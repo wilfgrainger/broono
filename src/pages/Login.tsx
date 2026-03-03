@@ -14,10 +14,27 @@ export default function Login() {
 
         setStatus('loading')
 
-        // Dev bypass: immediately log in without calling the backend
-        setTimeout(() => {
-            setAuth('dev-dummy-token', email, 'pro')
-        }, 400)
+        try {
+            const res = await fetch(`${API_URL}/api/auth/send-magic-link`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            })
+
+            const data = await res.json()
+
+            if (res.ok && data.success) {
+                setStatus('success')
+                if (data.dev_link) {
+                    setDevLink(data.dev_link)
+                }
+            } else {
+                setStatus('error')
+            }
+        } catch (err) {
+            console.error(err)
+            setStatus('error')
+        }
     }
 
     if (status === 'success') {
