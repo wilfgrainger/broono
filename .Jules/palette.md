@@ -1,0 +1,3 @@
+## 2024-05-14 - CheckIn Form Accessibility Improvements
+**Learning:** Found that custom button-based selectors for form inputs (like Site Rotation and Side Effects) lack proper aria attributes to convey state. Visual toggles alone don't announce their state to screen readers. Also, visual labels for inputs require an explicit `htmlFor` association to link them programmatically for screen readers.
+**Action:** Always add `aria-pressed={condition}` to custom button toggles acting as form choices, and explicitly link `<label>` elements to `<input>` elements using `htmlFor` and `id`.
