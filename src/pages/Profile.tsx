@@ -1,26 +1,60 @@
 import { useStore, type MedicationName } from '../store'
-import { useState } from 'react'
-import PaywallModal from '../components/PaywallModal'
 
 const MEDICATIONS: MedicationName[] = ['Zepbound', 'Mounjaro', 'Wegovy', 'Ozempic']
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787'
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 export default function ProfilePage() {
     const profile = useStore((s) => s.profile)
+    const logs = useStore((s) => s.logs)
+    const journalEntries = useStore((s) => s.journalEntries)
     const updateProfile = useStore((s) => s.updateProfile)
     const logout = useStore((s) => s.logout)
-    const subscriptionStatus = useStore((s) => s.subscriptionStatus)
-
-    const [showPaywall, setShowPaywall] = useState(false)
+    const authToken = useStore((s) => s.authToken)
 
     const handleExport = () => {
-        if (subscriptionStatus !== 'pro') {
-            setShowPaywall(true)
+        // Exporting data logic
+        const dataStr = JSON.stringify({
+            profile,
+            logs,
+            journalEntries
+        }, null, 2)
+
+        const blob = new Blob([dataStr], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = 'broono_data_export.json'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+    }
+
+    const handleDeleteAccount = async () => {
+        if (!confirm('Are you sure you want to delete your account? This will permanently delete your data.')) {
             return
         }
-        // Stubbed for now — will generate PDF via Cloudflare Worker in v1.1
-        alert('Doctor export generating...')
+
+        try {
+            const res = await fetch(`${API_URL}/api/user`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            })
+
+            if (res.ok) {
+                localStorage.clear()
+                logout()
+            } else {
+                alert('Failed to delete account.')
+            }
+        } catch (e) {
+            console.error('Failed to delete account', e)
+            alert('Failed to delete account.')
+        }
     }
 
     return (
@@ -192,15 +226,32 @@ export default function ProfilePage() {
                 Sign Out
             </button>
 
+            {/* Delete Account */}
+            <button
+                id="delete-account-btn"
+                onClick={handleDeleteAccount}
+                style={{
+                    width: '100%',
+                    background: 'transparent',
+                    color: '#e11d48',
+                    border: 'none',
+                    fontFamily: 'Inter, sans-serif',
+                    fontSize: 14,
+                    fontWeight: 600,
+                    padding: '12px 24px',
+                    cursor: 'pointer',
+                    transition: 'opacity .15s',
+                    marginTop: 8
+                }}
+                onMouseEnter={(e) => { (e.currentTarget).style.opacity = '0.8' }}
+                onMouseLeave={(e) => { (e.currentTarget).style.opacity = '1' }}
+            >
+                Delete Account
+            </button>
+
             <p style={{ textAlign: 'center', fontSize: 11, color: '#94a3b8', paddingBottom: 8, marginTop: 16 }}>
                 Broono v0.1.0 · Your data stays private and on-device.
             </p>
-
-            <PaywallModal
-                isOpen={showPaywall}
-                onClose={() => setShowPaywall(false)}
-                featureName="Doctor Data Export"
-            />
         </div>
     )
 }

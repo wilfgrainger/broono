@@ -10,9 +10,18 @@ type Bindings = {
   RESEND_API_KEY: string
   STRIPE_SECRET_KEY: string
   STRIPE_WEBHOOK_SECRET: string
+  STRIPE_PRO_PRICE_ID: string
 }
 
-const app = new Hono<{ Bindings: Bindings }>()
+type Variables = {
+  user: {
+    id: string
+    email: string
+    sub_status: string
+  }
+}
+
+const app = new Hono<{ Bindings: Bindings, Variables: Variables }>()
 
 // Enforce strict CORS for the GitLab Pages domain (and local dev)
 app.use('*', async (c, next) => {
@@ -95,7 +104,7 @@ app.post('/api/auth/verify', async (c) => {
   // Check magic link in D1
   const link = await c.env.DB.prepare(
     'SELECT * FROM magic_links WHERE email = ? AND token_hash = ? AND used = 0'
-  ).bind(email, tokenHash).first()
+  ).bind(email, tokenHash).first<{ expires_at: number, id: string }>()
 
   if (!link) return c.json({ error: 'Invalid or expired link' }, 401)
 
@@ -108,13 +117,13 @@ app.post('/api/auth/verify', async (c) => {
   await c.env.DB.prepare('UPDATE magic_links SET used = 1 WHERE id = ?').bind(link.id).run()
 
   // Get or Create User
-  let user = await c.env.DB.prepare('SELECT * FROM users WHERE email = ?').bind(email).first()
+  let user = await c.env.DB.prepare('SELECT * FROM users WHERE email = ?').bind(email).first<{ id: string, email: string, subscription_status: string }>()
   if (!user) {
     const userId = crypto.randomUUID()
     await c.env.DB.prepare(
       'INSERT INTO users (id, email, created_at, subscription_status) VALUES (?, ?, ?, ?)'
     ).bind(userId, email, now, 'free').run()
-    user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(userId).first()
+    user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(userId).first<{ id: string, email: string, subscription_status: string }>()
   }
 
   // Mint JWT
@@ -122,7 +131,7 @@ app.post('/api/auth/verify', async (c) => {
     throw new Error('JWT_SECRET environment variable is missing.')
   }
   const jwtSecret = new TextEncoder().encode(c.env.JWT_SECRET)
-  const authToken = await new SignJWT({ id: user.id, email: user.email, sub_status: user.subscription_status })
+  const authToken = await new SignJWT({ id: user!.id, email: user!.email, sub_status: user!.subscription_status })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('30d')
@@ -157,8 +166,28 @@ const authMiddleware = async (c: any, next: any) => {
   }
 }
 
+app.delete('/api/user', authMiddleware, async (c) => {
+  const user = c.get('user') as any
+
+  if (!user || !user.email) {
+    return c.json({ error: 'Unauthorized' }, 401)
+  }
+
+  try {
+    // Delete magic links
+    await c.env.DB.prepare('DELETE FROM magic_links WHERE email = ?').bind(user.email).run()
+    // Delete user
+    await c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(user.id).run()
+
+    return c.json({ success: true, message: 'Account deleted successfully' })
+  } catch (err: any) {
+    console.error('Error deleting user', err)
+    return c.json({ error: 'Internal server error' }, 500)
+  }
+})
+
 app.post('/api/stripe/checkout', authMiddleware, async (c) => {
-  const user = c.get('user')
+  const user = c.get('user') as any
   const { email } = await c.req.json()
   
   if (!c.env.STRIPE_SECRET_KEY) {
@@ -166,7 +195,7 @@ app.post('/api/stripe/checkout', authMiddleware, async (c) => {
   }
 
   const stripe = new Stripe(c.env.STRIPE_SECRET_KEY, {
-    apiVersion: '2024-11-20.acacia'
+    apiVersion: '2025-02-24.acacia' as any
   })
 
   // Set up the mock price ID if configuring locally
@@ -196,7 +225,7 @@ app.post('/api/stripe/webhook', async (c) => {
   }
 
   const stripe = new Stripe(c.env.STRIPE_SECRET_KEY, {
-    apiVersion: '2024-11-20.acacia'
+    apiVersion: '2025-02-24.acacia' as any
   })
   const signature = c.req.header('stripe-signature')
   
