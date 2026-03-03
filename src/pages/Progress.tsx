@@ -31,7 +31,7 @@ export default function Progress() {
         )
     }
 
-    const { maxW, minW, range, startWeight, currentWeight, totalLost, weeksCount, reversedLogs } = stats
+    const { minW, range, startWeight, totalLost, weeksCount, reversedLogs } = stats
 
     return (
         <div className="page-enter space-y-6" style={{ paddingTop: 8 }}>

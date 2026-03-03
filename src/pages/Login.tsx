@@ -120,6 +120,25 @@ export default function Login() {
                         {status === 'loading' ? 'Sending...' : 'Continue with Email'}
                     </button>
                 </form>
+
+                {import.meta.env.DEV && (
+                    <div style={{ marginTop: 24, textAlign: 'center' }}>
+                        <button
+                            type="button"
+                            onClick={() => setAuth('dev-token', 'test@example.com', 'pro')}
+                            style={{
+                                background: 'none',
+                                border: 'none',
+                                color: '#94a3b8',
+                                fontSize: 12,
+                                textDecoration: 'underline',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            Bypass Login (Test Mode)
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     )
