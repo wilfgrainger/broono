@@ -1,0 +1,11 @@
+name = "broono-api"
+main = "src/index.ts"
+compatibility_date = "2024-12-18"
+
+[vars]
+FRONTEND_URL = "http://localhost:5176"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "broono-db"
+database_id = "00000000-0000-0000-0000-000000000000"
