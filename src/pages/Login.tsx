@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useStore } from '../store'
-const API_URL = 'http://localhost:8787'
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787'
 
 export default function Login() {
     const [email, setEmail] = useState('')
     const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
     const [devLink, setDevLink] = useState('')
+    const [agreedToTerms, setAgreedToTerms] = useState(false)
+    const [agreedToHealthData, setAgreedToHealthData] = useState(false)
     const setAuth = useStore((state) => state.setAuth)
 
     const handleLogin = async (e: React.FormEvent) => {
@@ -20,14 +22,10 @@ export default function Login() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email })
             })
-
             const data = await res.json()
-
-            if (res.ok && data.success) {
+            if (data.success) {
                 setStatus('success')
-                if (data.dev_link) {
-                    setDevLink(data.dev_link)
-                }
+                if (data.dev_link) setDevLink(data.dev_link)
             } else {
                 setStatus('error')
             }
@@ -88,6 +86,27 @@ export default function Login() {
                         />
                     </div>
 
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8 }}>
+                        <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 13, color: '#475569', cursor: 'pointer' }}>
+                            <input
+                                type="checkbox"
+                                checked={agreedToTerms}
+                                onChange={(e) => setAgreedToTerms(e.target.checked)}
+                                style={{ marginTop: 2, accentColor: '#0f172a' }}
+                            />
+                            <span>I agree to the Terms of Service and Privacy Policy.</span>
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 13, color: '#475569', cursor: 'pointer' }}>
+                            <input
+                                type="checkbox"
+                                checked={agreedToHealthData}
+                                onChange={(e) => setAgreedToHealthData(e.target.checked)}
+                                style={{ marginTop: 2, accentColor: '#0f172a' }}
+                            />
+                            <span>I consent to the processing of my health data for the purposes of providing this service (UK GDPR compliance).</span>
+                        </label>
+                    </div>
+
                     {status === 'error' && (
                         <p style={{ color: '#e11d48', fontSize: 13, fontWeight: 500 }}>Failed to send magic link. Please try again.</p>
                     )}
@@ -95,8 +114,8 @@ export default function Login() {
                     <button
                         type="submit"
                         className="btn-primary"
-                        disabled={!email || status === 'loading'}
-                        style={{ width: '100%', padding: '16px', opacity: (!email || status === 'loading') ? 0.6 : 1 }}
+                        disabled={!email || !agreedToTerms || !agreedToHealthData || status === 'loading'}
+                        style={{ width: '100%', padding: '16px', opacity: (!email || !agreedToTerms || !agreedToHealthData || status === 'loading') ? 0.6 : 1 }}
                     >
                         {status === 'loading' ? 'Sending...' : 'Continue with Email'}
                     </button>
