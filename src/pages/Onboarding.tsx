@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useStore } from '../store'
 import type { MedicationName, WeightUnit, UserProfile } from '../store'
 import { ArrowRight, ArrowLeft, Check, Syringe, Target, CalendarDays, Activity } from 'lucide-react'
+import ReviewRow from '../components/ReviewRow'
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -340,11 +341,3 @@ function PillSelect({ active, onClick, children, style = {} }: any) {
     )
 }
 
-function ReviewRow({ label, value }: { label: string, value: string }) {
-    return (
-        <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '16px', borderBottom: '1px solid var(--border)' }}>
-            <span style={{ color: 'var(--text-light)' }}>{label}</span>
-            <span style={{ fontWeight: 600 }}>{value}</span>
-        </div>
-    )
-}
