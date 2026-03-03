@@ -1,9 +1,27 @@
+import { useMemo } from 'react'
 import { useStore } from '../store'
 
 export default function Progress() {
     const logs = useStore((s) => s.logs)
 
-    if (logs.length === 0) {
+    const stats = useMemo(() => {
+        if (logs.length === 0) return null
+
+        const weights = logs.map((l) => l.weight)
+        const maxW = Math.max(...weights) + 3
+        const minW = Math.min(...weights) - 3
+        const range = maxW - minW
+
+        const startWeight = logs[logs.length - 1].weight
+        const currentWeight = logs[0].weight
+        const totalLost = startWeight - currentWeight
+        const weeksCount = logs.length
+        const reversedLogs = [...logs].reverse()
+
+        return { maxW, minW, range, startWeight, currentWeight, totalLost, weeksCount, reversedLogs }
+    }, [logs])
+
+    if (logs.length === 0 || !stats) {
         return (
             <div className="page-enter" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh', textAlign: 'center', gap: 12 }}>
                 <p style={{ fontSize: 40 }}>📉</p>
@@ -13,15 +31,7 @@ export default function Progress() {
         )
     }
 
-    const weights = logs.map((l) => l.weight)
-    const maxW = Math.max(...weights) + 3
-    const minW = Math.min(...weights) - 3
-    const range = maxW - minW
-
-    const startWeight = logs[logs.length - 1].weight
-    const currentWeight = logs[0].weight
-    const totalLost = startWeight - currentWeight
-    const weeksCount = logs.length
+    const { maxW, minW, range, startWeight, currentWeight, totalLost, weeksCount, reversedLogs } = stats
 
     return (
         <div className="page-enter space-y-6" style={{ paddingTop: 8 }}>
@@ -61,7 +71,7 @@ export default function Progress() {
                     gap: 8,
                     padding: '0 4px',
                 }}>
-                    {[...logs].reverse().map((log) => {
+                    {reversedLogs.map((log) => {
                         const pct = range > 0 ? ((log.weight - minW) / range) * 100 : 50
                         return (
                             <div
