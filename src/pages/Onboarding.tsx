@@ -6,6 +6,217 @@ import ReviewRow from '../components/ReviewRow'
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
+function WelcomeSlide() {
+    return (
+        <Slide transitionKey="0">
+            <h1 style={{ fontSize: '2rem', marginBottom: '16px', letterSpacing: '-0.03em', lineHeight: 1.2 }}>
+                Welcome to<br />
+                <span style={{ fontWeight: 800 }}>broono<span style={{ color: 'var(--primary)' }}>.</span></span>
+            </h1>
+            <p style={{ fontSize: '1.1rem', color: 'var(--text-light)', lineHeight: 1.5, marginBottom: '32px' }}>
+                Your personal companion for GLP-1 weight loss progress, journaling, and tracking.
+            </p>
+            <div style={{
+                background: 'var(--card-bg)',
+                border: '1px solid var(--border)',
+                borderRadius: '16px',
+                padding: '24px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px'
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Activity size={20} color="var(--primary)" />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                        <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>Track Progress</h3>
+                        <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-light)' }}>Log your weekly weight & symptoms</p>
+                    </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Syringe size={20} color="var(--primary)" />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                        <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>Dose Tracking</h3>
+                        <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-light)' }}>Stay on top of your injection schedule</p>
+                    </div>
+                </div>
+            </div>
+        </Slide>
+    )
+}
+
+function MedicationSlide({ localProfile, updateLocal }: { localProfile: UserProfile, updateLocal: (updates: Partial<UserProfile>) => void }) {
+    return (
+        <Slide transitionKey="1">
+            <h2 style={{ fontSize: '1.5rem', marginBottom: '8px' }}>Medication Details</h2>
+            <p style={{ color: 'var(--text-light)', marginBottom: '24px' }}>What medication are you taking?</p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '32px' }}>
+                {(['Zepbound', 'Mounjaro', 'Wegovy', 'Ozempic'] as MedicationName[]).map(med => (
+                    <PillSelect
+                        key={med}
+                        active={localProfile.medicationName === med}
+                        onClick={() => updateLocal({ medicationName: med })}
+                    >
+                        {med}
+                    </PillSelect>
+                ))}
+            </div>
+
+            <h3 style={{ fontSize: '1.1rem', marginBottom: '12px' }}>Current Dose</h3>
+            <input
+                type="text"
+                className="form-input"
+                value={localProfile.dose}
+                onChange={(e) => updateLocal({ dose: e.target.value })}
+                placeholder="e.g. 2.5mg, 5mg"
+            />
+        </Slide>
+    )
+}
+
+function VitalsSlide({ localProfile, updateLocal }: { localProfile: UserProfile, updateLocal: (updates: Partial<UserProfile>) => void }) {
+    return (
+        <Slide transitionKey="2">
+            <h2 style={{ fontSize: '1.5rem', marginBottom: '8px' }}>Starting Vitals</h2>
+            <p style={{ color: 'var(--text-light)', marginBottom: '24px' }}>Let's set your baseline.</p>
+
+            <h3 style={{ fontSize: '1.1rem', marginBottom: '12px' }}>Unit</h3>
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
+                {(['lbs', 'kg'] as WeightUnit[]).map(u => (
+                    <PillSelect
+                        key={u}
+                        active={localProfile.weightUnit === u}
+                        onClick={() => updateLocal({ weightUnit: u })}
+                        style={{ flex: 1, textAlign: 'center', justifyContent: 'center' }}
+                    >
+                        {u}
+                    </PillSelect>
+                ))}
+            </div>
+
+            <h3 style={{ fontSize: '1.1rem', marginBottom: '12px' }}>Starting Weight</h3>
+            <div style={{ position: 'relative' }}>
+                <input
+                    type="number"
+                    className="form-input"
+                    style={{ paddingRight: '48px' }}
+                    value={localProfile.startWeight || ''}
+                    onChange={(e) => updateLocal({ startWeight: parseFloat(e.target.value) || 0 })}
+                    placeholder="0.0"
+                />
+                <span style={{
+                    position: 'absolute',
+                    right: '16px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: 'var(--text-light)',
+                    fontWeight: 600
+                }}>{localProfile.weightUnit}</span>
+            </div>
+        </Slide>
+    )
+}
+
+function GoalsSlide({ localProfile, updateLocal }: { localProfile: UserProfile, updateLocal: (updates: Partial<UserProfile>) => void }) {
+    return (
+        <Slide transitionKey="3">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <Target size={24} color="var(--primary)" />
+                <h2 style={{ margin: 0, fontSize: '1.5rem' }}>Daily Goals</h2>
+            </div>
+            <p style={{ color: 'var(--text-light)', marginBottom: '24px' }}>Set your daily targets to stay on track.</p>
+
+            <div style={{
+                background: 'var(--card-bg)',
+                border: '1px solid var(--border)',
+                borderRadius: '16px',
+                padding: '20px',
+                marginBottom: '16px'
+            }}>
+                <h3 style={{ margin: '0 0 12px 0', fontSize: '1rem', display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Hydration Goal</span>
+                    <span style={{ color: 'var(--primary)' }}>{localProfile.waterGoalGlasses} glasses</span>
+                </h3>
+                <input
+                    type="range"
+                    min="1"
+                    max="20"
+                    value={localProfile.waterGoalGlasses}
+                    onChange={(e) => updateLocal({ waterGoalGlasses: parseInt(e.target.value, 10) })}
+                    style={{ width: '100%', accentColor: 'var(--primary)' }}
+                />
+                <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: 'var(--text-light)' }}>approx {Math.round(localProfile.waterGoalGlasses * 8)} oz</p>
+            </div>
+
+            <div style={{
+                background: 'var(--card-bg)',
+                border: '1px solid var(--border)',
+                borderRadius: '16px',
+                padding: '20px'
+            }}>
+                <h3 style={{ margin: '0 0 12px 0', fontSize: '1rem', display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Protein Goal</span>
+                    <span style={{ color: 'var(--primary)' }}>{localProfile.proteinGoalG}g</span>
+                </h3>
+                <input
+                    type="range"
+                    min="30"
+                    max="250"
+                    step="5"
+                    value={localProfile.proteinGoalG}
+                    onChange={(e) => updateLocal({ proteinGoalG: parseInt(e.target.value, 10) })}
+                    style={{ width: '100%', accentColor: 'var(--primary)' }}
+                />
+            </div>
+        </Slide>
+    )
+}
+
+function ScheduleSlide({ localProfile, updateLocal }: { localProfile: UserProfile, updateLocal: (updates: Partial<UserProfile>) => void }) {
+    return (
+        <Slide transitionKey="4">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <CalendarDays size={24} color="var(--primary)" />
+                <h2 style={{ margin: 0, fontSize: '1.5rem' }}>Injection Schedule</h2>
+            </div>
+            <p style={{ color: 'var(--text-light)', marginBottom: '24px' }}>When do you take your dose?</p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {DAY_NAMES.map((day, idx) => (
+                    <PillSelect
+                        key={day}
+                        active={localProfile.injectionDayOfWeek === idx}
+                        onClick={() => updateLocal({ injectionDayOfWeek: idx })}
+                    >
+                        {day}
+                    </PillSelect>
+                ))}
+            </div>
+        </Slide>
+    )
+}
+
+function ReviewSlide({ localProfile }: { localProfile: UserProfile }) {
+    return (
+        <Slide transitionKey="5">
+            <h2 style={{ fontSize: '1.5rem', marginBottom: '8px' }}>You're all set!</h2>
+            <p style={{ color: 'var(--text-light)', marginBottom: '32px' }}>Review your details below.</p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <ReviewRow label="Medication" value={`${localProfile.medicationName} (${localProfile.dose})`} />
+                <ReviewRow label="Start Weight" value={`${localProfile.startWeight} ${localProfile.weightUnit}`} />
+                <ReviewRow label="Injection Day" value={DAY_NAMES[localProfile.injectionDayOfWeek]} />
+                <ReviewRow label="Water Goal" value={`${localProfile.waterGoalGlasses} glasses`} />
+                <ReviewRow label="Protein Goal" value={`${localProfile.proteinGoalG}g`} />
+            </div>
+        </Slide>
+    )
+}
+
 export default function Onboarding() {
     const completeOnboarding = useStore((s) => s.completeOnboarding)
     const updateProfile = useStore((s) => s.updateProfile)
@@ -75,204 +286,12 @@ export default function Onboarding() {
             </div>
 
             <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px 24px' }}>
-                {step === 0 && (
-                    <Slide transitionKey="0">
-                        <h1 style={{ fontSize: '2rem', marginBottom: '16px', letterSpacing: '-0.03em', lineHeight: 1.2 }}>
-                            Welcome to<br />
-                            <span style={{ fontWeight: 800 }}>broono<span style={{ color: 'var(--primary)' }}>.</span></span>
-                        </h1>
-                        <p style={{ fontSize: '1.1rem', color: 'var(--text-light)', lineHeight: 1.5, marginBottom: '32px' }}>
-                            Your personal companion for GLP-1 weight loss progress, journaling, and tracking.
-                        </p>
-                        <div style={{
-                            background: 'var(--card-bg)',
-                            border: '1px solid var(--border)',
-                            borderRadius: '16px',
-                            padding: '24px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '16px'
-                        }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <Activity size={20} color="var(--primary)" />
-                                </div>
-                                <div style={{ flex: 1 }}>
-                                    <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>Track Progress</h3>
-                                    <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-light)' }}>Log your weekly weight & symptoms</p>
-                                </div>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <Syringe size={20} color="var(--primary)" />
-                                </div>
-                                <div style={{ flex: 1 }}>
-                                    <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>Dose Tracking</h3>
-                                    <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-light)' }}>Stay on top of your injection schedule</p>
-                                </div>
-                            </div>
-                        </div>
-                    </Slide>
-                )}
-
-                {step === 1 && (
-                    <Slide transitionKey="1">
-                        <h2 style={{ fontSize: '1.5rem', marginBottom: '8px' }}>Medication Details</h2>
-                        <p style={{ color: 'var(--text-light)', marginBottom: '24px' }}>What medication are you taking?</p>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '32px' }}>
-                            {(['Zepbound', 'Mounjaro', 'Wegovy', 'Ozempic'] as MedicationName[]).map(med => (
-                                <PillSelect
-                                    key={med}
-                                    active={localProfile.medicationName === med}
-                                    onClick={() => updateLocal({ medicationName: med })}
-                                >
-                                    {med}
-                                </PillSelect>
-                            ))}
-                        </div>
-
-                        <h3 style={{ fontSize: '1.1rem', marginBottom: '12px' }}>Current Dose</h3>
-                        <input
-                            type="text"
-                            className="form-input"
-                            value={localProfile.dose}
-                            onChange={(e) => updateLocal({ dose: e.target.value })}
-                            placeholder="e.g. 2.5mg, 5mg"
-                        />
-                    </Slide>
-                )}
-
-                {step === 2 && (
-                    <Slide transitionKey="2">
-                        <h2 style={{ fontSize: '1.5rem', marginBottom: '8px' }}>Starting Vitals</h2>
-                        <p style={{ color: 'var(--text-light)', marginBottom: '24px' }}>Let's set your baseline.</p>
-
-                        <h3 style={{ fontSize: '1.1rem', marginBottom: '12px' }}>Unit</h3>
-                        <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
-                            {(['lbs', 'kg'] as WeightUnit[]).map(u => (
-                                <PillSelect
-                                    key={u}
-                                    active={localProfile.weightUnit === u}
-                                    onClick={() => updateLocal({ weightUnit: u })}
-                                    style={{ flex: 1, textAlign: 'center', justifyContent: 'center' }}
-                                >
-                                    {u}
-                                </PillSelect>
-                            ))}
-                        </div>
-
-                        <h3 style={{ fontSize: '1.1rem', marginBottom: '12px' }}>Starting Weight</h3>
-                        <div style={{ position: 'relative' }}>
-                            <input
-                                type="number"
-                                className="form-input"
-                                style={{ paddingRight: '48px' }}
-                                value={localProfile.startWeight || ''}
-                                onChange={(e) => updateLocal({ startWeight: parseFloat(e.target.value) || 0 })}
-                                placeholder="0.0"
-                            />
-                            <span style={{
-                                position: 'absolute',
-                                right: '16px',
-                                top: '50%',
-                                transform: 'translateY(-50%)',
-                                color: 'var(--text-light)',
-                                fontWeight: 600
-                            }}>{localProfile.weightUnit}</span>
-                        </div>
-                    </Slide>
-                )}
-
-                {step === 3 && (
-                    <Slide transitionKey="3">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                            <Target size={24} color="var(--primary)" />
-                            <h2 style={{ margin: 0, fontSize: '1.5rem' }}>Daily Goals</h2>
-                        </div>
-                        <p style={{ color: 'var(--text-light)', marginBottom: '24px' }}>Set your daily targets to stay on track.</p>
-
-                        <div style={{
-                            background: 'var(--card-bg)',
-                            border: '1px solid var(--border)',
-                            borderRadius: '16px',
-                            padding: '20px',
-                            marginBottom: '16px'
-                        }}>
-                            <h3 style={{ margin: '0 0 12px 0', fontSize: '1rem', display: 'flex', justifyContent: 'space-between' }}>
-                                <span>Hydration Goal</span>
-                                <span style={{ color: 'var(--primary)' }}>{localProfile.waterGoalGlasses} glasses</span>
-                            </h3>
-                            <input
-                                type="range"
-                                min="1"
-                                max="20"
-                                value={localProfile.waterGoalGlasses}
-                                onChange={(e) => updateLocal({ waterGoalGlasses: parseInt(e.target.value, 10) })}
-                                style={{ width: '100%', accentColor: 'var(--primary)' }}
-                            />
-                            <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: 'var(--text-light)' }}>approx {Math.round(localProfile.waterGoalGlasses * 8)} oz</p>
-                        </div>
-
-                        <div style={{
-                            background: 'var(--card-bg)',
-                            border: '1px solid var(--border)',
-                            borderRadius: '16px',
-                            padding: '20px'
-                        }}>
-                            <h3 style={{ margin: '0 0 12px 0', fontSize: '1rem', display: 'flex', justifyContent: 'space-between' }}>
-                                <span>Protein Goal</span>
-                                <span style={{ color: 'var(--primary)' }}>{localProfile.proteinGoalG}g</span>
-                            </h3>
-                            <input
-                                type="range"
-                                min="30"
-                                max="250"
-                                step="5"
-                                value={localProfile.proteinGoalG}
-                                onChange={(e) => updateLocal({ proteinGoalG: parseInt(e.target.value, 10) })}
-                                style={{ width: '100%', accentColor: 'var(--primary)' }}
-                            />
-                        </div>
-                    </Slide>
-                )}
-
-                {step === 4 && (
-                    <Slide transitionKey="4">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                            <CalendarDays size={24} color="var(--primary)" />
-                            <h2 style={{ margin: 0, fontSize: '1.5rem' }}>Injection Schedule</h2>
-                        </div>
-                        <p style={{ color: 'var(--text-light)', marginBottom: '24px' }}>When do you take your dose?</p>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            {DAY_NAMES.map((day, idx) => (
-                                <PillSelect
-                                    key={day}
-                                    active={localProfile.injectionDayOfWeek === idx}
-                                    onClick={() => updateLocal({ injectionDayOfWeek: idx })}
-                                >
-                                    {day}
-                                </PillSelect>
-                            ))}
-                        </div>
-                    </Slide>
-                )}
-
-                {step === 5 && (
-                    <Slide transitionKey="5">
-                        <h2 style={{ fontSize: '1.5rem', marginBottom: '8px' }}>You're all set!</h2>
-                        <p style={{ color: 'var(--text-light)', marginBottom: '32px' }}>Review your details below.</p>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                            <ReviewRow label="Medication" value={`${localProfile.medicationName} (${localProfile.dose})`} />
-                            <ReviewRow label="Start Weight" value={`${localProfile.startWeight} ${localProfile.weightUnit}`} />
-                            <ReviewRow label="Injection Day" value={DAY_NAMES[localProfile.injectionDayOfWeek]} />
-                            <ReviewRow label="Water Goal" value={`${localProfile.waterGoalGlasses} glasses`} />
-                            <ReviewRow label="Protein Goal" value={`${localProfile.proteinGoalG}g`} />
-                        </div>
-                    </Slide>
-                )}
+                {step === 0 && <WelcomeSlide />}
+                {step === 1 && <MedicationSlide localProfile={localProfile} updateLocal={updateLocal} />}
+                {step === 2 && <VitalsSlide localProfile={localProfile} updateLocal={updateLocal} />}
+                {step === 3 && <GoalsSlide localProfile={localProfile} updateLocal={updateLocal} />}
+                {step === 4 && <ScheduleSlide localProfile={localProfile} updateLocal={updateLocal} />}
+                {step === 5 && <ReviewSlide localProfile={localProfile} />}
             </div>
 
             {/* Fixed Bottom Action */}
