@@ -3,6 +3,7 @@ import { useStore } from '../store'
 import type { MedicationName, WeightUnit, UserProfile } from '../store'
 import { ArrowRight, ArrowLeft, Check, Syringe, Target, CalendarDays, Activity } from 'lucide-react'
 import ReviewRow from '../components/ReviewRow'
+import PillSelect from '../components/PillSelect'
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -313,31 +314,6 @@ function Slide({ children, transitionKey }: { children: React.ReactNode, transit
         <div key={transitionKey} className="slide-up" style={{ animation: 'slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards' }}>
             {children}
         </div>
-    )
-}
-
-function PillSelect({ active, onClick, children, style = {} }: any) {
-    return (
-        <button
-            onClick={onClick}
-            style={{
-                padding: '16px 20px',
-                borderRadius: '12px',
-                border: `2px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
-                background: active ? 'var(--primary-light)' : 'var(--card-bg)',
-                color: active ? 'var(--primary)' : 'var(--text)',
-                fontWeight: active ? 600 : 500,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'flex-start',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                fontSize: '1rem',
-                ...style
-            }}
-        >
-            {children}
-        </button>
     )
 }
 
