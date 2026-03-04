@@ -1,73 +1,62 @@
-# React + TypeScript + Vite
+# Broono
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Broono is a GLP-1 companion app designed to track your journey with medications like Zepbound, Mounjaro, Wegovy, or Ozempic.
 
-Currently, two official plugins are available:
+## Architecture
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Frontend**: React + Vite (TypeScript) - Deployed on Cloudflare Pages.
+- **Backend**: Hono + Cloudflare Workers - Serverless API.
+- **Database**: Cloudflare D1.
+- **Auth**: Magic Links via Resend.
+- **Payments**: Stripe.
 
-## React Compiler
+## Getting Started
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Prerequisites
 
-## Expanding the ESLint configuration
+- [pnpm](https://pnpm.io/)
+- [Wrangler](https://developers.cloudflare.com/workers/wrangler/install-and-update/) (Cloudflare CLI)
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Installation
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+1. Clone the repository.
+2. Install dependencies in the root and backend:
+   ```bash
+   pnpm install
+   cd backend && npm install
+   ```
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### Development
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+#### Frontend
+```bash
+pnpm dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+#### Backend
+```bash
+cd backend
+npm run dev
 ```
+
+### Deployment
+
+#### Frontend (Cloudflare Pages)
+Connect your GitHub/GitLab repository to Cloudflare Pages and select the Vite preset. Set `VITE_API_URL` to your worker URL.
+
+#### Backend (Cloudflare Workers)
+```bash
+cd backend
+npm run deploy
+```
+
+## Security
+
+- CORS is enforced for the primary frontend domain.
+- Secrets are managed via Cloudflare environment variables.
+- Input validation is handled on the backend via Hono.
+
+## Domain & Routing
+
+- Canonical Domain: `broono.app`
+- `www.broono.app` automatically redirects to the canonical domain to ensure session consistency and avoid duplicate content issues.

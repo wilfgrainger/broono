@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useStore } from '../store'
 
-const API_URL = 'http://localhost:8787'
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787'
 
 export default function Verify() {
     const [searchParams] = useSearchParams()

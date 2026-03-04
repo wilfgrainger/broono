@@ -23,7 +23,7 @@ type Variables = {
 
 const app = new Hono<{ Bindings: Bindings, Variables: Variables }>()
 
-// Enforce strict CORS for the GitLab Pages domain (and local dev)
+// Enforce strict CORS for the Cloudflare Pages domain (and local dev)
 app.use('*', async (c, next) => {
   const corsMiddleware = cors({
     origin: c.env.FRONTEND_URL,
@@ -73,7 +73,7 @@ app.post('/api/auth/send-magic-link', async (c) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        from: 'Broono <login@broono.gitlab.io>', // Update when domain verified
+        from: 'Broono <login@broono.app>', // Updated to .app domain
         to: email,
         subject: 'Sign in to Broono',
         html: `<p>Click the link below to sign in to your Broono account:</p><p><a href="${magicLink}">Sign in to Broono</a></p><p>This link expires in 15 minutes.</p>`
