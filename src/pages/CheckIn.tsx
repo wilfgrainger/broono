@@ -61,7 +61,7 @@ export default function CheckIn({ onDone }: CheckInProps) {
 
             {/* Weight input */}
             <div className="card" style={{ textAlign: 'center', padding: '32px 24px' }}>
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 16 }}>
+                <label htmlFor="weight-input" style={{ display: 'block', fontSize: 11, fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 16 }}>
                     Current Weight
                 </label>
                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'baseline', gap: 8 }}>
@@ -109,6 +109,7 @@ export default function CheckIn({ onDone }: CheckInProps) {
                             key={s}
                             id={`site-${s.replace(/ /g, '-').toLowerCase()}`}
                             onClick={() => setSite(s)}
+                            aria-pressed={site === s}
                             className={`selector-btn ${site === s ? 'selected' : ''}`}
                         >
                             {s}
@@ -126,6 +127,7 @@ export default function CheckIn({ onDone }: CheckInProps) {
                             key={sym}
                             id={`symptom-${sym.toLowerCase()}`}
                             onClick={() => setSymptom(sym)}
+                            aria-pressed={symptom === sym}
                             className="pill-btn"
                             style={{
                                 padding: '10px 18px',
@@ -170,6 +172,7 @@ export default function CheckIn({ onDone }: CheckInProps) {
                 className="btn-primary"
                 onClick={handleSave}
                 disabled={!weight}
+                title={!weight ? "Enter current weight to save" : undefined}
                 style={{ opacity: weight ? 1 : 0.5 }}
             >
                 Save Log <ArrowRight size={18} strokeWidth={2.5} />
