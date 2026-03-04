@@ -11,7 +11,7 @@ import Onboarding from './pages/Onboarding'
 import Login from './pages/Login'
 import Verify from './pages/Verify'
 
-type Tab = 'dashboard' | 'checkin' | 'progress' | 'news' | 'journal' | 'profile'
+export type Tab = 'dashboard' | 'checkin' | 'progress' | 'news' | 'journal' | 'profile'
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard')
@@ -21,7 +21,7 @@ export default function App() {
 
   useEffect(() => {
     resetWaterIfNewDay()
-  }, [])
+  }, [resetWaterIfNewDay])
 
   const renderPage = () => {
     switch (activeTab) {
