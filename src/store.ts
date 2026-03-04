@@ -76,7 +76,7 @@ function today(): string {
 }
 
 function uid(): string {
-  return Math.random().toString(36).slice(2) + Date.now().toString(36)
+  return crypto.randomUUID()
 }
 
 function formatDisplayDate(isoDate: string): string {
