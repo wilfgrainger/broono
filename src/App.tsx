@@ -21,7 +21,7 @@ export default function App() {
 
   useEffect(() => {
     resetWaterIfNewDay()
-  }, [])
+  }, [resetWaterIfNewDay])
 
   const renderPage = () => {
     switch (activeTab) {

@@ -112,25 +112,27 @@ export default function Login() {
                     </button>
                 </form>
 
-                <div style={{ marginTop: 24, textAlign: 'center' }}>
-                    <button
-                        type="button"
-                        onClick={() => setAuth('dev-token', 'test@example.com', 'pro')}
-                        style={{
-                            background: '#f8fafc',
-                            border: '1px solid #e2e8f0',
-                            borderRadius: '8px',
-                            padding: '8px 16px',
-                            color: '#475569',
-                            fontSize: 13,
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                        }}
-                    >
-                        Auto Login (Temporary Test Button)
-                    </button>
-                </div>
+                {import.meta.env.DEV && (
+                    <div style={{ marginTop: 24, textAlign: 'center' }}>
+                        <button
+                            type="button"
+                            onClick={() => setAuth('dev-token', 'test@example.com', 'pro')}
+                            style={{
+                                background: '#f8fafc',
+                                border: '1px solid #e2e8f0',
+                                borderRadius: '8px',
+                                padding: '8px 16px',
+                                color: '#475569',
+                                fontSize: 13,
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                            }}
+                        >
+                            Auto Login (Temporary Test Button)
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     )
