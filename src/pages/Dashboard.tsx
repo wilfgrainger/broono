@@ -2,7 +2,7 @@ import { Beef, Droplets, TrendingDown, Plus } from 'lucide-react'
 import { useStore, getMedicationLevel, getDaysUntilNextDose } from '../store'
 
 interface DashboardProps {
-    onNavigate: (tab: any) => void
+    onNavigate: (tab: 'home' | 'journal' | 'history' | 'profile') => void
 }
 
 export default function Dashboard({ onNavigate }: DashboardProps) {
