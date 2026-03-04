@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useStore } from '../store'
 import type { MedicationName, WeightUnit, UserProfile } from '../store'
 import { ArrowRight, ArrowLeft, Check, Syringe, Target, CalendarDays, Activity } from 'lucide-react'
+import React from 'react'
 import ReviewRow from '../components/ReviewRow'
 import Slide from '../components/Slide'
 
@@ -309,7 +310,7 @@ export default function Onboarding() {
     )
 }
 
-function PillSelect({ active, onClick, children, style = {} }: any) {
+function PillSelect({ active, onClick, children, style = {} }: { active: boolean, onClick: () => void, children: React.ReactNode, style?: React.CSSProperties }) {
     return (
         <button
             onClick={onClick}
