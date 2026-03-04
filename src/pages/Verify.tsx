@@ -37,8 +37,8 @@ export default function Verify() {
                 setAuth(data.token, data.user.email, data.user.subscription_status)
                 completeOnboarding() // They are logged in, effectively onboarded
                 navigate('/') // Go to Dashboard
-            } catch (err: any) {
-                setError(err.message || 'Verification failed. The link may have expired.')
+            } catch (err: unknown) {
+                setError(err instanceof Error ? err.message : 'Verification failed. The link may have expired.')
             }
         }
 
