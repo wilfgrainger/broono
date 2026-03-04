@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "wrangler dev",
+    "build": "wrangler build",
     "deploy": "wrangler deploy",
     "db:init": "wrangler d1 execute broono-db --file=./schema.sql --local",
     "db:deploy": "wrangler d1 execute broono-db --file=./schema.sql --remote"
