@@ -121,24 +121,25 @@ export default function Login() {
                     </button>
                 </form>
 
-                {import.meta.env.DEV && (
-                    <div style={{ marginTop: 24, textAlign: 'center' }}>
-                        <button
-                            type="button"
-                            onClick={() => setAuth('dev-token', 'test@example.com', 'pro')}
-                            style={{
-                                background: 'none',
-                                border: 'none',
-                                color: '#94a3b8',
-                                fontSize: 12,
-                                textDecoration: 'underline',
-                                cursor: 'pointer'
-                            }}
-                        >
-                            Bypass Login (Test Mode)
-                        </button>
-                    </div>
-                )}
+                <div style={{ marginTop: 24, textAlign: 'center' }}>
+                    <button
+                        type="button"
+                        onClick={() => setAuth('dev-token', 'test@example.com', 'pro')}
+                        style={{
+                            background: '#f8fafc',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '8px',
+                            padding: '8px 16px',
+                            color: '#475569',
+                            fontSize: 13,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                        }}
+                    >
+                        Auto Login (Temporary Test Button)
+                    </button>
+                </div>
             </div>
         </div>
     )
