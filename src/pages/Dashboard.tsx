@@ -1,8 +1,9 @@
 import { Beef, Droplets, TrendingDown, Plus } from 'lucide-react'
 import { useStore, getMedicationLevel, getDaysUntilNextDose } from '../store'
+import type { Tab } from '../App'
 
 interface DashboardProps {
-    onNavigate: (tab: any) => void
+    onNavigate: (tab: Tab) => void
 }
 
 export default function Dashboard({ onNavigate }: DashboardProps) {
