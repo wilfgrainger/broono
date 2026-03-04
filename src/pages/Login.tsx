@@ -5,7 +5,6 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787'
 export default function Login() {
     const [email, setEmail] = useState('')
     const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
-    const [devLink, setDevLink] = useState('')
     const [agreedToTerms, setAgreedToTerms] = useState(false)
     const [agreedToHealthData, setAgreedToHealthData] = useState(false)
     const setAuth = useStore((state) => state.setAuth)
@@ -25,7 +24,6 @@ export default function Login() {
             const data = await res.json()
             if (data.success) {
                 setStatus('success')
-                if (data.dev_link) setDevLink(data.dev_link)
             } else {
                 setStatus('error')
             }
@@ -45,13 +43,6 @@ export default function Login() {
                 <p style={{ fontSize: 15, color: '#64748b', lineHeight: 1.6 }}>
                     We sent a magic link to <strong>{email}</strong>. Click it to log in securely.
                 </p>
-
-                {devLink && (
-                    <div style={{ marginTop: 40, padding: 16, background: '#fffbeb', borderRadius: 12, border: '1px solid #fde68a', textAlign: 'left', wordBreak: 'break-all' }}>
-                        <p style={{ fontSize: 12, fontWeight: 700, color: '#b45309', marginBottom: 8 }}>DEV MODE LINK:</p>
-                        <a href={devLink} style={{ fontSize: 13, color: '#0369a1', textDecoration: 'underline' }}>{devLink}</a>
-                    </div>
-                )}
             </div>
         )
     }

@@ -88,8 +88,7 @@ app.post('/api/auth/send-magic-link', async (c) => {
 
   return c.json({ 
     success: true, 
-    message: 'Magic link generated', 
-    dev_link: !c.env.RESEND_API_KEY || c.env.RESEND_API_KEY === 'dummy' ? magicLink : undefined 
+    message: 'Magic link generated'
   })
 })
 
