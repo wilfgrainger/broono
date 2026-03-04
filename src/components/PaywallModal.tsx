@@ -30,7 +30,11 @@ export default function PaywallModal({ isOpen, onClose, featureName }: PaywallMo
             })
             const data = await res.json()
             if (data.url) {
-                window.location.href = data.url
+                if (data.url.startsWith('https://checkout.stripe.com/')) {
+                    window.location.href = data.url
+                } else {
+                    throw new Error('Invalid checkout URL returned from server')
+                }
             } else {
                 throw new Error(data.error || 'Failed to start checkout')
             }
