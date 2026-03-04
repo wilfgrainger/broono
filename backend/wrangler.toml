@@ -8,4 +8,4 @@ FRONTEND_URL = "http://localhost:5176"
 [[d1_databases]]
 binding = "DB"
 database_name = "broono-db"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "16c0b6bd-23d5-46a8-8083-491fedf3eb73"
