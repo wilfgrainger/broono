@@ -147,7 +147,8 @@ app.post('/api/auth/verify', async (c) => {
 // === PAYMENTS (STRIPE) ===
 
 // Middleware for JWT Verification
-const authMiddleware = async (c: any, next: any) => {
+import type { Context, Next } from 'hono'
+const authMiddleware = async (c: Context, next: Next) => {
   const authHeader = c.req.header('Authorization')
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return c.json({ error: 'Unauthorized' }, 401)
@@ -161,13 +162,13 @@ const authMiddleware = async (c: any, next: any) => {
     const { payload } = await jwtVerify(token, jwtSecret)
     c.set('user', payload)
     await next()
-  } catch (err) {
+  } catch {
     return c.json({ error: 'Invalid token' }, 401)
   }
 }
 
 app.delete('/api/user', authMiddleware, async (c) => {
-  const user = c.get('user') as any
+  const user = c.get('user') as { email?: string, id?: string } | undefined
 
   if (!user || !user.email) {
     return c.json({ error: 'Unauthorized' }, 401)
@@ -180,22 +181,22 @@ app.delete('/api/user', authMiddleware, async (c) => {
     await c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(user.id).run()
 
     return c.json({ success: true, message: 'Account deleted successfully' })
-  } catch (err: any) {
+  } catch (err) {
     console.error('Error deleting user', err)
     return c.json({ error: 'Internal server error' }, 500)
   }
 })
 
 app.post('/api/stripe/checkout', authMiddleware, async (c) => {
-  const user = c.get('user') as any
-  const { email } = await c.req.json()
+  const user = c.get('user') as { id?: string } | undefined
+  const { email } = await c.req.json<{ email: string }>()
   
   if (!c.env.STRIPE_SECRET_KEY) {
     throw new Error('STRIPE_SECRET_KEY environment variable is missing.')
   }
 
   const stripe = new Stripe(c.env.STRIPE_SECRET_KEY, {
-    apiVersion: '2025-02-24.acacia' as any
+    apiVersion: '2025-02-24.acacia' as Stripe.LatestApiVersion
   })
 
   // Set up the mock price ID if configuring locally
@@ -208,14 +209,15 @@ app.post('/api/stripe/checkout', authMiddleware, async (c) => {
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${c.env.FRONTEND_URL}/profile?checkout=success`,
       cancel_url: `${c.env.FRONTEND_URL}/profile?checkout=canceled`,
-      client_reference_id: user.id,
+      client_reference_id: user?.id,
       customer_email: email,
     })
 
     return c.json({ url: session.url })
-  } catch (err: any) {
-    console.error('Stripe error', err)
-    return c.json({ error: err.message }, 500)
+  } catch (err) {
+    const error = err as Error
+    console.error('Stripe error', error)
+    return c.json({ error: error.message }, 500)
   }
 })
 
@@ -225,7 +227,7 @@ app.post('/api/stripe/webhook', async (c) => {
   }
 
   const stripe = new Stripe(c.env.STRIPE_SECRET_KEY, {
-    apiVersion: '2025-02-24.acacia' as any
+    apiVersion: '2025-02-24.acacia' as Stripe.LatestApiVersion
   })
   const signature = c.req.header('stripe-signature')
   
@@ -239,9 +241,10 @@ app.post('/api/stripe/webhook', async (c) => {
       signature,
       c.env.STRIPE_WEBHOOK_SECRET
     )
-  } catch (err: any) {
-    console.error(`Webhook signature verification failed:`, err.message)
-    return c.json({ error: `Webhook Error: ${err.message}` }, 400)
+  } catch (err) {
+    const error = err as Error
+    console.error(`Webhook signature verification failed:`, error.message)
+    return c.json({ error: `Webhook Error: ${error.message}` }, 400)
   }
 
   // Handle the event
