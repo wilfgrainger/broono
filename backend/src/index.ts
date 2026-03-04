@@ -23,6 +23,21 @@ type Variables = {
 
 const app = new Hono<{ Bindings: Bindings, Variables: Variables }>()
 
+// Pre-computed hex strings for performance
+const byteToHex: string[] = new Array(256)
+for (let i = 0; i < 256; i++) {
+  byteToHex[i] = i.toString(16).padStart(2, '0')
+}
+
+function bufferToHex(buffer: Uint8Array | ArrayBuffer): string {
+  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer)
+  let hex = ''
+  for (let i = 0; i < bytes.length; i++) {
+    hex += byteToHex[bytes[i]]
+  }
+  return hex
+}
+
 // Enforce strict CORS for the Cloudflare Pages domain (and local dev)
 app.use('*', async (c, next) => {
   const corsMiddleware = cors({
@@ -48,11 +63,11 @@ app.post('/api/auth/send-magic-link', async (c) => {
   // Generate secure random token
   const tokenBytes = new Uint8Array(32)
   crypto.getRandomValues(tokenBytes)
-  const token = Array.from(tokenBytes, b => b.toString(16).padStart(2, '0')).join('')
+  const token = bufferToHex(tokenBytes)
 
   // Hash token for storage
   const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token))
-  const tokenHash = Array.from(new Uint8Array(hashBuffer), b => b.toString(16).padStart(2, '0')).join('')
+  const tokenHash = bufferToHex(hashBuffer)
 
   // Store in D1
   const id = crypto.randomUUID()
@@ -99,7 +114,7 @@ app.post('/api/auth/verify', async (c) => {
 
   // Hash the incoming token
   const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token))
-  const tokenHash = Array.from(new Uint8Array(hashBuffer), b => b.toString(16).padStart(2, '0')).join('')
+  const tokenHash = bufferToHex(hashBuffer)
 
   // Check magic link in D1
   const link = await c.env.DB.prepare(
