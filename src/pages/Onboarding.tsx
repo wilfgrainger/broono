@@ -3,6 +3,7 @@ import { useStore } from '../store'
 import type { MedicationName, WeightUnit, UserProfile } from '../store'
 import { ArrowRight, ArrowLeft, Check, Syringe, Target, CalendarDays, Activity } from 'lucide-react'
 import ReviewRow from '../components/ReviewRow'
+import Slide from '../components/Slide'
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -304,14 +305,6 @@ export default function Onboarding() {
                     </button>
                 )}
             </div>
-        </div>
-    )
-}
-
-function Slide({ children, transitionKey }: { children: React.ReactNode, transitionKey: string }) {
-    return (
-        <div key={transitionKey} className="slide-up" style={{ animation: 'slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards' }}>
-            {children}
         </div>
     )
 }
