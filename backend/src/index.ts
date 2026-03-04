@@ -23,17 +23,25 @@ type Variables = {
 
 const app = new Hono<{ Bindings: Bindings, Variables: Variables }>()
 
-// Pre-computed hex strings for performance
-const byteToHex: string[] = new Array(256)
-for (let i = 0; i < 256; i++) {
-  byteToHex[i] = i.toString(16).padStart(2, '0')
+// Pre-computed hex strings for performance (lazily initialized)
+let byteToHex: string[] | null = null
+
+function getByteToHex(): string[] {
+  if (!byteToHex) {
+    byteToHex = new Array(256)
+    for (let i = 0; i < 256; i++) {
+      byteToHex[i] = i.toString(16).padStart(2, '0')
+    }
+  }
+  return byteToHex
 }
 
 function bufferToHex(buffer: Uint8Array | ArrayBuffer): string {
   const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer)
+  const lookup = getByteToHex()
   let hex = ''
   for (let i = 0; i < bytes.length; i++) {
-    hex += byteToHex[bytes[i]]
+    hex += lookup[bytes[i]]
   }
   return hex
 }
