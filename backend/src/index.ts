@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import type { Context, Next } from 'hono'
 import { cors } from 'hono/cors'
 import { SignJWT, jwtVerify } from 'jose'
 import Stripe from 'stripe'
@@ -145,8 +146,6 @@ app.post('/api/auth/verify', async (c) => {
 })
 
 // === PAYMENTS (STRIPE) ===
-
-import type { Context, Next } from 'hono'
 
 // Middleware for JWT Verification
 const authMiddleware = async (c: Context, next: Next) => {
