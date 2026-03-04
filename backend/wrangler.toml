@@ -3,7 +3,7 @@ main = "src/index.ts"
 compatibility_date = "2024-12-18"
 
 [vars]
-FRONTEND_URL = "http://localhost:5176"
+FRONTEND_URL = "http://localhost:5173"
 
 [[d1_databases]]
 binding = "DB"
