@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import PaywallModal from './PaywallModal'
 import { useStore } from '../store'
 
@@ -9,7 +9,11 @@ vi.mock('../store', () => ({
 }))
 
 // Mock fetch globally
-global.fetch = vi.fn()
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+globalThis.fetch = vi.fn() as any
+
+const mockedUseStore = vi.mocked(useStore)
+const mockedFetch = vi.mocked(globalThis.fetch)
 
 describe('PaywallModal', () => {
     const mockOnClose = vi.fn()
@@ -19,15 +23,26 @@ describe('PaywallModal', () => {
         featureName: 'Test Feature'
     }
 
+    const originalLocation = window.location
+
     beforeEach(() => {
         vi.clearAllMocks()
         // Default store mock state
-        ;(useStore as unknown as any).mockImplementation((selector: any) =>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        mockedUseStore.mockImplementation((selector: (state: any) => any) =>
             selector({
                 authToken: 'test-token',
                 userEmail: 'test@example.com'
             })
         )
+    })
+
+    afterEach(() => {
+        // Restore window.location safely
+        Object.defineProperty(window, 'location', {
+            value: originalLocation,
+            writable: true
+        })
     })
 
     it('returns null when isOpen is false', () => {
@@ -51,14 +66,17 @@ describe('PaywallModal', () => {
 
     it('triggers fetch request and handles redirect on "Upgrade Now" click', async () => {
         // Mock window.location.href assignment
-        const originalLocation = window.location
-        delete (window as any).location
-        window.location = { ...originalLocation, href: '' } as any
+        // Cast to unknown then to Location to avoid TS error on delete
+        delete (window as unknown as { location?: Location }).location
+        Object.defineProperty(window, 'location', {
+            value: { ...originalLocation, href: '' },
+            writable: true
+        })
 
         const mockResponse = { url: 'https://checkout.stripe.com/test' }
-        ;(global.fetch as any).mockResolvedValueOnce({
+        mockedFetch.mockResolvedValueOnce({
             json: async () => mockResponse
-        })
+        } as unknown as Response)
 
         render(<PaywallModal {...defaultProps} />)
         const upgradeBtn = screen.getByText(/Upgrade Now/i)
@@ -66,7 +84,7 @@ describe('PaywallModal', () => {
         fireEvent.click(upgradeBtn)
 
         // Assert fetch was called correctly
-        expect(global.fetch).toHaveBeenCalledWith('http://localhost:8787/api/stripe/checkout', {
+        expect(mockedFetch).toHaveBeenCalledWith('http://localhost:8787/api/stripe/checkout', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -81,9 +99,6 @@ describe('PaywallModal', () => {
         await waitFor(() => {
             expect(window.location.href).toBe(mockResponse.url)
         })
-
-        // Restore window.location
-        window.location = originalLocation
     })
 
     it('handles errors gracefully and stops loading', async () => {
@@ -92,7 +107,8 @@ describe('PaywallModal', () => {
         // Mock alert
         const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {})
 
-        ;(global.fetch as any).mockRejectedValueOnce(new Error('Network error'))
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        mockedFetch.mockRejectedValueOnce(new Error('Network error') as any)
 
         render(<PaywallModal {...defaultProps} />)
         const upgradeBtn = screen.getByText(/Upgrade Now/i)
@@ -111,7 +127,8 @@ describe('PaywallModal', () => {
     })
 
     it('does not make a request if there is no authToken', async () => {
-        ;(useStore as unknown as any).mockImplementation((selector: any) =>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        mockedUseStore.mockImplementation((selector: (state: any) => any) =>
             selector({
                 authToken: null,
                 userEmail: 'test@example.com'
@@ -123,6 +140,6 @@ describe('PaywallModal', () => {
 
         fireEvent.click(upgradeBtn)
 
-        expect(global.fetch).not.toHaveBeenCalled()
+        expect(mockedFetch).not.toHaveBeenCalled()
     })
 })
