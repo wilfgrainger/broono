@@ -7,9 +7,16 @@ export default function Progress() {
     const stats = useMemo(() => {
         if (logs.length === 0) return null
 
-        const weights = logs.map((l) => l.weight)
-        const maxW = Math.max(...weights) + 3
-        const minW = Math.min(...weights) - 3
+        const { min, max } = logs.reduce(
+            (acc, l) => {
+                acc.min = Math.min(acc.min, l.weight)
+                acc.max = Math.max(acc.max, l.weight)
+                return acc
+            },
+            { min: Infinity, max: -Infinity }
+        )
+        const maxW = max + 3
+        const minW = min - 3
         const range = maxW - minW
 
         const startWeight = logs[logs.length - 1].weight
