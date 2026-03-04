@@ -1,3 +1,4 @@
+import type { Context, Next } from 'hono'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { SignJWT, jwtVerify } from 'jose'
