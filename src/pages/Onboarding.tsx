@@ -316,7 +316,7 @@ function Slide({ children, transitionKey }: { children: React.ReactNode, transit
     )
 }
 
-function PillSelect({ active, onClick, children, style = {} }: any) {
+function PillSelect({ active, onClick, children, style = {} }: { active: boolean, onClick: () => void, children: React.ReactNode, style?: React.CSSProperties }) {
     return (
         <button
             onClick={onClick}
