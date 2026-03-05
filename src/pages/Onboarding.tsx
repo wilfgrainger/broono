@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useStore } from '../store'
 import type { MedicationName, WeightUnit, UserProfile } from '../store'
-import { ArrowRight, ArrowLeft, Check, Syringe, Target, CalendarDays, Activity } from 'lucide-react'
+import { ArrowRight, ArrowLeft, Check, Syringe, Target, CalendarDays, Activity, Lock } from 'lucide-react'
 import ReviewRow from '../components/ReviewRow'
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -264,6 +264,22 @@ export default function Onboarding() {
                         <h2 style={{ fontSize: '1.5rem', marginBottom: '8px' }}>You're all set!</h2>
                         <p style={{ color: 'var(--text-light)', marginBottom: '32px' }}>Review your details below.</p>
 
+                        <div style={{
+                            background: '#f0fdf4',
+                            border: '1px solid #bbf7d0',
+                            borderRadius: '12px',
+                            padding: '12px 16px',
+                            marginBottom: '24px',
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: '12px'
+                        }}>
+                            <Lock size={18} color="#16a34a" style={{ marginTop: '2px', flexShrink: 0 }} />
+                            <p style={{ fontSize: 13, color: '#166534', lineHeight: 1.5, margin: 0 }}>
+                                <strong>Your data is private.</strong> All health information entered here and in the app is saved <em>locally on your device</em> and is never sent to our servers.
+                            </p>
+                        </div>
+
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                             <ReviewRow label="Medication" value={`${localProfile.medicationName} (${localProfile.dose})`} />
                             <ReviewRow label="Start Weight" value={`${localProfile.startWeight} ${localProfile.weightUnit}`} />
@@ -316,7 +332,7 @@ function Slide({ children, transitionKey }: { children: React.ReactNode, transit
     )
 }
 
-function PillSelect({ active, onClick, children, style = {} }: any) {
+function PillSelect({ active, onClick, children, style = {} }: { active: boolean, onClick: () => void, children: React.ReactNode, style?: React.CSSProperties }) {
     return (
         <button
             onClick={onClick}
