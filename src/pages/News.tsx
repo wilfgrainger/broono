@@ -71,16 +71,21 @@ export default function NewsPage() {
 
         async function fetchNews() {
             try {
-                const query = encodeURIComponent(`"${medicationName}" OR GLP-1`)
+                // Ensure specific medications are always included in the news feed
+                const coreTerms = ['"GLP-1"', '"Ozempic"', '"Wegovy"', '"Mounjaro"']
+                if (!coreTerms.includes(`"${medicationName}"`)) {
+                    coreTerms.unshift(`"${medicationName}"`)
+                }
+                const query = encodeURIComponent(coreTerms.join(' OR '))
                 const rssUrl = `https://news.google.com/rss/search?q=${query}&hl=en-US&gl=US&ceid=US:en`
-                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(rssUrl)}`
+                const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(rssUrl)}`
 
                 const response = await fetch(proxyUrl)
                 if (!response.ok) throw new Error('Network response was not ok')
-                const data = await response.json()
+                const xmlText = await response.text()
 
                 const parser = new DOMParser()
-                const xmlDoc = parser.parseFromString(data.contents, "text/xml")
+                const xmlDoc = parser.parseFromString(xmlText, "text/xml")
 
                 const items = Array.from(xmlDoc.querySelectorAll("item")).slice(0, 10)
 
