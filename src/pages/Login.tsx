@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Lock } from 'lucide-react'
 import { useStore } from '../store'
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787'
 
@@ -60,6 +61,22 @@ export default function Login() {
             </div>
 
             <div className="card" style={{ width: '100%', maxWidth: 400 }}>
+                <div style={{
+                    background: '#f0fdf4',
+                    border: '1px solid #bbf7d0',
+                    borderRadius: '12px',
+                    padding: '12px 16px',
+                    marginBottom: '20px',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '12px'
+                }}>
+                    <Lock size={18} color="#16a34a" style={{ marginTop: '2px', flexShrink: 0 }} />
+                    <p style={{ fontSize: 13, color: '#166534', lineHeight: 1.5, margin: 0 }}>
+                        <strong>100% Private.</strong> Your health data, weight, and logs are stored <em>locally on your device only</em>. We never see or store your health data on our servers.
+                    </p>
+                </div>
+
                 <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                     <div>
                         <label htmlFor="email" style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#334155', marginBottom: 8 }}>
@@ -94,7 +111,7 @@ export default function Login() {
                                 onChange={(e) => setAgreedToHealthData(e.target.checked)}
                                 style={{ marginTop: 2, accentColor: '#0f172a' }}
                             />
-                            <span>I consent to the processing of my health data for the purposes of providing this service (UK GDPR compliance).</span>
+                            <span>I understand that my health data is stored locally on my device and I consent to this data processing to use the app (UK GDPR compliance).</span>
                         </label>
                     </div>
 

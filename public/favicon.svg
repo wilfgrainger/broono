@@ -1,4 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-  <rect width="64" height="64" rx="16" fill="#005b7f"/>
+  <defs>
+    <linearGradient id="nightGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#3730a3" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#nightGradient)"/>
+  <circle cx="45" cy="18" r="8" fill="white" opacity="0.8"/>
+  <circle cx="40" cy="14" r="8" fill="url(#nightGradient)" opacity="1"/>
   <text x="12" y="50" font-family="Georgia, serif" font-style="italic" font-size="48" fill="white">b</text>
 </svg>

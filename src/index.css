@@ -8,10 +8,10 @@
 }
 
 :root {
-  --brand: #005b7f;
-  --brand-dark: #003B52;
-  --brand-mid: #005272;
-  --brand-light: #00688F;
+  --brand: #6366f1;
+  --brand-dark: #3730a3;
+  --brand-mid: #4f46e5;
+  --brand-light: #818cf8;
   --bg: #F8FAFC;
   --surface: #ffffff;
   --text-primary: #0f172a;
@@ -22,9 +22,9 @@
   --radius-btn: 1rem;
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
   --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
-  --shadow-brand: 0 8px 32px rgba(0,91,127,0.18);
+  --shadow-brand: 0 8px 32px rgba(99,102,241,0.18);
   --primary: var(--brand);
-  --primary-light: rgba(0, 91, 127, 0.08);
+  --primary-light: rgba(99, 102, 241, 0.08);
   --card-bg: var(--surface);
 }
 
@@ -90,21 +90,39 @@ body {
 .logo-icon {
   width: 40px;
   height: 40px;
-  background: rgba(0,91,127,0.08);
-  border: 1px solid rgba(0,91,127,0.15);
+  background: linear-gradient(135deg, var(--text-primary) 0%, var(--brand-dark) 100%);
+  border: 1px solid rgba(255,255,255,0.1);
   border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(15,23,42,0.15);
+}
+
+.logo-icon::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  width: 14px;
+  height: 14px;
+  background: transparent;
+  border-radius: 50%;
+  box-shadow: -4px 4px 0 -2px rgba(255,255,255,0.8);
+  transform: rotate(-15deg);
 }
 
 .logo-b {
   font-family: 'DM Serif Display', Georgia, serif;
   font-style: italic;
   font-size: 28px;
-  color: var(--brand);
+  color: #ffffff;
   line-height: 1;
   padding-bottom: 2px;
+  position: relative;
+  z-index: 1;
 }
 
 .logo-text {
