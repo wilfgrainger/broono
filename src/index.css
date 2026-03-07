@@ -552,3 +552,29 @@ input[type=range]::-moz-range-thumb {
 .space-y-5 > * + * { margin-top: 20px; }
 .space-y-6 > * + * { margin-top: 24px; }
 .space-y-8 > * + * { margin-top: 32px; }
+
+
+@media (min-width: 600px) {
+  body {
+    background-color: #e2e8f0;
+    background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+    background-size: 24px 24px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  #root {
+    align-items: center;
+    padding: 24px;
+  }
+  .app-shell {
+    height: calc(100vh - 48px);
+    max-height: 850px;
+    border-radius: 36px;
+    border: 8px solid #ffffff;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  }
+  .bottom-nav {
+    border-radius: 0 0 28px 28px;
+  }
+}
