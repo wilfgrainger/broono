@@ -37,10 +37,10 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
             {/* Weight Card */}
             <div className="card">
-                <p style={{ fontSize: 13, fontWeight: 600, color: '#94a3b8', marginBottom: 4 }}>Current Weight</p>
+                <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>Current Weight</p>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
                     <span className="weight-display">{currentWeightStr}</span>
-                    <span style={{ fontSize: 16, fontWeight: 600, color: '#94a3b8' }}>{profile.weightUnit}</span>
+                    <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-muted)' }}>{profile.weightUnit}</span>
                 </div>
                 <div className="badge-teal">
                     <TrendingDown size={13} strokeWidth={3} />
@@ -93,12 +93,12 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                             </span>
                             Protein
                         </span>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: '#94a3b8' }}>—  / {profile.proteinGoalG}g</span>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }}>—  / {profile.proteinGoalG}g</span>
                     </div>
                     <div className="progress-track">
                         <div className="progress-fill" style={{ width: `0%`, background: '#fb7185' }} />
                     </div>
-                    <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 6, fontWeight: 500 }}>
+                    <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6, fontWeight: 500 }}>
                         Log meals to track protein
                     </p>
                 </div>
@@ -112,7 +112,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                             </span>
                             Water
                         </span>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: '#94a3b8' }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }}>
                             {waterGlasses} / {profile.waterGoalGlasses} glasses
                         </span>
                     </div>
@@ -121,23 +121,9 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                     </div>
                     <button
                         id="add-water-glass-btn"
+                        className="water-add-btn"
                         onClick={addWaterGlass}
                         disabled={waterGlasses >= profile.waterGoalGlasses}
-                        style={{
-                            width: '100%',
-                            background: '#f8fafc',
-                            border: '1px solid #f1f5f9',
-                            borderRadius: 14,
-                            padding: '14px',
-                            fontFamily: 'Inter, sans-serif',
-                            fontSize: 14,
-                            fontWeight: 700,
-                            color: waterGlasses >= profile.waterGoalGlasses ? '#94a3b8' : '#334155',
-                            cursor: waterGlasses >= profile.waterGoalGlasses ? 'default' : 'pointer',
-                            transition: 'background .15s',
-                        }}
-                        onMouseEnter={(e) => { if (waterGlasses < profile.waterGoalGlasses) (e.target as HTMLElement).style.background = '#f1f5f9' }}
-                        onMouseLeave={(e) => { (e.target as HTMLElement).style.background = '#f8fafc' }}
                     >
                         {waterGlasses >= profile.waterGoalGlasses ? '✓ Goal Reached!' : '+ Add Glass'}
                     </button>
@@ -148,28 +134,13 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             <button
                 onClick={() => onNavigate('checkin')}
                 id="quick-log-btn"
-                style={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '20px 24px',
-                    background: 'white',
-                    border: '1px solid #f1f5f9',
-                    borderRadius: 'var(--radius-card)',
-                    cursor: 'pointer',
-                    boxShadow: 'var(--shadow-sm)',
-                    fontFamily: 'Inter, sans-serif',
-                    transition: 'box-shadow .15s',
-                }}
-                onMouseEnter={(e) => { (e.currentTarget).style.boxShadow = 'var(--shadow-md)' }}
-                onMouseLeave={(e) => { (e.currentTarget).style.boxShadow = 'var(--shadow-sm)' }}
+                className="quick-log-btn"
             >
                 <div style={{ textAlign: 'left' }}>
-                    <p style={{ fontSize: 15, fontWeight: 700, color: '#0f172a' }}>Log this week</p>
-                    <p style={{ fontSize: 13, color: '#94a3b8', marginTop: 2, fontWeight: 500 }}>Weight + injection site</p>
+                    <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>Log this week</p>
+                    <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2, fontWeight: 500 }}>Weight + injection site</p>
                 </div>
-                <div style={{ background: '#0f172a', borderRadius: 12, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div className="icon-wrap">
                     <Plus size={18} color="white" strokeWidth={2.5} />
                 </div>
             </button>
