@@ -36,7 +36,7 @@ app.use('*', async (c, next) => {
   return await corsMiddleware(c, next)
 })
 
-app.get('/', (c) => c.text('Broono API Gateway - Active'))
+app.get('/', (c) => c.json({ status: 'active', message: 'Broono API Gateway - Active' }))
 
 // === AUTHENTICATION ===
 app.post('/api/auth/send-magic-link', async (c) => {
