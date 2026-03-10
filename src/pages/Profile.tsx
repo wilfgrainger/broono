@@ -73,6 +73,7 @@ export default function ProfilePage() {
                             key={m}
                             id={`med-${m.toLowerCase()}`}
                             onClick={() => updateProfile({ medicationName: m })}
+                            aria-pressed={profile.medicationName === m}
                             className={`selector-btn ${profile.medicationName === m ? 'selected' : ''}`}
                         >
                             {m}
@@ -105,6 +106,7 @@ export default function ProfilePage() {
                             key={day}
                             id={`day-${day.toLowerCase()}`}
                             onClick={() => updateProfile({ injectionDayOfWeek: idx })}
+                            aria-pressed={profile.injectionDayOfWeek === idx}
                             style={{
                                 padding: '10px 0',
                                 borderRadius: 10,
@@ -171,6 +173,7 @@ export default function ProfilePage() {
                             key={unit}
                             id={`unit-${unit}`}
                             onClick={() => updateProfile({ weightUnit: unit })}
+                            aria-pressed={profile.weightUnit === unit}
                             className={`selector-btn ${profile.weightUnit === unit ? 'selected' : ''}`}
                         >
                             {unit}

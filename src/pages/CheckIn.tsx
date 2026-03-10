@@ -61,7 +61,7 @@ export default function CheckIn({ onDone }: CheckInProps) {
 
             {/* Weight input */}
             <div className="card" style={{ textAlign: 'center', padding: '32px 24px' }}>
-                <label htmlFor="weight-input" style={{ display: 'block', fontSize: 11, fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 16 }}>
+                <label htmlFor="weight-input" style={{ display: 'block', fontSize: 11, fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 16 }}>
                     Current Weight
                 </label>
                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'baseline', gap: 8 }}>
@@ -81,24 +81,25 @@ export default function CheckIn({ onDone }: CheckInProps) {
                             border: 'none',
                             outline: 'none',
                             background: 'transparent',
-                            color: weight ? '#0f172a' : '#e2e8f0',
+                            color: weight ? 'var(--text-primary)' : 'var(--border)',
                             fontFamily: 'Inter, sans-serif',
+                            transition: 'color 0.2s',
                         }}
                     />
-                    <span style={{ fontSize: 22, fontWeight: 700, color: '#94a3b8' }}>lbs</span>
+                    <span style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-muted)' }}>lbs</span>
                 </div>
             </div>
 
             {/* Injection site */}
             <div className="card">
                 <div style={{
-                    display: 'flex', alignItems: 'flex-start', gap: 12, background: '#f8fafc',
+                    display: 'flex', alignItems: 'flex-start', gap: 12, background: 'var(--bg)',
                     borderRadius: 14, padding: 16, marginBottom: 20
                 }}>
-                    <AlertCircle size={18} color="#64748b" strokeWidth={2} style={{ flexShrink: 0, marginTop: 2 }} />
+                    <AlertCircle size={18} color="var(--text-secondary)" strokeWidth={2} style={{ flexShrink: 0, marginTop: 2 }} />
                     <div>
-                        <p style={{ fontSize: 13, fontWeight: 700, color: '#334155' }}>Site Rotation</p>
-                        <p style={{ fontSize: 12, color: '#64748b', marginTop: 4, lineHeight: 1.5 }}>
+                        <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Site Rotation</p>
+                        <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4, lineHeight: 1.5 }}>
                             Last injection: <strong>{lastSite || 'Not recorded'}</strong>. Choose a different area.
                         </p>
                     </div>
@@ -132,10 +133,10 @@ export default function CheckIn({ onDone }: CheckInProps) {
                             style={{
                                 padding: '10px 18px',
                                 fontSize: 13,
-                                background: symptom === sym ? 'var(--brand)' : '#f8fafc',
-                                color: symptom === sym ? 'white' : '#64748b',
-                                border: symptom === sym ? '1px solid var(--brand)' : '1px solid #f1f5f9',
-                                boxShadow: symptom === sym ? '0 4px 14px rgba(0,91,127,0.2)' : 'none',
+                                background: symptom === sym ? 'var(--primary)' : 'var(--bg)',
+                                color: symptom === sym ? 'white' : 'var(--text-secondary)',
+                                border: symptom === sym ? '1px solid var(--primary)' : '1px solid var(--border)',
+                                boxShadow: symptom === sym ? '0 4px 14px rgba(99, 102, 241, 0.2)' : 'none',
                             }}
                         >
                             {sym}
@@ -146,8 +147,9 @@ export default function CheckIn({ onDone }: CheckInProps) {
 
             {/* Notes */}
             <div className="card" style={{ padding: '20px 24px' }}>
-                <p style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>Notes (optional)</p>
+                <label htmlFor="notes-input" style={{ display: 'block', fontSize: 14, fontWeight: 700, marginBottom: 12 }}>Notes (optional)</label>
                 <textarea
+                    id="notes-input"
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="How are you feeling this week?"
@@ -160,7 +162,7 @@ export default function CheckIn({ onDone }: CheckInProps) {
                         fontFamily: 'Inter, sans-serif',
                         fontSize: 14,
                         resize: 'none',
-                        color: '#334155',
+                        color: 'var(--text-primary)',
                         lineHeight: 1.6,
                     }}
                 />

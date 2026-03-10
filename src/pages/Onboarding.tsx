@@ -132,8 +132,9 @@ export default function Onboarding() {
                             ))}
                         </div>
 
-                        <h3 style={{ fontSize: '1.1rem', marginBottom: '12px' }}>Current Dose</h3>
+                        <label htmlFor="dose-input" style={{ display: 'block', fontSize: '1.1rem', marginBottom: '12px', fontWeight: 'bold' }}>Current Dose</label>
                         <input
+                            id="dose-input"
                             type="text"
                             className="form-input"
                             value={localProfile.dose}
@@ -162,9 +163,10 @@ export default function Onboarding() {
                             ))}
                         </div>
 
-                        <h3 style={{ fontSize: '1.1rem', marginBottom: '12px' }}>Starting Weight</h3>
+                        <label htmlFor="start-weight-input" style={{ display: 'block', fontSize: '1.1rem', marginBottom: '12px', fontWeight: 'bold' }}>Starting Weight</label>
                         <div style={{ position: 'relative' }}>
                             <input
+                                id="start-weight-input"
                                 type="number"
                                 className="form-input"
                                 style={{ paddingRight: '48px' }}
@@ -200,10 +202,11 @@ export default function Onboarding() {
                             marginBottom: '16px'
                         }}>
                             <h3 style={{ margin: '0 0 12px 0', fontSize: '1rem', display: 'flex', justifyContent: 'space-between' }}>
-                                <span>Hydration Goal</span>
+                                <label htmlFor="water-goal-input">Hydration Goal</label>
                                 <span style={{ color: 'var(--primary)' }}>{localProfile.waterGoalGlasses} glasses</span>
                             </h3>
                             <input
+                                id="water-goal-input"
                                 type="range"
                                 min="1"
                                 max="20"
@@ -221,10 +224,11 @@ export default function Onboarding() {
                             padding: '20px'
                         }}>
                             <h3 style={{ margin: '0 0 12px 0', fontSize: '1rem', display: 'flex', justifyContent: 'space-between' }}>
-                                <span>Protein Goal</span>
+                                <label htmlFor="protein-goal-input">Protein Goal</label>
                                 <span style={{ color: 'var(--primary)' }}>{localProfile.proteinGoalG}g</span>
                             </h3>
                             <input
+                                id="protein-goal-input"
                                 type="range"
                                 min="30"
                                 max="250"
@@ -335,6 +339,7 @@ function Slide({ children, transitionKey }: { children: React.ReactNode, transit
 function PillSelect({ active, onClick, children, style = {} }: { active: boolean, onClick: () => void, children: React.ReactNode, style?: React.CSSProperties }) {
     return (
         <button
+            aria-pressed={active}
             onClick={onClick}
             style={{
                 padding: '16px 20px',
