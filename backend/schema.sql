@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS users (
   
   -- Subscription State
   stripe_customer_id TEXT,
+  google_play_token TEXT,
   subscription_status TEXT DEFAULT 'free', -- 'free', 'pro', 'canceled'
   
   -- Profile State

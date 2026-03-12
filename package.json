@@ -9,9 +9,19 @@
     "lint": "eslint .",
     "test": "node --experimental-strip-types --test src/utils/medication.node-test.ts",
     "preview": "pnpm run build && wrangler dev",
-    "deploy": "pnpm run build && wrangler deploy"
+    "deploy": "pnpm run build && wrangler deploy",
+    "android:sync": "npx cap sync android",
+    "android:open": "npx cap open android",
+    "android:build": "npm run build && npx cap sync android",
+    "android:run": "npm run build && npx cap sync android && npx cap run android"
   },
   "dependencies": {
+    "@capacitor/app": "^8.0.1",
+    "@capacitor/core": "^8.2.0",
+    "@capacitor/haptics": "^8.0.1",
+    "@capacitor/keyboard": "^8.0.1",
+    "@capacitor/status-bar": "^8.0.1",
+    "@capgo/native-purchases": "^8.2.2",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.576.0",
@@ -21,6 +31,8 @@
     "zustand": "^5.0.11"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.2.0",
+    "@capacitor/cli": "^8.2.0",
     "@cloudflare/vite-plugin": "^1.26.0",
     "@eslint/js": "^9.39.1",
     "@types/node": "^24.10.1",

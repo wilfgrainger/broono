@@ -11,6 +11,8 @@ type Bindings = {
   STRIPE_SECRET_KEY: string
   STRIPE_WEBHOOK_SECRET: string
   STRIPE_PRO_PRICE_ID: string
+  GOOGLE_PLAY_PACKAGE_NAME: string
+  GOOGLE_PLAY_SERVICE_ACCOUNT_KEY: string
 }
 
 type Variables = {
@@ -282,6 +284,148 @@ app.post('/api/stripe/webhook', async (c) => {
   }
 
   return c.json({ received: true })
+})
+
+// === GOOGLE PLAY BILLING (Android) ===
+
+/**
+ * Verify a Google Play subscription purchase.
+ * The client sends the purchaseToken after a successful Google Play purchase.
+ * We verify it with Google's Android Publisher API and update the user's status.
+ */
+app.post('/api/play/verify-subscription', authMiddleware, async (c) => {
+  const user = c.get('user') as { id: string; email: string; sub_status: string }
+  const { purchaseToken, productId } = await c.req.json()
+
+  if (!purchaseToken || !productId) {
+    return c.json({ error: 'Missing purchaseToken or productId' }, 400)
+  }
+
+  const packageName = c.env.GOOGLE_PLAY_PACKAGE_NAME || 'app.broono.android'
+
+  try {
+    // Get an access token from the service account credentials
+    const serviceAccountKey = c.env.GOOGLE_PLAY_SERVICE_ACCOUNT_KEY
+    if (!serviceAccountKey) {
+      // In development, auto-approve
+      await c.env.DB.prepare(
+        'UPDATE users SET subscription_status = ? WHERE id = ?'
+      ).bind('pro', user.id).run()
+      return c.json({ success: true, status: 'pro', verified: false })
+    }
+
+    const keyData = JSON.parse(serviceAccountKey)
+
+    // Create JWT for Google OAuth2
+    const now = Math.floor(Date.now() / 1000)
+    const jwtSecret = new TextEncoder().encode(keyData.private_key)
+    const googleJwt = await new SignJWT({
+      iss: keyData.client_email,
+      scope: 'https://www.googleapis.com/auth/androidpublisher',
+      aud: 'https://oauth2.googleapis.com/token',
+      iat: now,
+      exp: now + 3600,
+    })
+      .setProtectedHeader({ alg: 'RS256', typ: 'JWT' })
+      .sign(jwtSecret)
+
+    // Exchange JWT for access token
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${googleJwt}`,
+    })
+    const tokenData = await tokenRes.json() as { access_token: string }
+
+    // Verify the subscription with Google Play Developer API
+    const verifyUrl = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${packageName}/purchases/subscriptionsv2/tokens/${purchaseToken}`
+    const verifyRes = await fetch(verifyUrl, {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` },
+    })
+    const purchase = await verifyRes.json() as {
+      subscriptionState: string
+      lineItems?: Array<{ productId: string; expiryTime: string }>
+    }
+
+    if (!verifyRes.ok) {
+      return c.json({ error: 'Failed to verify purchase with Google' }, 400)
+    }
+
+    // Check subscription state
+    const isActive = purchase.subscriptionState === 'SUBSCRIPTION_STATE_ACTIVE' ||
+                     purchase.subscriptionState === 'SUBSCRIPTION_STATE_IN_GRACE_PERIOD'
+    const newStatus = isActive ? 'pro' : 'free'
+
+    await c.env.DB.prepare(
+      'UPDATE users SET subscription_status = ?, google_play_token = ? WHERE id = ?'
+    ).bind(newStatus, purchaseToken, user.id).run()
+
+    return c.json({ success: true, status: newStatus, verified: true })
+  } catch (err: unknown) {
+    const error = err as Error
+    console.error('Google Play verification error:', error)
+    return c.json({ error: error.message }, 500)
+  }
+})
+
+/**
+ * Google Play Real-Time Developer Notifications (RTDN) webhook.
+ * Google sends push notifications when subscription state changes.
+ */
+app.post('/api/play/webhook', async (c) => {
+  try {
+    const body = await c.req.json()
+    const { message } = body
+
+    if (!message?.data) {
+      return c.json({ error: 'Invalid notification' }, 400)
+    }
+
+    // Decode the base64-encoded notification data
+    const decodedData = atob(message.data)
+    const notification = JSON.parse(decodedData) as {
+      subscriptionNotification?: {
+        notificationType: number
+        purchaseToken: string
+        subscriptionId: string
+      }
+    }
+
+    if (notification.subscriptionNotification) {
+      const { notificationType, purchaseToken } = notification.subscriptionNotification
+
+      // Map notification type to subscription status
+      // See: https://developer.android.com/google/play/billing/rtdn-reference
+      let newStatus: string
+      switch (notificationType) {
+        case 1:  // SUBSCRIPTION_RECOVERED
+        case 2:  // SUBSCRIPTION_RENEWED
+        case 4:  // SUBSCRIPTION_PURCHASED
+        case 7:  // SUBSCRIPTION_RESTARTED
+          newStatus = 'pro'
+          break
+        case 3:  // SUBSCRIPTION_CANCELED
+        case 5:  // SUBSCRIPTION_ON_HOLD
+        case 10: // SUBSCRIPTION_PAUSED
+        case 12: // SUBSCRIPTION_EXPIRED
+        case 13: // SUBSCRIPTION_REVOKED
+          newStatus = 'free'
+          break
+        default:
+          newStatus = 'free'
+      }
+
+      // Update user status by their stored Google Play token
+      await c.env.DB.prepare(
+        'UPDATE users SET subscription_status = ? WHERE google_play_token = ?'
+      ).bind(newStatus, purchaseToken).run()
+    }
+
+    return c.json({ received: true })
+  } catch (err: unknown) {
+    console.error('Play webhook error:', err)
+    return c.json({ error: 'Internal server error' }, 500)
+  }
 })
 
 export default app
