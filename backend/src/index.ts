@@ -13,6 +13,7 @@ type Bindings = {
   STRIPE_PRO_PRICE_ID: string
   GOOGLE_PLAY_PACKAGE_NAME: string
   GOOGLE_PLAY_SERVICE_ACCOUNT_KEY: string
+  GOOGLE_PLAY_WEBHOOK_TOKEN: string
 }
 
 type Variables = {
@@ -288,6 +289,9 @@ app.post('/api/stripe/webhook', async (c) => {
 
 // === GOOGLE PLAY BILLING (Android) ===
 
+// Allowed product IDs for subscription verification
+const ALLOWED_PRODUCT_IDS = ['broono_pro_monthly']
+
 /**
  * Verify a Google Play subscription purchase.
  * The client sends the purchaseToken after a successful Google Play purchase.
@@ -301,17 +305,22 @@ app.post('/api/play/verify-subscription', authMiddleware, async (c) => {
     return c.json({ error: 'Missing purchaseToken or productId' }, 400)
   }
 
+  // Validate purchaseToken format (alphanumeric with dots, hyphens, underscores)
+  if (typeof purchaseToken !== 'string' || !/^[a-zA-Z0-9._-]+$/.test(purchaseToken)) {
+    return c.json({ error: 'Invalid purchaseToken format' }, 400)
+  }
+
+  // Validate productId against allowlist
+  if (!ALLOWED_PRODUCT_IDS.includes(productId)) {
+    return c.json({ error: 'Invalid productId' }, 400)
+  }
+
   const packageName = c.env.GOOGLE_PLAY_PACKAGE_NAME || 'app.broono.android'
 
   try {
-    // Get an access token from the service account credentials
     const serviceAccountKey = c.env.GOOGLE_PLAY_SERVICE_ACCOUNT_KEY
     if (!serviceAccountKey) {
-      // In development, auto-approve
-      await c.env.DB.prepare(
-        'UPDATE users SET subscription_status = ? WHERE id = ?'
-      ).bind('pro', user.id).run()
-      return c.json({ success: true, status: 'pro', verified: false })
+      return c.json({ error: 'Google Play verification is not configured' }, 503)
     }
 
     const keyData = JSON.parse(serviceAccountKey)
@@ -338,7 +347,7 @@ app.post('/api/play/verify-subscription', authMiddleware, async (c) => {
     const tokenData = await tokenRes.json() as { access_token: string }
 
     // Verify the subscription with Google Play Developer API
-    const verifyUrl = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${packageName}/purchases/subscriptionsv2/tokens/${purchaseToken}`
+    const verifyUrl = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${packageName}/purchases/subscriptionsv2/tokens/${encodeURIComponent(purchaseToken)}`
     const verifyRes = await fetch(verifyUrl, {
       headers: { Authorization: `Bearer ${tokenData.access_token}` },
     })
@@ -364,20 +373,33 @@ app.post('/api/play/verify-subscription', authMiddleware, async (c) => {
   } catch (err: unknown) {
     const error = err as Error
     console.error('Google Play verification error:', error)
-    return c.json({ error: error.message }, 500)
+    return c.json({ error: 'Verification failed' }, 500)
   }
 })
 
 /**
  * Google Play Real-Time Developer Notifications (RTDN) webhook.
- * Google sends push notifications when subscription state changes.
+ * Google sends push notifications via Cloud Pub/Sub when subscription state changes.
+ *
+ * Security: This endpoint verifies the notification came from Google by:
+ * 1. Checking the bearer token matches our configured webhook secret
+ * 2. Validating the notification structure before processing
  */
 app.post('/api/play/webhook', async (c) => {
+  // Verify the webhook bearer token (configured in Pub/Sub push subscription)
+  const authHeader = c.req.header('Authorization')
+  const expectedToken = c.env.GOOGLE_PLAY_WEBHOOK_TOKEN
+  if (expectedToken) {
+    if (!authHeader || authHeader !== `Bearer ${expectedToken}`) {
+      return c.json({ error: 'Unauthorized' }, 401)
+    }
+  }
+
   try {
     const body = await c.req.json()
     const { message } = body
 
-    if (!message?.data) {
+    if (!message?.data || typeof message.data !== 'string') {
       return c.json({ error: 'Invalid notification' }, 400)
     }
 
@@ -393,6 +415,11 @@ app.post('/api/play/webhook', async (c) => {
 
     if (notification.subscriptionNotification) {
       const { notificationType, purchaseToken } = notification.subscriptionNotification
+
+      // Validate purchaseToken format before using in query
+      if (!purchaseToken || typeof purchaseToken !== 'string' || !/^[a-zA-Z0-9._-]+$/.test(purchaseToken)) {
+        return c.json({ error: 'Invalid purchase token' }, 400)
+      }
 
       // Map notification type to subscription status
       // See: https://developer.android.com/google/play/billing/rtdn-reference

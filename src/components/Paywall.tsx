@@ -46,7 +46,7 @@ export default function Paywall() {
                     body: JSON.stringify({ email: userEmail }),
                 })
                 const data = await res.json()
-                if (data.url) {
+                if (data.url && typeof data.url === 'string' && data.url.startsWith('https://')) {
                     window.location.href = data.url
                 } else {
                     setError('Failed to start checkout')
