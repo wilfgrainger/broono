@@ -1,4 +1,5 @@
 import { useStore, type MedicationName } from '../store'
+import { isNativePlatform, MONTHLY_PRICE, TRIAL_DAYS } from '../services/billing'
 
 const MEDICATIONS: MedicationName[] = ['Zepbound', 'Mounjaro', 'Wegovy', 'Ozempic']
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787'
@@ -12,6 +13,7 @@ export default function ProfilePage() {
     const updateProfile = useStore((s) => s.updateProfile)
     const logout = useStore((s) => s.logout)
     const authToken = useStore((s) => s.authToken)
+    const subscriptionStatus = useStore((s) => s.subscriptionStatus)
 
     const handleExport = () => {
         // Exporting data logic
@@ -182,6 +184,52 @@ export default function ProfilePage() {
                 </div>
             </div>
 
+            {/* Subscription */}
+            <div className="card">
+                <p style={{ fontSize: 14, fontWeight: 700, marginBottom: 16 }}>Subscription</p>
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '12px 16px',
+                    background: subscriptionStatus === 'pro' ? '#f0fdf4' : '#fff7ed',
+                    borderRadius: 10,
+                    border: `1px solid ${subscriptionStatus === 'pro' ? '#bbf7d0' : '#fed7aa'}`,
+                }}>
+                    <div>
+                        <p style={{ fontSize: 14, fontWeight: 700, color: subscriptionStatus === 'pro' ? '#166534' : '#9a3412' }}>
+                            {subscriptionStatus === 'pro' ? 'Broono Pro' : 'Free Plan'}
+                        </p>
+                        <p style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+                            {subscriptionStatus === 'pro'
+                                ? `${MONTHLY_PRICE}/month · Active`
+                                : `${TRIAL_DAYS}-day trial · ${MONTHLY_PRICE}/month`}
+                        </p>
+                    </div>
+                    {isNativePlatform() && (
+                        <button
+                            onClick={() => {
+                                // Deep link to Google Play subscription management
+                                window.open('https://play.google.com/store/account/subscriptions', '_blank')
+                            }}
+                            style={{
+                                background: '#f8fafc',
+                                border: '1px solid #e2e8f0',
+                                borderRadius: 8,
+                                padding: '8px 12px',
+                                fontSize: 12,
+                                fontWeight: 600,
+                                color: '#475569',
+                                cursor: 'pointer',
+                                fontFamily: 'Inter, sans-serif',
+                            }}
+                        >
+                            Manage
+                        </button>
+                    )}
+                </div>
+            </div>
+
             {/* Export */}
             <button
                 id="export-btn"
@@ -253,8 +301,12 @@ export default function ProfilePage() {
             </button>
 
             <p style={{ textAlign: 'center', fontSize: 11, color: '#94a3b8', paddingBottom: 8, marginTop: 16 }}>
-                Broono v0.1.0 · Your data stays private and on-device.
+                Broono v1.0.0 · Your data stays private and on-device.
             </p>
+            <div style={{ textAlign: 'center', display: 'flex', gap: 16, justifyContent: 'center', paddingBottom: 24 }}>
+                <a href="/privacy" style={{ fontSize: 11, color: '#94a3b8', textDecoration: 'underline' }}>Privacy Policy</a>
+                <a href="/terms" style={{ fontSize: 11, color: '#94a3b8', textDecoration: 'underline' }}>Terms of Service</a>
+            </div>
         </div>
     )
 }

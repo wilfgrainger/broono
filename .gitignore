@@ -29,3 +29,10 @@ dist-ssr
 !.dev.vars.example
 .env*
 !.env.example
+
+# Android build artifacts
+android/app/build
+android/.gradle
+android/build
+*.keystore
+*.jks

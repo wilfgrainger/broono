@@ -10,6 +10,10 @@ import ProfilePage from './pages/Profile'
 import Onboarding from './pages/Onboarding'
 import Login from './pages/Login'
 import Verify from './pages/Verify'
+import PrivacyPolicy from './pages/PrivacyPolicy'
+import Terms from './pages/Terms'
+import Paywall from './components/Paywall'
+import { initBilling } from './services/billing'
 
 type Tab = 'dashboard' | 'checkin' | 'progress' | 'news' | 'journal' | 'profile'
 
@@ -18,9 +22,11 @@ export default function App() {
   const resetWaterIfNewDay = useStore((s) => s.resetWaterIfNewDay)
   const hasCompletedOnboarding = useStore((s) => s.hasCompletedOnboarding)
   const authToken = useStore((s) => s.authToken)
+  const subscriptionStatus = useStore((s) => s.subscriptionStatus)
 
   useEffect(() => {
     resetWaterIfNewDay()
+    initBilling().catch(() => { /* billing init is best-effort */ })
   }, [])
 
   const renderPage = () => {
@@ -39,6 +45,14 @@ export default function App() {
     return <Verify />
   }
 
+  // Public pages (accessible without login)
+  if (window.location.pathname === '/privacy') {
+    return <PrivacyPolicy />
+  }
+  if (window.location.pathname === '/terms') {
+    return <Terms />
+  }
+
   // Not logged in -> Show Login
   if (!authToken) {
     return <Login />
@@ -47,6 +61,11 @@ export default function App() {
   // Logged in but new user -> Show Onboarding
   if (!hasCompletedOnboarding) {
     return <Onboarding />
+  }
+
+  // Logged in, onboarded, but no active subscription -> Show Paywall
+  if (subscriptionStatus !== 'pro') {
+    return <Paywall />
   }
 
   return (
