@@ -11,6 +11,7 @@
  */
 
 import { Capacitor } from '@capacitor/core'
+import { PURCHASE_TYPE } from '@capgo/native-purchases'
 
 // ---------- Types ----------
 
@@ -90,7 +91,7 @@ export async function getProduct(): Promise<ProductInfo> {
     const NativePurchases = await getNativePurchases()
     const result = await NativePurchases.getProducts({
       productIdentifiers: [PRODUCT_ID],
-      productType: 'SUBS',
+      productType: PURCHASE_TYPE.SUBS,
     })
 
     if (result.products && result.products.length > 0) {
@@ -128,7 +129,7 @@ export async function purchaseSubscription(): Promise<{ success: boolean; error?
     const NativePurchases = await getNativePurchases()
     await NativePurchases.purchaseProduct({
       productIdentifier: PRODUCT_ID,
-      productType: 'SUBS',
+      productType: PURCHASE_TYPE.SUBS,
     })
     return { success: true }
   } catch (err: unknown) {
@@ -150,12 +151,16 @@ export async function restorePurchases(): Promise<SubscriptionInfo> {
 
   try {
     const NativePurchases = await getNativePurchases()
-    const result = await NativePurchases.restorePurchases()
+    await NativePurchases.restorePurchases()
 
-    if (result.activeSubscriptions && result.activeSubscriptions.length > 0) {
+    const { purchases } = await NativePurchases.getPurchases({
+      productType: PURCHASE_TYPE.SUBS,
+    })
+
+    if (purchases && purchases.length > 0) {
       return {
         status: 'pro',
-        productId: result.activeSubscriptions[0],
+        productId: purchases[0].productIdentifier,
         platform: 'android',
       }
     }
