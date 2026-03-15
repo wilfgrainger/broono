@@ -240,6 +240,8 @@ Make sure these are set in your Cloudflare Worker:
 | `GOOGLE_PLAY_PACKAGE_NAME` | `app.broono.android` |
 | `GOOGLE_PLAY_SERVICE_ACCOUNT_KEY` | Full JSON key from Google Cloud |
 | `GOOGLE_PLAY_WEBHOOK_TOKEN` | Bearer token for Pub/Sub webhook auth |
+| `GOOGLE_CLIENT_ID` | Google OAuth Web client ID (for token audience validation) |
+| `GOOGLE_ANDROID_CLIENT_ID` | Google OAuth Android client ID (optional secondary audience) |
 | `STRIPE_SECRET_KEY` | Existing – for web payments |
 | `STRIPE_WEBHOOK_SECRET` | Existing – for Stripe webhooks |
 | `STRIPE_PRO_PRICE_ID` | Existing – Stripe price ID |
@@ -268,6 +270,7 @@ ALTER TABLE users ADD COLUMN google_play_token TEXT;
 - Privacy Policy and Terms of Service pages
 - Backend purchase verification endpoint
 - Backend RTDN webhook endpoint
+- Google sign-in endpoint (`/api/auth/google`) for Android login
 - Database schema updated
 - Build scripts added
 
@@ -279,10 +282,12 @@ ALTER TABLE users ADD COLUMN google_play_token TEXT;
 - [ ] Configure the 2-day free trial offer
 - [ ] Set up Google Cloud service account for server verification
 - [ ] Configure RTDN (Real-Time Developer Notifications)
+- [ ] Configure Google Sign-In in Google Cloud (OAuth consent + Android/Web clients)
+- [ ] Add Android SHA-1/SHA-256 signing fingerprints to Google OAuth client config
 - [ ] Prepare store listing assets (icon, screenshots, feature graphic)
 - [ ] Complete content rating questionnaire
 - [ ] Complete data safety form
 - [ ] Run `ALTER TABLE users ADD COLUMN google_play_token TEXT;` on production DB
-- [ ] Set environment variables (`GOOGLE_PLAY_PACKAGE_NAME`, `GOOGLE_PLAY_SERVICE_ACCOUNT_KEY`, `GOOGLE_PLAY_WEBHOOK_TOKEN`)
+- [ ] Set environment variables (`GOOGLE_PLAY_PACKAGE_NAME`, `GOOGLE_PLAY_SERVICE_ACCOUNT_KEY`, `GOOGLE_PLAY_WEBHOOK_TOKEN`, `GOOGLE_CLIENT_ID`, `GOOGLE_ANDROID_CLIENT_ID`)
 - [ ] Build signed AAB and upload to Play Console
 - [ ] Submit for review

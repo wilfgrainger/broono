@@ -14,6 +14,8 @@ type Bindings = {
   GOOGLE_PLAY_PACKAGE_NAME: string
   GOOGLE_PLAY_SERVICE_ACCOUNT_KEY: string
   GOOGLE_PLAY_WEBHOOK_TOKEN: string
+  GOOGLE_CLIENT_ID: string
+  GOOGLE_ANDROID_CLIENT_ID: string
 }
 
 type Variables = {
@@ -144,6 +146,73 @@ app.post('/api/auth/verify', async (c) => {
     token: authToken,
     user
   })
+})
+
+app.post('/api/auth/google', async (c) => {
+  const { idToken } = await c.req.json()
+  if (!idToken || typeof idToken !== 'string') {
+    return c.json({ error: 'Missing Google ID token' }, 400)
+  }
+
+  try {
+    const googleRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`)
+    if (!googleRes.ok) {
+      return c.json({ error: 'Invalid Google token' }, 401)
+    }
+
+    const payload = await googleRes.json() as {
+      aud?: string
+      email?: string
+      email_verified?: string | boolean
+      exp?: string
+    }
+
+    const allowedAudiences = [c.env.GOOGLE_CLIENT_ID, c.env.GOOGLE_ANDROID_CLIENT_ID].filter(Boolean)
+    if (allowedAudiences.length > 0 && (!payload.aud || !allowedAudiences.includes(payload.aud))) {
+      return c.json({ error: 'Google token audience mismatch' }, 401)
+    }
+
+    const emailVerified = payload.email_verified === true || payload.email_verified === 'true'
+    if (!payload.email || !emailVerified) {
+      return c.json({ error: 'Google email is missing or not verified' }, 401)
+    }
+
+    const tokenExp = payload.exp ? Number(payload.exp) : 0
+    const now = Math.floor(Date.now() / 1000)
+    if (tokenExp && tokenExp <= now) {
+      return c.json({ error: 'Google token has expired' }, 401)
+    }
+
+    let user = await c.env.DB.prepare('SELECT * FROM users WHERE email = ?').bind(payload.email).first<{ id: string, email: string, subscription_status: string }>()
+    if (!user) {
+      const userId = crypto.randomUUID()
+      await c.env.DB.prepare(
+        'INSERT INTO users (id, email, created_at, subscription_status) VALUES (?, ?, ?, ?)'
+      ).bind(userId, payload.email, now, 'free').run()
+      user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(userId).first<{ id: string, email: string, subscription_status: string }>()
+    }
+
+    if (!c.env.JWT_SECRET) {
+      throw new Error('JWT_SECRET environment variable is missing.')
+    }
+
+    const jwtSecret = new TextEncoder().encode(c.env.JWT_SECRET)
+    const authToken = await new SignJWT({ id: user!.id, email: user!.email, sub_status: user!.subscription_status })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime('30d')
+      .sign(jwtSecret)
+
+    return c.json({
+      success: true,
+      token: authToken,
+      user,
+    })
+  } catch (err: unknown) {
+    const error = err as Error
+    console.error('Google auth verification failed:', error)
+    return c.json({ error: 'Google auth failed' }, 500)
+  }
 })
 
 // === PAYMENTS (STRIPE) ===
