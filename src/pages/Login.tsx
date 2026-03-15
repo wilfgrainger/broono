@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Lock } from 'lucide-react'
 import { useStore } from '../store'
+import { Capacitor } from '@capacitor/core'
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787'
 
 export default function Login() {
@@ -9,6 +10,7 @@ export default function Login() {
     const [agreedToTerms, setAgreedToTerms] = useState(false)
     const [agreedToHealthData, setAgreedToHealthData] = useState(false)
     const setAuth = useStore((state) => state.setAuth)
+    const isAndroid = Capacitor.getPlatform() === 'android'
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -28,6 +30,43 @@ export default function Login() {
             } else {
                 setStatus('error')
             }
+        } catch (err) {
+            console.error(err)
+            setStatus('error')
+        }
+    }
+
+    const handleGoogleLogin = async () => {
+        if (!agreedToTerms || !agreedToHealthData) return
+
+        setStatus('loading')
+        try {
+            if (!isAndroid) {
+                throw new Error('Google sign-in is available on Android app builds.')
+            }
+
+            const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth')
+            await GoogleAuth.initialize()
+            const result = await GoogleAuth.signIn()
+            const idToken = result.authentication?.idToken
+
+            if (!idToken) {
+                throw new Error('Google login failed: missing ID token')
+            }
+
+            const res = await fetch(`${API_URL}/api/auth/google`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ idToken }),
+            })
+            const data = await res.json()
+
+            if (data.success && data.token && data.user?.email) {
+                setAuth(data.token, data.user.email, data.user.subscription_status)
+                return
+            }
+
+            throw new Error(data.error || 'Google login failed')
         } catch (err) {
             console.error(err)
             setStatus('error')
@@ -127,27 +166,25 @@ export default function Login() {
                     >
                         {status === 'loading' ? 'Sending...' : 'Continue with Email'}
                     </button>
+
+                    {isAndroid && (
+                        <button
+                            type="button"
+                            onClick={handleGoogleLogin}
+                            className="btn-primary"
+                            disabled={!agreedToTerms || !agreedToHealthData || status === 'loading'}
+                            style={{
+                                width: '100%',
+                                padding: '16px',
+                                background: '#0f172a',
+                                opacity: (!agreedToTerms || !agreedToHealthData || status === 'loading') ? 0.6 : 1,
+                            }}
+                        >
+                            {status === 'loading' ? 'Connecting...' : 'Continue with Google Play Account'}
+                        </button>
+                    )}
                 </form>
 
-                <div style={{ marginTop: 24, textAlign: 'center' }}>
-                    <button
-                        type="button"
-                        onClick={() => setAuth('dev-token', 'test@example.com', 'pro')}
-                        style={{
-                            background: '#f8fafc',
-                            border: '1px solid #e2e8f0',
-                            borderRadius: '8px',
-                            padding: '8px 16px',
-                            color: '#475569',
-                            fontSize: 13,
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                        }}
-                    >
-                        Auto Login (Temporary Test Button)
-                    </button>
-                </div>
             </div>
         </div>
     )
