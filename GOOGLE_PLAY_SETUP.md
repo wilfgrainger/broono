@@ -187,12 +187,49 @@ SUBSCRIPTION INFO:
 1. Go to **Policy and programs** → **App content** → **Data safety**
 2. Declare:
    - **Email address**: Collected (for authentication)
-   - **Health info**: Collected but stays on device (not transmitted)
+   - **Health info**: Entered by user and stored on device only (not transmitted to Broono servers)
    - **Purchase history**: Collected by Google Play (for subscriptions)
    - Data is encrypted in transit: Yes
    - Users can request data deletion: Yes
 
 ---
+
+
+## Backup & Local Sensitive Data Policy (Android)
+
+**Decision:** Enforce strict local-only handling by disabling Android cloud/device backup for app data.
+
+Implemented in `android/app/src/main/AndroidManifest.xml` with:
+
+- `android:allowBackup="false"` on `<application>`
+
+### Why this policy
+
+Broono stores sensitive wellness data (weight logs, symptoms, journal entries, medication schedule) in local app storage on-device. Disabling backup prevents these local artifacts from being copied into Android backup transports (Google Drive/device transfer), which keeps behavior aligned with a strict "local only, user-controlled" privacy stance.
+
+### Play Data Safety answers to use
+
+For the Data safety form, answers should match the implementation above:
+
+- **Does your app collect or share health data?**
+  - Health data is entered by the user and stored only on-device by the app runtime.
+  - It is **not shared** with third parties by Broono servers.
+- **Is data processed ephemerally?**
+  - No (local storage is persistent on the device until user clears data/deletes app/account).
+- **Can users request data deletion?**
+  - Yes.
+  - Server-side account data can be deleted from in-app Settings.
+  - Local device data can be wiped by account deletion flow, clearing app data, or uninstalling.
+- **Is app data backed up off-device by Android backup?**
+  - **No** for Broono app data, because `android:allowBackup="false"`.
+
+### Re-verification checklist (policy consistency)
+
+- Account deletion (Settings → Delete account) sends `DELETE /api/user`, then calls `localStorage.clear()` and logs out. This wipes locally persisted app data on success.
+- Local data wipe behavior remains accurate:
+  - Delete account (successful API response) clears local storage immediately.
+  - Clearing app storage in Android settings removes all local artifacts.
+  - Uninstall removes app sandbox data from the device.
 
 ## Step 8: Privacy Policy URL
 
@@ -225,7 +262,7 @@ Google Play provides license testing:
 
 1. Complete all store listing information
 2. Complete the content rating questionnaire
-3. Complete the data safety form
+3. Complete the data safety form (must match the Backup & Local Sensitive Data Policy section above)
 4. Upload the signed AAB to the **Production** track
 5. Submit for review (typically 1-3 days)
 
