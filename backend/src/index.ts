@@ -2,7 +2,8 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { SignJWT, importPKCS8, jwtVerify } from 'jose'
 import Stripe from 'stripe'
-import { buildVerifySubscriptionResponse, getSubscriptionStatusFromPlayState } from './playVerification'
+import { mapRtdnNotificationTypeToStatus } from './play-rtdn.js'
+import { buildVerifySubscriptionResponse, getSubscriptionStatusFromPlayState } from './playVerification.js'
 
 type Bindings = {
   DB: D1Database

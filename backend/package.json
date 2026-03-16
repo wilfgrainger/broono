@@ -2,13 +2,13 @@
   "name": "broono-api",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "db:init": "wrangler d1 execute broono-db --file=./schema.sql --local",
     "db:deploy": "wrangler d1 execute broono-db --file=./schema.sql --remote",
-    "test": "npm run test:rtdn",
-    "test:rtdn": "tsc -p tsconfig.tests.json && node --test dist-test/tests/play-rtdn.test.js"
+    "test": "tsc -p tsconfig.tests.json && node --test dist-test/tests/play-rtdn.test.js"
   },
   "dependencies": {
     "hono": "^4.6.14",

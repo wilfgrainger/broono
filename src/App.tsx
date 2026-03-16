@@ -27,7 +27,7 @@ export default function App() {
   useEffect(() => {
     resetWaterIfNewDay()
     initBilling().catch(() => { /* billing init is best-effort */ })
-  }, [])
+  }, [resetWaterIfNewDay])
 
   const renderPage = () => {
     switch (activeTab) {
