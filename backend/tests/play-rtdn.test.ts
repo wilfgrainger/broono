@@ -49,7 +49,7 @@ const buildWebhookPayload = (notificationType: number) => {
           subscriptionNotification: {
             notificationType,
             purchaseToken: 'purchase_token_123',
-            subscriptionId: 'broono.pro.monthly',
+            subscriptionId: 'broono_pro_monthly',
           },
         })
       ).toString('base64'),
