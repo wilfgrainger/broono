@@ -20,6 +20,7 @@ export interface SubscriptionInfo {
   expiresAt?: string
   trialEndsAt?: string
   productId?: string
+  purchaseToken?: string
   platform: 'android' | 'web'
 }
 
@@ -120,18 +121,27 @@ export async function getProduct(): Promise<ProductInfo> {
 /**
  * Purchase the subscription (launches Google Play purchase flow on Android)
  */
-export async function purchaseSubscription(): Promise<{ success: boolean; error?: string }> {
+export async function purchaseSubscription(): Promise<{ success: boolean; productId?: string; purchaseToken?: string; error?: string }> {
   if (!isNativePlatform()) {
     return { success: false, error: 'Use web checkout for browser purchases' }
   }
 
   try {
     const NativePurchases = await getNativePurchases()
-    await NativePurchases.purchaseProduct({
+    const transaction = await NativePurchases.purchaseProduct({
       productIdentifier: PRODUCT_ID,
       productType: PURCHASE_TYPE.SUBS,
     })
-    return { success: true }
+
+    if (!transaction.purchaseToken) {
+      return { success: false, error: 'Purchase completed but no purchase token was returned.' }
+    }
+
+    return {
+      success: true,
+      productId: transaction.productIdentifier,
+      purchaseToken: transaction.purchaseToken,
+    }
   } catch (err: unknown) {
     const error = err as Error
     if (error.message?.includes('userCancelled')) {
@@ -158,9 +168,11 @@ export async function restorePurchases(): Promise<SubscriptionInfo> {
     })
 
     if (purchases && purchases.length > 0) {
+      const purchase = purchases[0]
       return {
         status: 'pro',
-        productId: purchases[0].productIdentifier,
+        productId: purchase.productIdentifier,
+        purchaseToken: purchase.purchaseToken,
         platform: 'android',
       }
     }

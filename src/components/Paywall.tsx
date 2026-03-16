@@ -1,9 +1,20 @@
 import { useState } from 'react'
 import { useStore } from '../store'
-import { purchaseSubscription, restorePurchases, MONTHLY_PRICE, TRIAL_DAYS, isNativePlatform } from '../services/billing'
+import { purchaseSubscription, restorePurchases, MONTHLY_PRICE, TRIAL_DAYS, isNativePlatform, PRODUCT_ID } from '../services/billing'
 import { Crown, Shield, Star, Check } from 'lucide-react'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787'
+
+
+type VerificationResponse = {
+    verified?: boolean
+    status?: string
+}
+
+type VerificationResult = {
+    success: boolean
+    errorMessage?: string
+}
 
 const features = [
     'Unlimited check-ins & weight logging',
@@ -20,16 +31,59 @@ export default function Paywall() {
     const authToken = useStore((s) => s.authToken)
     const userEmail = useStore((s) => s.userEmail)
 
+
+    const verifySubscription = async (purchaseToken: string, productId: string): Promise<VerificationResult> => {
+        if (!authToken) {
+            return { success: false, errorMessage: 'Sign in again to verify your subscription.' }
+        }
+
+        setError('Purchase received, verifying with Google Play...')
+
+        try {
+            const res = await fetch(`${API_URL}/api/play/verify-subscription`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`,
+                },
+                body: JSON.stringify({ purchaseToken, productId }),
+            })
+
+            const data = (await res.json()) as VerificationResponse
+            const isActive = ['active', 'trial', 'in_grace_period'].includes((data.status || '').toLowerCase())
+
+            if (res.ok && data.verified === true && isActive) {
+                return { success: true }
+            }
+
+            return {
+                success: false,
+                errorMessage: 'Purchase received, but we could not verify an active subscription yet. Please try Restore Purchases in a moment.',
+            }
+        } catch {
+            return {
+                success: false,
+                errorMessage: 'Purchase received, but verification is pending. Please check your connection and tap Restore Purchases.',
+            }
+        }
+    }
+
     const handleSubscribe = async () => {
         setLoading(true)
         setError(null)
 
         if (isNativePlatform()) {
-            // Android: Use Google Play Billing
+            // Android: Use Google Play Billing + backend verification
             const result = await purchaseSubscription()
-            if (result.success) {
-                if (authToken && userEmail) {
-                    setAuth(authToken, userEmail, 'pro')
+            if (result.success && result.purchaseToken) {
+                const verification = await verifySubscription(result.purchaseToken, result.productId || PRODUCT_ID)
+                if (verification.success) {
+                    if (authToken && userEmail) {
+                        setAuth(authToken, userEmail, 'pro')
+                    }
+                    setError(null)
+                } else {
+                    setError(verification.errorMessage || 'Purchase verification failed. Please try Restore Purchases.')
                 }
             } else if (result.error && result.error !== 'Purchase cancelled') {
                 setError(result.error)
@@ -64,10 +118,18 @@ export default function Paywall() {
         setError(null)
 
         const info = await restorePurchases()
-        if (info.status === 'pro' || info.status === 'trial') {
-            if (authToken && userEmail) {
-                setAuth(authToken, userEmail, 'pro')
+        if ((info.status === 'pro' || info.status === 'trial') && info.purchaseToken) {
+            const verification = await verifySubscription(info.purchaseToken, info.productId || PRODUCT_ID)
+            if (verification.success) {
+                if (authToken && userEmail) {
+                    setAuth(authToken, userEmail, 'pro')
+                }
+                setError(null)
+            } else {
+                setError(verification.errorMessage || 'Purchase verification failed. Please try Restore Purchases.')
             }
+        } else if (info.status === 'pro' || info.status === 'trial') {
+            setError('Subscription found, but verification data is unavailable. Please try again shortly.')
         } else {
             setError('No active subscription found.')
         }
