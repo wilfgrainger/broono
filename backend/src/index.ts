@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import { SignJWT, jwtVerify } from 'jose'
+import { SignJWT, importPKCS8, jwtVerify } from 'jose'
 import Stripe from 'stripe'
 
 type Bindings = {
@@ -392,11 +392,26 @@ app.post('/api/play/verify-subscription', authMiddleware, async (c) => {
       return c.json({ error: 'Google Play verification is not configured' }, 503)
     }
 
-    const keyData = JSON.parse(serviceAccountKey)
+    let keyData: { private_key?: string; client_email?: string }
+    try {
+      keyData = JSON.parse(serviceAccountKey)
+    } catch {
+      return c.json({ error: 'Google Play verification is misconfigured: invalid service account JSON' }, 503)
+    }
+
+    if (!keyData.private_key || !keyData.client_email) {
+      return c.json({ error: 'Google Play verification is misconfigured: missing private_key or client_email' }, 503)
+    }
+
+    let privateKey: CryptoKey
+    try {
+      privateKey = await importPKCS8(keyData.private_key, 'RS256')
+    } catch {
+      return c.json({ error: 'Google Play verification is misconfigured: invalid service account private key' }, 503)
+    }
 
     // Create JWT for Google OAuth2
     const now = Math.floor(Date.now() / 1000)
-    const jwtSecret = new TextEncoder().encode(keyData.private_key)
     const googleJwt = await new SignJWT({
       iss: keyData.client_email,
       scope: 'https://www.googleapis.com/auth/androidpublisher',
@@ -405,7 +420,7 @@ app.post('/api/play/verify-subscription', authMiddleware, async (c) => {
       exp: now + 3600,
     })
       .setProtectedHeader({ alg: 'RS256', typ: 'JWT' })
-      .sign(jwtSecret)
+      .sign(privateKey)
 
     // Exchange JWT for access token
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
