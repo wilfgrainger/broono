@@ -50,6 +50,20 @@ cd backend
 npm run deploy
 ```
 
+
+## Google Auth Environment (Android Play release)
+
+For reliable Google Play sign-in, configure **both frontend and backend** Google OAuth audiences:
+
+- Frontend (`.env` / Cloudflare Pages):
+  - `VITE_GOOGLE_CLIENT_ID` (Web OAuth client ID)
+  - `VITE_GOOGLE_ANDROID_CLIENT_ID` (Android OAuth client ID for `app.broono.android`)
+- Backend (Cloudflare Worker secrets):
+  - `GOOGLE_CLIENT_ID`
+  - `GOOGLE_ANDROID_CLIENT_ID`
+
+These values must align with backend audience validation in `backend/src/index.ts` (`allowedAudiences` check in `/api/auth/google`).
+
 ## Security
 
 - CORS is enforced for the primary frontend domain.

@@ -1,16 +1,65 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Lock } from 'lucide-react'
 import { useStore } from '../store'
 import { Capacitor } from '@capacitor/core'
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787'
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim() || ''
+const GOOGLE_ANDROID_CLIENT_ID = import.meta.env.VITE_GOOGLE_ANDROID_CLIENT_ID?.trim() || ''
 
 export default function Login() {
     const [email, setEmail] = useState('')
     const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
     const [agreedToTerms, setAgreedToTerms] = useState(false)
     const [agreedToHealthData, setAgreedToHealthData] = useState(false)
+    const [googleAuthReady, setGoogleAuthReady] = useState(false)
+    const [googleAuthInitError, setGoogleAuthInitError] = useState<string | null>(null)
     const setAuth = useStore((state) => state.setAuth)
     const isAndroid = Capacitor.getPlatform() === 'android'
+    const googleInitClientId = (isAndroid && GOOGLE_ANDROID_CLIENT_ID) ? GOOGLE_ANDROID_CLIENT_ID : GOOGLE_CLIENT_ID
+
+    useEffect(() => {
+        if (!isAndroid) {
+            return
+        }
+
+        const missingKeys: string[] = []
+        if (!GOOGLE_CLIENT_ID) {
+            missingKeys.push('VITE_GOOGLE_CLIENT_ID')
+        }
+
+        if (!googleInitClientId) {
+            missingKeys.push('VITE_GOOGLE_ANDROID_CLIENT_ID or VITE_GOOGLE_CLIENT_ID')
+        }
+
+        if (missingKeys.length > 0) {
+            const message = `Google auth misconfigured. Missing: ${missingKeys.join(', ')}`
+            console.error(message)
+            setGoogleAuthInitError(message)
+            setGoogleAuthReady(false)
+            return
+        }
+
+        const initializeGoogleAuth = async () => {
+            try {
+                const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth')
+                await GoogleAuth.initialize({ clientId: googleInitClientId })
+                setGoogleAuthReady(true)
+                setGoogleAuthInitError(null)
+                console.info('Google auth initialized', {
+                    activeClientId: googleInitClientId,
+                    webClientConfigured: Boolean(GOOGLE_CLIENT_ID),
+                    androidClientConfigured: Boolean(GOOGLE_ANDROID_CLIENT_ID),
+                })
+            } catch (err) {
+                const message = 'Google auth failed to initialize. Check OAuth client IDs and signing fingerprints.'
+                console.error(message, err)
+                setGoogleAuthInitError(message)
+                setGoogleAuthReady(false)
+            }
+        }
+
+        void initializeGoogleAuth()
+    }, [googleInitClientId, isAndroid])
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -45,8 +94,11 @@ export default function Login() {
                 throw new Error('Google sign-in is available on Android app builds.')
             }
 
+            if (!googleAuthReady) {
+                throw new Error(googleAuthInitError || 'Google auth is not initialized yet. Check app configuration.')
+            }
+
             const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth')
-            await GoogleAuth.initialize()
             const result = await GoogleAuth.signIn()
             const idToken = result.authentication?.idToken
 
@@ -158,6 +210,10 @@ export default function Login() {
                         <p style={{ color: '#e11d48', fontSize: 13, fontWeight: 500 }}>Failed to send magic link. Please try again.</p>
                     )}
 
+                    {isAndroid && googleAuthInitError && (
+                        <p style={{ color: '#e11d48', fontSize: 13, fontWeight: 500 }}>{googleAuthInitError}</p>
+                    )}
+
                     <button
                         type="submit"
                         className="btn-primary"
@@ -172,12 +228,12 @@ export default function Login() {
                             type="button"
                             onClick={handleGoogleLogin}
                             className="btn-primary"
-                            disabled={!agreedToTerms || !agreedToHealthData || status === 'loading'}
+                            disabled={!agreedToTerms || !agreedToHealthData || status === 'loading' || !googleAuthReady}
                             style={{
                                 width: '100%',
                                 padding: '16px',
                                 background: '#0f172a',
-                                opacity: (!agreedToTerms || !agreedToHealthData || status === 'loading') ? 0.6 : 1,
+                                opacity: (!agreedToTerms || !agreedToHealthData || status === 'loading' || !googleAuthReady) ? 0.6 : 1,
                             }}
                         >
                             {status === 'loading' ? 'Connecting...' : 'Continue with Google Play Account'}

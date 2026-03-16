@@ -258,6 +258,29 @@ Google Play provides license testing:
 
 ---
 
+## Step 9.5: Verify OAuth Android signing fingerprints
+
+Google Sign-In on Play builds will fail if the Android OAuth client does not include the correct SHA-1/SHA-256 fingerprints for your package (`app.broono.android`).
+
+1. In Google Cloud Console, open the OAuth **Android client** used by production.
+2. Ensure package name is exactly: `app.broono.android`.
+3. Register **both SHA-1 and SHA-256** for:
+   - Debug keystore (local testing)
+   - Release/Play signing certificate (production)
+4. Save changes, then wait a few minutes for propagation.
+
+Useful commands:
+
+```bash
+# Debug keystore fingerprints
+keytool -list -v -alias androiddebugkey -keystore ~/.android/debug.keystore
+
+# Release keystore fingerprints
+keytool -list -v -alias <release-alias> -keystore <path-to-release-keystore>
+```
+
+If backend returns `Google token audience mismatch`, re-check that OAuth client IDs and `GOOGLE_CLIENT_ID` / `GOOGLE_ANDROID_CLIENT_ID` are aligned with `backend/src/index.ts` audience validation.
+
 ## Step 10: Release to Production
 
 1. Complete all store listing information
@@ -277,8 +300,8 @@ Make sure these are set in your Cloudflare Worker:
 | `GOOGLE_PLAY_PACKAGE_NAME` | `app.broono.android` |
 | `GOOGLE_PLAY_SERVICE_ACCOUNT_KEY` | Full JSON key from Google Cloud |
 | `GOOGLE_PLAY_WEBHOOK_TOKEN` | Bearer token for Pub/Sub webhook auth |
-| `GOOGLE_CLIENT_ID` | Google OAuth Web client ID (for token audience validation) |
-| `GOOGLE_ANDROID_CLIENT_ID` | Google OAuth Android client ID (optional secondary audience) |
+| `GOOGLE_CLIENT_ID` | Google OAuth Web client ID (must match frontend `VITE_GOOGLE_CLIENT_ID` and backend audience checks) |
+| `GOOGLE_ANDROID_CLIENT_ID` | Google OAuth Android client ID for `app.broono.android` (must match frontend `VITE_GOOGLE_ANDROID_CLIENT_ID` and backend audience checks) |
 | `STRIPE_SECRET_KEY` | Existing – for web payments |
 | `STRIPE_WEBHOOK_SECRET` | Existing – for Stripe webhooks |
 | `STRIPE_PRO_PRICE_ID` | Existing – Stripe price ID |
@@ -325,6 +348,7 @@ ALTER TABLE users ADD COLUMN google_play_token TEXT;
 - [ ] Complete content rating questionnaire
 - [ ] Complete data safety form
 - [ ] Run `ALTER TABLE users ADD COLUMN google_play_token TEXT;` on production DB
-- [ ] Set environment variables (`GOOGLE_PLAY_PACKAGE_NAME`, `GOOGLE_PLAY_SERVICE_ACCOUNT_KEY`, `GOOGLE_PLAY_WEBHOOK_TOKEN`, `GOOGLE_CLIENT_ID`, `GOOGLE_ANDROID_CLIENT_ID`)
+- [ ] Set backend environment variables (`GOOGLE_PLAY_PACKAGE_NAME`, `GOOGLE_PLAY_SERVICE_ACCOUNT_KEY`, `GOOGLE_PLAY_WEBHOOK_TOKEN`, `GOOGLE_CLIENT_ID`, `GOOGLE_ANDROID_CLIENT_ID`)
+- [ ] Set frontend environment variables (`VITE_GOOGLE_CLIENT_ID`, `VITE_GOOGLE_ANDROID_CLIENT_ID`) to match backend audiences
 - [ ] Build signed AAB and upload to Play Console
 - [ ] Submit for review
