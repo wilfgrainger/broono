@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { SignJWT, importPKCS8, jwtVerify } from 'jose'
 import Stripe from 'stripe'
-import { mapRtdnNotificationTypeToStatus } from './play-rtdn.js'
+import { buildVerifySubscriptionResponse, getSubscriptionStatusFromPlayState } from './playVerification'
 
 type Bindings = {
   DB: D1Database
@@ -362,6 +362,7 @@ app.post('/api/stripe/webhook', async (c) => {
 // Allowed product IDs for subscription verification
 const ALLOWED_PRODUCT_IDS = ['broono_pro_monthly']
 
+
 /**
  * Verify a Google Play subscription purchase.
  * The client sends the purchaseToken after a successful Google Play purchase.
@@ -442,19 +443,23 @@ app.post('/api/play/verify-subscription', authMiddleware, async (c) => {
     }
 
     if (!verifyRes.ok) {
-      return c.json({ error: 'Failed to verify purchase with Google' }, 400)
+      return c.json(buildVerifySubscriptionResponse(false, 'free'))
     }
 
     // Check subscription state
-    const isActive = purchase.subscriptionState === 'SUBSCRIPTION_STATE_ACTIVE' ||
-                     purchase.subscriptionState === 'SUBSCRIPTION_STATE_IN_GRACE_PERIOD'
-    const newStatus = isActive ? 'pro' : 'free'
+    const newStatus = getSubscriptionStatusFromPlayState(purchase.subscriptionState)
+    const isActive = newStatus === 'pro'
 
     await c.env.DB.prepare(
       'UPDATE users SET subscription_status = ?, google_play_token = ? WHERE id = ?'
     ).bind(newStatus, purchaseToken, user.id).run()
 
-    return c.json({ success: true, status: newStatus, verified: true })
+    /**
+     * Stable client contract for purchase verification responses.
+     * Clients should only unlock paid features when:
+     *   verified === true && status === 'pro'
+     */
+    return c.json(buildVerifySubscriptionResponse(isActive, newStatus))
   } catch (err: unknown) {
     const error = err as Error
     console.error('Google Play verification error:', error)

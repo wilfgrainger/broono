@@ -2,14 +2,11 @@ import { useState } from 'react'
 import { useStore } from '../store'
 import { purchaseSubscription, restorePurchases, MONTHLY_PRICE, TRIAL_DAYS, isNativePlatform, PRODUCT_ID } from '../services/billing'
 import { Crown, Shield, Star, Check } from 'lucide-react'
+import { isUnlockedSubscription } from '../types/subscription.ts'
+import { parseVerifySubscriptionResponse } from '../services/subscriptionVerification.ts'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787'
 
-
-type VerificationResponse = {
-    verified?: boolean
-    status?: string
-}
 
 type VerificationResult = {
     success: boolean
@@ -49,10 +46,9 @@ export default function Paywall() {
                 body: JSON.stringify({ purchaseToken, productId }),
             })
 
-            const data = (await res.json()) as VerificationResponse
-            const isActive = ['active', 'trial', 'in_grace_period'].includes((data.status || '').toLowerCase())
+            const data = parseVerifySubscriptionResponse(await res.json())
 
-            if (res.ok && data.verified === true && isActive) {
+            if (res.ok && isUnlockedSubscription(data)) {
                 return { success: true }
             }
 
