@@ -504,7 +504,7 @@ app.post('/api/play/webhook', async (c) => {
     }
 
     if (notification.subscriptionNotification) {
-      const { notificationType, purchaseToken } = notification.subscriptionNotification
+      const { notificationType, purchaseToken, subscriptionId } = notification.subscriptionNotification
 
       // Validate purchaseToken format before using in query
       if (!purchaseToken || typeof purchaseToken !== 'string' || !/^[a-zA-Z0-9._-]+$/.test(purchaseToken)) {
@@ -513,23 +513,13 @@ app.post('/api/play/webhook', async (c) => {
 
       // Map notification type to subscription status
       // See: https://developer.android.com/google/play/billing/rtdn-reference
-      let newStatus: string
-      switch (notificationType) {
-        case 1:  // SUBSCRIPTION_RECOVERED
-        case 2:  // SUBSCRIPTION_RENEWED
-        case 4:  // SUBSCRIPTION_PURCHASED
-        case 7:  // SUBSCRIPTION_RESTARTED
-          newStatus = 'pro'
-          break
-        case 3:  // SUBSCRIPTION_CANCELED
-        case 5:  // SUBSCRIPTION_ON_HOLD
-        case 10: // SUBSCRIPTION_PAUSED
-        case 12: // SUBSCRIPTION_EXPIRED
-        case 13: // SUBSCRIPTION_REVOKED
-          newStatus = 'free'
-          break
-        default:
-          newStatus = 'free'
+      const newStatus = mapRtdnNotificationTypeToStatus(notificationType)
+      if (!newStatus) {
+        console.info('Ignoring unknown Google Play RTDN notification type', {
+          notificationType,
+          subscriptionId,
+        })
+        return c.json({ received: true })
       }
 
       // Update user status by their stored Google Play token
