@@ -1,5 +1,6 @@
 import { Beef, Droplets, TrendingDown, Plus } from 'lucide-react'
 import { useStore, getMedicationLevel, getDaysUntilNextDose } from '../store'
+import { formatWeight, getWeightUnitLabel } from '../utils/weight'
 
 interface DashboardProps {
   onNavigate: (tab: 'dashboard' | 'checkin' | 'progress' | 'news' | 'journal' | 'profile') => void
@@ -19,8 +20,8 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const hasStartWeight = profile.startWeight > 0
   const hasLogs = logs.length > 0
   const currentWeight = logs[0]?.weight ?? (hasStartWeight ? profile.startWeight : null)
-  const totalLost = hasLogs && hasStartWeight && currentWeight !== null ? (profile.startWeight - currentWeight).toFixed(1) : null
-  const currentWeightStr = currentWeight !== null ? currentWeight.toFixed(1) : '--'
+  const totalLost = hasLogs && hasStartWeight && currentWeight !== null ? profile.startWeight - currentWeight : null
+  const currentWeightStr = currentWeight !== null ? formatWeight(currentWeight, profile.weightUnit) : '--'
 
   const medLevel = getMedicationLevel(logs[0]?.date, profile.medicationName)
   const daysUntilDose = getDaysUntilNextDose(profile.injectionDayOfWeek)
@@ -57,13 +58,12 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
       <div className="card">
         <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>Current Weight</p>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+        <div>
           <span className="weight-display">{currentWeightStr}</span>
-          <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-muted)' }}>{profile.weightUnit}</span>
         </div>
         <div className="badge-teal">
           <TrendingDown size={13} strokeWidth={3} />
-          {totalLost !== null ? `${totalLost} ${profile.weightUnit} total` : 'Add your first log to start tracking'}
+          {totalLost !== null ? `${formatWeight(totalLost, profile.weightUnit)} total` : `Add your first log to start tracking in ${getWeightUnitLabel(profile.weightUnit)}`}
         </div>
       </div>
 

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ArrowRight, AlertCircle, Check } from 'lucide-react'
 import { useStore, type InjectionSite, type Symptom } from '../store'
+import { getWeightUnitLabel } from '../utils/weight'
 
 const SITES: InjectionSite[] = ['Left Stomach', 'Right Stomach', 'Left Thigh', 'Right Thigh']
 const SYMPTOMS: Symptom[] = ['None', 'Nausea', 'Fatigue', 'Headache', 'Constipation']
@@ -87,7 +88,7 @@ export default function CheckIn({ onDone }: CheckInProps) {
                             transition: 'color 0.2s',
                         }}
                     />
-                    <span style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-muted)' }}>{weightUnit}</span>
+                    <span style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-muted)' }}>{getWeightUnitLabel(weightUnit)}</span>
                 </div>
             </div>
 

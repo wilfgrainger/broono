@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useStore } from '../store'
+import { formatWeight, formatWeightValue, getWeightUnitLabel } from '../utils/weight'
 
 export default function Progress() {
   const logs = useStore((s) => s.logs)
@@ -37,14 +38,14 @@ export default function Progress() {
       <div>
         <h2 className="page-title">Progress</h2>
         <p className="page-subtitle">
-          {totalLost > 0 ? `You're down ${totalLost.toFixed(1)} ${weightUnit} total.` : 'Tracking your journey.'}
+          {totalLost > 0 ? `You're down ${formatWeight(totalLost, weightUnit)} total.` : 'Tracking your journey.'}
         </p>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
         {[
-          { label: 'Start', value: `${startWeight.toFixed(1)}`, unit: weightUnit },
-          { label: 'Lost', value: totalLost > 0 ? `-${totalLost.toFixed(1)}` : '0', unit: weightUnit },
+          { label: 'Start', value: formatWeightValue(startWeight, weightUnit), unit: getWeightUnitLabel(weightUnit) },
+          { label: 'Lost', value: totalLost > 0 ? formatWeightValue(totalLost, weightUnit) : '0', unit: totalLost > 0 ? getWeightUnitLabel(weightUnit) : '' },
           { label: 'Weeks', value: `${weeksCount}`, unit: 'logged' },
         ].map((stat) => (
           <div key={stat.label} className="card" style={{ padding: '16px 14px', textAlign: 'center' }}>
@@ -76,7 +77,7 @@ export default function Progress() {
               <div
                 key={log.id}
                 style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}
-                title={`${log.weight} ${weightUnit}`}
+                title={formatWeight(log.weight, weightUnit)}
               >
                 <div
                   className="chart-bar"
@@ -97,16 +98,20 @@ export default function Progress() {
           {logs.map((log, index) => {
             const prevWeight = logs[index + 1]?.weight
             const delta = prevWeight ? log.weight - prevWeight : 0
-            const deltaLabel = delta < 0 ? `down ${Math.abs(delta).toFixed(1)}` : delta > 0 ? `up ${Math.abs(delta).toFixed(1)}` : 'steady'
+            const deltaLabel = delta < 0
+              ? `down ${formatWeight(Math.abs(delta), weightUnit)}`
+              : delta > 0
+                ? `up ${formatWeight(Math.abs(delta), weightUnit)}`
+                : 'steady'
 
             return (
               <div key={log.id} className="card" style={{ padding: '20px 22px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
                     <span style={{ fontSize: 24, fontWeight: 900, letterSpacing: '-0.5px' }}>
-                      {log.weight.toFixed(1)}
+                      {formatWeightValue(log.weight, weightUnit)}
                     </span>
-                    <span style={{ fontSize: 13, color: '#94a3b8', fontWeight: 600 }}>{weightUnit}</span>
+                    <span style={{ fontSize: 13, color: '#94a3b8', fontWeight: 600 }}>{getWeightUnitLabel(weightUnit)}</span>
                     {prevWeight ? (
                       <span
                         style={{

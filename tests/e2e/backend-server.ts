@@ -12,29 +12,15 @@ type UserRecord = {
   email: string
   created_at: number
   subscription_status: string
-  stripe_customer_id?: string | null
   google_play_token?: string | null
-}
-
-type MagicLinkRecord = {
-  id: string
-  email: string
-  token_hash: string
-  expires_at: number
-  used: number
 }
 
 type ExecResult = { changes?: number }
 
 class MemoryStmt {
   private values: unknown[] = []
-  private db: MemoryDb
-  private query: string
 
-  constructor(db: MemoryDb, query: string) {
-    this.db = db
-    this.query = query
-  }
+  constructor(private db: MemoryDb, private query: string) {}
 
   bind(...values: unknown[]) {
     this.values = values
@@ -42,27 +28,6 @@ class MemoryStmt {
   }
 
   async run(): Promise<ExecResult> {
-    if (this.query.startsWith('INSERT INTO magic_links')) {
-      const [id, email, tokenHash, expiresAt] = this.values as [string, string, string, number]
-      this.db.magicLinks.push({
-        id,
-        email,
-        token_hash: tokenHash,
-        expires_at: expiresAt,
-        used: 0,
-      })
-      return { changes: 1 }
-    }
-
-    if (this.query.startsWith('UPDATE magic_links SET used = 1 WHERE id = ?')) {
-      const [id] = this.values as [string]
-      const link = this.db.magicLinks.find((entry) => entry.id === id)
-      if (link) {
-        link.used = 1
-      }
-      return { changes: link ? 1 : 0 }
-    }
-
     if (this.query.startsWith('INSERT INTO users')) {
       const [id, email, createdAt, status] = this.values as [string, string, number, string]
       const user: UserRecord = {
@@ -70,19 +35,11 @@ class MemoryStmt {
         email,
         created_at: createdAt,
         subscription_status: status,
-        stripe_customer_id: null,
         google_play_token: null,
       }
       this.db.usersById.set(id, user)
       this.db.userIdByEmail.set(email, id)
       return { changes: 1 }
-    }
-
-    if (this.query.startsWith('DELETE FROM magic_links WHERE email = ?')) {
-      const [email] = this.values as [string]
-      const before = this.db.magicLinks.length
-      this.db.magicLinks = this.db.magicLinks.filter((entry) => entry.email !== email)
-      return { changes: before - this.db.magicLinks.length }
     }
 
     if (this.query.startsWith('DELETE FROM users WHERE id = ?')) {
@@ -99,14 +56,6 @@ class MemoryStmt {
   }
 
   async first<T>(): Promise<T | null> {
-    if (this.query.startsWith('SELECT * FROM magic_links WHERE email = ? AND token_hash = ? AND used = 0')) {
-      const [email, tokenHash] = this.values as [string, string]
-      const link = this.db.magicLinks.find((entry) =>
-        entry.email === email && entry.token_hash === tokenHash && entry.used === 0
-      )
-      return (link as T | undefined) ?? null
-    }
-
     if (this.query.startsWith('SELECT * FROM users WHERE email = ?')) {
       const [email] = this.values as [string]
       const userId = this.db.userIdByEmail.get(email)
@@ -123,7 +72,6 @@ class MemoryStmt {
 }
 
 class MemoryDb {
-  magicLinks: MagicLinkRecord[] = []
   usersById = new Map<string, UserRecord>()
   userIdByEmail = new Map<string, string>()
 
@@ -133,7 +81,6 @@ class MemoryDb {
 }
 
 const db = new MemoryDb()
-const capturedMagicLinks = new Map<string, string>()
 const originalFetch = globalThis.fetch.bind(globalThis)
 
 globalThis.fetch = async (input, init) => {
@@ -143,18 +90,25 @@ globalThis.fetch = async (input, init) => {
       ? input.toString()
       : input.url
 
-  if (url === 'https://api.resend.com/emails') {
-    const payload = JSON.parse(String(init?.body ?? '{}')) as {
-      to?: string | string[]
-      html?: string
-    }
-    const email = Array.isArray(payload.to) ? payload.to[0] : payload.to
-    const match = payload.html?.match(/href="([^"]+)"/)
-    if (email && match?.[1]) {
-      capturedMagicLinks.set(email, match[1])
+  if (url.startsWith('https://oauth2.googleapis.com/tokeninfo')) {
+    const idToken = new URL(url).searchParams.get('id_token') ?? ''
+    const email = idToken.startsWith('e2e-google:')
+      ? idToken.slice('e2e-google:'.length).trim().toLowerCase()
+      : ''
+
+    if (!email) {
+      return new Response(JSON.stringify({ error: 'invalid_token' }), {
+        status: 401,
+        headers: { 'content-type': 'application/json' },
+      })
     }
 
-    return new Response(JSON.stringify({ id: 'email_test_123' }), {
+    return new Response(JSON.stringify({
+      aud: 'google-client-id',
+      email,
+      email_verified: true,
+      exp: String(Math.floor(Date.now() / 1000) + 3600),
+    }), {
       status: 200,
       headers: { 'content-type': 'application/json' },
     })
@@ -167,32 +121,41 @@ const env = {
   DB: db as unknown as D1Database,
   FRONTEND_URL: 'http://127.0.0.1:4173',
   JWT_SECRET: 'e2e-secret',
-  RESEND_API_KEY: 'capture',
-  STRIPE_SECRET_KEY: 'sk_test_123',
-  STRIPE_WEBHOOK_SECRET: 'whsec_123',
-  STRIPE_PRO_PRICE_ID: 'price_123',
+  GOOGLE_AUTH_ALLOWED_EMAILS: '',
   GOOGLE_PLAY_PACKAGE_NAME: 'app.broono.android',
   GOOGLE_PLAY_SERVICE_ACCOUNT_KEY: '{}',
   GOOGLE_PLAY_WEBHOOK_TOKEN: 'webhook-token',
-  GOOGLE_CLIENT_ID: '',
-  GOOGLE_ANDROID_CLIENT_ID: '',
+  GOOGLE_CLIENT_ID: 'google-client-id',
+  GOOGLE_ANDROID_CLIENT_ID: 'google-android-client-id',
 }
 
 const server = createServer(async (req, res) => {
   const url = new URL(req.url ?? '/', 'http://127.0.0.1:8787')
 
-  if (url.pathname === '/_test/magic-link') {
-    const email = url.searchParams.get('email') ?? ''
-    const magicLink = capturedMagicLinks.get(email)
+  if (url.pathname === '/_test/google-auth' && req.method === 'POST') {
+    const chunks: Buffer[] = []
+    for await (const chunk of req) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
+    }
 
-    if (!magicLink) {
-      res.writeHead(404, { 'content-type': 'application/json' })
-      res.end(JSON.stringify({ error: 'Magic link not found' }))
+    const body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}') as { email?: string }
+    const email = body.email?.trim().toLowerCase()
+
+    if (!email) {
+      res.writeHead(400, { 'content-type': 'application/json' })
+      res.end(JSON.stringify({ error: 'email is required' }))
       return
     }
 
-    res.writeHead(200, { 'content-type': 'application/json' })
-    res.end(JSON.stringify({ email, url: magicLink }))
+    const request = new Request('http://127.0.0.1:8787/api/auth/google', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ idToken: `e2e-google:${email}` }),
+    })
+
+    const response = await app.fetch(request, env)
+    res.writeHead(response.status, Object.fromEntries(response.headers.entries()))
+    res.end(Buffer.from(await response.arrayBuffer()))
     return
   }
 

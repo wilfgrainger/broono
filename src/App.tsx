@@ -9,7 +9,6 @@ import Journal from './pages/Journal'
 import ProfilePage from './pages/Profile'
 import Onboarding from './pages/Onboarding'
 import Login from './pages/Login'
-import Verify from './pages/Verify'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import Terms from './pages/Terms'
 import Paywall from './components/Paywall'
@@ -38,11 +37,6 @@ export default function App() {
       case 'journal': return <Journal onRequestUpgrade={() => setActiveTab('progress')} />
       case 'profile': return <ProfilePage onRequestUpgrade={() => setActiveTab('progress')} />
     }
-  }
-
-  // Handle Magic Link Verification route
-  if (window.location.pathname === '/verify') {
-    return <Verify />
   }
 
   // Public pages (accessible without login)

@@ -4,7 +4,6 @@ CREATE TABLE IF NOT EXISTS users (
   created_at INTEGER NOT NULL,
   
   -- Subscription State
-  stripe_customer_id TEXT,
   google_play_token TEXT,
   subscription_status TEXT DEFAULT 'free', -- 'free', 'pro', 'canceled'
   
@@ -16,12 +15,4 @@ CREATE TABLE IF NOT EXISTS users (
   weight_unit TEXT DEFAULT 'lbs',
   protein_goal INTEGER DEFAULT 100,
   water_goal INTEGER DEFAULT 8
-);
-
-CREATE TABLE IF NOT EXISTS magic_links (
-  id TEXT PRIMARY KEY,
-  email TEXT NOT NULL,
-  token_hash TEXT NOT NULL,
-  expires_at INTEGER NOT NULL,
-  used INTEGER DEFAULT 0
 );

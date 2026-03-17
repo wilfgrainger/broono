@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useStore, type MedicationName } from '../store'
 import { isNativePlatform, MONTHLY_PRICE, TRIAL_DAYS } from '../services/billing'
 import PaywallModal from '../components/PaywallModal'
+import { getWeightUnitLabel } from '../utils/weight'
 
 const MEDICATIONS: MedicationName[] = ['Zepbound', 'Mounjaro', 'Wegovy', 'Ozempic']
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787'
@@ -186,7 +187,7 @@ export default function ProfilePage({ onRequestUpgrade }: ProfilePageProps) {
               aria-pressed={profile.weightUnit === unit}
               className={`selector-btn ${profile.weightUnit === unit ? 'selected' : ''}`}
             >
-              {unit}
+              {getWeightUnitLabel(unit)}
             </button>
           ))}
         </div>
@@ -211,8 +212,8 @@ export default function ProfilePage({ onRequestUpgrade }: ProfilePageProps) {
             </p>
             <p style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
               {subscriptionStatus === 'pro'
-                ? `${MONTHLY_PRICE}/month - Active`
-                : `${TRIAL_DAYS}-day trial - ${MONTHLY_PRICE}/month`}
+                ? `${MONTHLY_PRICE}/month - Active in Google Play`
+                : `${TRIAL_DAYS}-day free trial in the Android app`}
             </p>
           </div>
           {subscriptionStatus !== 'pro' ? (
@@ -230,7 +231,7 @@ export default function ProfilePage({ onRequestUpgrade }: ProfilePageProps) {
                 fontFamily: 'Inter, sans-serif',
               }}
             >
-              See Plans
+              See Pro
             </button>
           ) : isNativePlatform() ? (
             <button
@@ -247,7 +248,7 @@ export default function ProfilePage({ onRequestUpgrade }: ProfilePageProps) {
                 fontFamily: 'Inter, sans-serif',
               }}
             >
-              Manage
+              Manage in Play
             </button>
           ) : null}
         </div>

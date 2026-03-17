@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react'
-import { Lock } from 'lucide-react'
+import { Lock, Smartphone } from 'lucide-react'
 import { useStore } from '../store'
 import { Capacitor } from '@capacitor/core'
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787'
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim() || ''
 const GOOGLE_ANDROID_CLIENT_ID = import.meta.env.VITE_GOOGLE_ANDROID_CLIENT_ID?.trim() || ''
+const REVIEW_GOOGLE_EMAIL = import.meta.env.VITE_REVIEW_GOOGLE_EMAIL?.trim() || ''
 
 export default function Login() {
-    const [email, setEmail] = useState('')
-    const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
-    const [errorMessage, setErrorMessage] = useState('Failed to send magic link. Please try again.')
+    const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle')
+    const [errorMessage, setErrorMessage] = useState('Google sign-in failed. Please try again.')
     const [agreedToTerms, setAgreedToTerms] = useState(false)
     const [agreedToHealthData, setAgreedToHealthData] = useState(false)
     const [googleAuthReady, setGoogleAuthReady] = useState(false)
@@ -46,11 +47,6 @@ export default function Login() {
                 await GoogleAuth.initialize({ clientId: googleInitClientId })
                 setGoogleAuthReady(true)
                 setGoogleAuthInitError(null)
-                console.info('Google auth initialized', {
-                    activeClientId: googleInitClientId,
-                    webClientConfigured: Boolean(GOOGLE_CLIENT_ID),
-                    androidClientConfigured: Boolean(GOOGLE_ANDROID_CLIENT_ID),
-                })
             } catch (err) {
                 const message = 'Google auth failed to initialize. Check OAuth client IDs and signing fingerprints.'
                 console.error(message, err)
@@ -62,40 +58,15 @@ export default function Login() {
         void initializeGoogleAuth()
     }, [googleInitClientId, isAndroid])
 
-    const handleLogin = async (e: React.FormEvent) => {
-        e.preventDefault()
-        if (!email.includes('@')) return
-
-        setStatus('loading')
-        setErrorMessage('Failed to send magic link. Please try again.')
-
-        try {
-            const res = await fetch(`${API_URL}/api/auth/send-magic-link`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email })
-            })
-            const data = await res.json()
-            if (data.success) {
-                setStatus('success')
-            } else {
-                setErrorMessage(data.error || 'Failed to send magic link. Please try again.')
-                setStatus('error')
-            }
-        } catch (err) {
-            console.error(err)
-            setErrorMessage('Failed to send magic link. Please try again.')
-            setStatus('error')
-        }
-    }
-
     const handleGoogleLogin = async () => {
         if (!agreedToTerms || !agreedToHealthData) return
 
         setStatus('loading')
+        setErrorMessage('Google sign-in failed. Please try again.')
+
         try {
             if (!isAndroid) {
-                throw new Error('Google sign-in is available on Android app builds.')
+                throw new Error('Google sign-in is available only in the Android app build.')
             }
 
             if (!googleAuthReady) {
@@ -124,27 +95,15 @@ export default function Login() {
 
             throw new Error(data.error || 'Google login failed')
         } catch (err) {
-            console.error(err)
+            const message = err instanceof Error ? err.message : 'Google sign-in failed. Please try again.'
+            console.error(message, err)
+            setErrorMessage(message)
             setStatus('error')
         }
     }
 
-    if (status === 'success') {
-        return (
-            <div className="page-enter" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', padding: 24, textAlign: 'center' }}>
-                <div style={{ width: 64, height: 64, background: '#f0fdf4', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24 }}>
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><path d="M22 4L12 14.01l-3-3"></path></svg>
-                </div>
-                <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>Check your email</h2>
-                <p style={{ fontSize: 15, color: '#64748b', lineHeight: 1.6 }}>
-                    We sent a magic link to <strong>{email}</strong>. Click it to log in securely.
-                </p>
-            </div>
-        )
-    }
-
     return (
-        <div className="page-enter" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', padding: 24 }}>
+        <div className="page-enter" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: 24 }}>
             <div style={{ textAlign: 'center', marginBottom: 40 }}>
                 <div className="logo-wrap" style={{ justifyContent: 'center', marginBottom: 16, transform: 'scale(1.2)' }}>
                     <div className="logo-icon" style={{ width: 40, height: 40, borderRadius: 14 }}>
@@ -155,79 +114,79 @@ export default function Login() {
                 <p style={{ fontSize: 15, color: '#64748b', marginTop: 8 }}>Your GLP-1 companion.</p>
             </div>
 
-            <div className="card" style={{ width: '100%', maxWidth: 400 }}>
+            <div className="card" style={{ width: '100%', maxWidth: 420 }}>
                 <div style={{
                     background: '#f0fdf4',
                     border: '1px solid #bbf7d0',
-                    borderRadius: '12px',
+                    borderRadius: 12,
                     padding: '12px 16px',
-                    marginBottom: '20px',
+                    marginBottom: 20,
                     display: 'flex',
                     alignItems: 'flex-start',
-                    gap: '12px'
+                    gap: 12,
                 }}>
-                    <Lock size={18} color="#16a34a" style={{ marginTop: '2px', flexShrink: 0 }} />
+                    <Lock size={18} color="#16a34a" style={{ marginTop: 2, flexShrink: 0 }} />
                     <p style={{ fontSize: 13, color: '#166534', lineHeight: 1.5, margin: 0 }}>
                         <strong>100% Private.</strong> Your health data, weight, and logs are stored <em>locally on your device only</em>. We never see or store your health data on our servers.
                     </p>
                 </div>
 
-                <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: 12,
+                    padding: '14px 16px',
+                    marginBottom: 20,
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 12,
+                }}>
+                    <Smartphone size={18} color="#0f172a" style={{ marginTop: 2, flexShrink: 0 }} />
                     <div>
-                        <label htmlFor="email" style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#334155', marginBottom: 8 }}>
-                            Email Address
-                        </label>
+                        <p style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', margin: 0, marginBottom: 4 }}>
+                            Google sign-in only
+                        </p>
+                        <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.5, margin: 0 }}>
+                            Broono sign-in is handled through Google in the Android app build.
+                        </p>
+                        {REVIEW_GOOGLE_EMAIL && (
+                            <p style={{ fontSize: 12, color: '#64748b', lineHeight: 1.5, margin: '8px 0 0' }}>
+                                Review account: <strong>{REVIEW_GOOGLE_EMAIL}</strong>
+                            </p>
+                        )}
+                    </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
+                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 13, color: '#475569', cursor: 'pointer' }}>
                         <input
-                            id="email"
-                            type="email"
-                            placeholder="you@example.com"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="form-input"
-                            style={{ fontSize: 15, padding: '14px 16px' }}
-                            disabled={status === 'loading'}
+                            type="checkbox"
+                            checked={agreedToTerms}
+                            onChange={(e) => setAgreedToTerms(e.target.checked)}
+                            style={{ marginTop: 2, accentColor: '#0f172a' }}
                         />
-                    </div>
+                        <span>I agree to the Terms of Service and Privacy Policy.</span>
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 13, color: '#475569', cursor: 'pointer' }}>
+                        <input
+                            type="checkbox"
+                            checked={agreedToHealthData}
+                            onChange={(e) => setAgreedToHealthData(e.target.checked)}
+                            style={{ marginTop: 2, accentColor: '#0f172a' }}
+                        />
+                        <span>I understand that my health data is stored locally on my device and I consent to this data processing to use the app (UK GDPR compliance).</span>
+                    </label>
+                </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8 }}>
-                        <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 13, color: '#475569', cursor: 'pointer' }}>
-                            <input
-                                type="checkbox"
-                                checked={agreedToTerms}
-                                onChange={(e) => setAgreedToTerms(e.target.checked)}
-                                style={{ marginTop: 2, accentColor: '#0f172a' }}
-                            />
-                            <span>I agree to the Terms of Service and Privacy Policy.</span>
-                        </label>
-                        <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 13, color: '#475569', cursor: 'pointer' }}>
-                            <input
-                                type="checkbox"
-                                checked={agreedToHealthData}
-                                onChange={(e) => setAgreedToHealthData(e.target.checked)}
-                                style={{ marginTop: 2, accentColor: '#0f172a' }}
-                            />
-                            <span>I understand that my health data is stored locally on my device and I consent to this data processing to use the app (UK GDPR compliance).</span>
-                        </label>
-                    </div>
+                {status === 'error' && (
+                    <p style={{ color: '#e11d48', fontSize: 13, fontWeight: 500, marginBottom: 12 }}>{errorMessage}</p>
+                )}
 
-                    {status === 'error' && (
-                        <p style={{ color: '#e11d48', fontSize: 13, fontWeight: 500 }}>{errorMessage}</p>
-                    )}
-
-                    {isAndroid && googleAuthInitError && (
-                        <p style={{ color: '#e11d48', fontSize: 13, fontWeight: 500 }}>{googleAuthInitError}</p>
-                    )}
-
-                    <button
-                        type="submit"
-                        className="btn-primary"
-                        disabled={!email || !agreedToTerms || !agreedToHealthData || status === 'loading'}
-                        style={{ width: '100%', padding: '16px', opacity: (!email || !agreedToTerms || !agreedToHealthData || status === 'loading') ? 0.6 : 1 }}
-                    >
-                        {status === 'loading' ? 'Sending...' : 'Continue with Email'}
-                    </button>
-
-                    {isAndroid && (
+                {isAndroid ? (
+                    <>
+                        {googleAuthInitError && (
+                            <p style={{ color: '#e11d48', fontSize: 13, fontWeight: 500, marginBottom: 12 }}>{googleAuthInitError}</p>
+                        )}
                         <button
                             type="button"
                             onClick={handleGoogleLogin}
@@ -240,11 +199,14 @@ export default function Login() {
                                 opacity: (!agreedToTerms || !agreedToHealthData || status === 'loading' || !googleAuthReady) ? 0.6 : 1,
                             }}
                         >
-                            {status === 'loading' ? 'Connecting...' : 'Continue with Google Play Account'}
+                            {status === 'loading' ? 'Connecting...' : 'Continue with Google'}
                         </button>
-                    )}
-                </form>
-
+                    </>
+                ) : (
+                    <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6, margin: 0 }}>
+                        Sign-in is available in the Android app build only. Legal pages remain accessible on web.
+                    </p>
+                )}
             </div>
         </div>
     )

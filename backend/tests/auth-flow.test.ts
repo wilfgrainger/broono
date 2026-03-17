@@ -10,16 +10,7 @@ type UserRecord = {
   email: string
   created_at: number
   subscription_status: string
-  stripe_customer_id?: string | null
   google_play_token?: string | null
-}
-
-type MagicLinkRecord = {
-  id: string
-  email: string
-  token_hash: string
-  expires_at: number
-  used: number
 }
 
 class MemoryStmt {
@@ -33,26 +24,6 @@ class MemoryStmt {
   }
 
   async run(): Promise<ExecResult> {
-    if (this.query.startsWith('INSERT INTO magic_links')) {
-      const [id, email, tokenHash, expiresAt] = this.values as [string, string, string, number]
-      this.db.magicLinks.push({ id, email, token_hash: tokenHash, expires_at: expiresAt, used: 0 })
-      return { changes: 1 }
-    }
-
-    if (this.query.startsWith('UPDATE magic_links SET used = 1 WHERE id = ?')) {
-      const [id] = this.values as [string]
-      const link = this.db.magicLinks.find((entry) => entry.id === id)
-      if (link) link.used = 1
-      return { changes: link ? 1 : 0 }
-    }
-
-    if (this.query.startsWith('DELETE FROM magic_links WHERE email = ?')) {
-      const [email] = this.values as [string]
-      const before = this.db.magicLinks.length
-      this.db.magicLinks = this.db.magicLinks.filter((entry) => entry.email !== email)
-      return { changes: before - this.db.magicLinks.length }
-    }
-
     if (this.query.startsWith('INSERT INTO users')) {
       const [id, email, createdAt, status] = this.values as [string, string, number, string]
       const user: UserRecord = {
@@ -60,7 +31,6 @@ class MemoryStmt {
         email,
         created_at: createdAt,
         subscription_status: status,
-        stripe_customer_id: null,
         google_play_token: null,
       }
       this.db.usersById.set(id, user)
@@ -82,14 +52,6 @@ class MemoryStmt {
   }
 
   async first<T>(): Promise<T | null> {
-    if (this.query.startsWith('SELECT * FROM magic_links WHERE email = ? AND token_hash = ? AND used = 0')) {
-      const [email, tokenHash] = this.values as [string, string]
-      const link = this.db.magicLinks.find((entry) =>
-        entry.email === email && entry.token_hash === tokenHash && entry.used === 0
-      )
-      return (link as T | undefined) ?? null
-    }
-
     if (this.query.startsWith('SELECT * FROM users WHERE email = ?')) {
       const [email] = this.values as [string]
       const userId = this.db.userIdByEmail.get(email)
@@ -106,7 +68,6 @@ class MemoryStmt {
 }
 
 class MemoryDb {
-  magicLinks: MagicLinkRecord[] = []
   usersById = new Map<string, UserRecord>()
   userIdByEmail = new Map<string, string>()
 
@@ -119,10 +80,7 @@ const createEnv = (db: MemoryDb) => ({
   DB: db as unknown as D1Database,
   FRONTEND_URL: 'http://localhost:3000',
   JWT_SECRET: 'secret',
-  RESEND_API_KEY: 'capture',
-  STRIPE_SECRET_KEY: 'sk_test_123',
-  STRIPE_WEBHOOK_SECRET: 'whsec_123',
-  STRIPE_PRO_PRICE_ID: 'price_123',
+  GOOGLE_AUTH_ALLOWED_EMAILS: '',
   GOOGLE_PLAY_PACKAGE_NAME: 'app.broono.android',
   GOOGLE_PLAY_SERVICE_ACCOUNT_KEY: '{}',
   GOOGLE_PLAY_WEBHOOK_TOKEN: 'webhook-token',
@@ -130,27 +88,27 @@ const createEnv = (db: MemoryDb) => ({
   GOOGLE_ANDROID_CLIENT_ID: 'google-android-client-id',
 })
 
-const hashToken = async (token: string) => {
-  const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token))
-  return Array.from(new Uint8Array(hashBuffer), (byte) => byte.toString(16).padStart(2, '0')).join('')
-}
+const originalFetch = globalThis.fetch.bind(globalThis)
 
-test('send magic link normalizes email and generates a capturable magic link', async () => {
-  const db = new MemoryDb()
-  const sentLinks = new Map<string, string>()
-  const originalFetch = globalThis.fetch.bind(globalThis)
-
+const mockGoogleTokenInfo = async <T>(
+  payloads: Record<string, { aud?: string; email?: string; email_verified?: string | boolean; exp?: string }>,
+  run: () => Promise<T>,
+) => {
   globalThis.fetch = async (input, init) => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
-    if (url === 'https://api.resend.com/emails') {
-      const payload = JSON.parse(String(init?.body ?? '{}')) as { to?: string | string[]; html?: string }
-      const email = Array.isArray(payload.to) ? payload.to[0] : payload.to
-      const match = payload.html?.match(/href="([^"]+)"/)
-      if (email && match?.[1]) {
-        sentLinks.set(email, match[1])
+
+    if (url.startsWith('https://oauth2.googleapis.com/tokeninfo')) {
+      const token = new URL(url).searchParams.get('id_token') ?? ''
+      const payload = payloads[token]
+
+      if (!payload) {
+        return new Response(JSON.stringify({ error: 'invalid_token' }), {
+          status: 401,
+          headers: { 'content-type': 'application/json' },
+        })
       }
 
-      return new Response(JSON.stringify({ id: 'email_test_123' }), {
+      return new Response(JSON.stringify(payload), {
         status: 200,
         headers: { 'content-type': 'application/json' },
       })
@@ -160,123 +118,156 @@ test('send magic link normalizes email and generates a capturable magic link', a
   }
 
   try {
-    const res = await app.request('http://example.com/api/auth/send-magic-link', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-forwarded-for': '203.0.113.10',
-      },
-      body: JSON.stringify({ email: 'USER@Example.COM ' }),
-    }, createEnv(db))
-
-    assert.equal(res.status, 200)
-    assert.deepEqual(await res.json(), { success: true, message: 'Magic link generated' })
-    assert.equal(db.magicLinks.length, 1)
-    assert.equal(db.magicLinks[0]?.email, 'user@example.com')
-    assert.match(sentLinks.get('user@example.com') ?? '', /verify\?token=.*email=user%40example\.com/)
+    return await run()
   } finally {
     globalThis.fetch = originalFetch
   }
-})
+}
 
-test('send magic link rate limits repeated attempts from the same client', async () => {
+test('legacy email sign-in is disabled', async () => {
   const db = new MemoryDb()
-  const env = createEnv(db)
-  env.RESEND_API_KEY = 'dummy'
-
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    const res = await app.request('http://example.com/api/auth/send-magic-link', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-forwarded-for': '203.0.113.11',
-      },
-      body: JSON.stringify({ email: 'limit@example.com' }),
-    }, env)
-
-    assert.equal(res.status, 200)
-  }
-
-  const limited = await app.request('http://example.com/api/auth/send-magic-link', {
+  const res = await app.request('http://example.com/api/auth/send-magic-link', {
     method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-forwarded-for': '203.0.113.11',
-    },
-    body: JSON.stringify({ email: 'limit@example.com' }),
-  }, env)
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email: 'user@example.com' }),
+  }, createEnv(db))
 
-  assert.equal(limited.status, 429)
-  assert.deepEqual(await limited.json(), {
-    error: 'Too many sign-in attempts. Please wait 15 minutes and try again.',
+  assert.equal(res.status, 410)
+  assert.deepEqual(await res.json(), {
+    error: 'Email sign-in has been retired. Use Google sign-in in the Android app.',
   })
 })
 
-test('verify consumes a valid magic link and creates a user', async () => {
+test('legacy email verification is disabled', async () => {
   const db = new MemoryDb()
-  const email = 'verify@example.com'
-  const token = 'valid-token'
-  const tokenHash = await hashToken(token)
-
-  db.magicLinks.push({
-    id: 'magic-1',
-    email,
-    token_hash: tokenHash,
-    expires_at: Math.floor(Date.now() / 1000) + 60,
-    used: 0,
-  })
-
   const res = await app.request('http://example.com/api/auth/verify', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ email, token }),
+    body: JSON.stringify({ email: 'user@example.com', token: 'unused' }),
   }, createEnv(db))
 
-  const payload = await res.json() as {
-    success: boolean
-    token: string
-    user: UserRecord
-  }
-
-  assert.equal(res.status, 200)
-  assert.equal(payload.success, true)
-  assert.ok(payload.token)
-  assert.equal(payload.user.email, email)
-  assert.equal(db.magicLinks[0]?.used, 1)
-  assert.equal(db.userIdByEmail.has(email), true)
+  assert.equal(res.status, 410)
+  assert.deepEqual(await res.json(), {
+    error: 'Email verification links are no longer supported. Use Google sign-in in the Android app.',
+  })
 })
 
-test('delete account removes backend records for the authenticated user', async () => {
+test('google auth creates a user and returns an auth token', async () => {
   const db = new MemoryDb()
-  const email = 'delete@example.com'
-  const token = 'delete-token'
-  const tokenHash = await hashToken(token)
 
-  db.magicLinks.push({
-    id: 'magic-2',
-    email,
-    token_hash: tokenHash,
-    expires_at: Math.floor(Date.now() / 1000) + 60,
-    used: 0,
-  })
-
-  const verifyRes = await app.request('http://example.com/api/auth/verify', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ email, token }),
-  }, createEnv(db))
-
-  const verifyPayload = await verifyRes.json() as { token: string; user: UserRecord }
-
-  const deleteRes = await app.request('http://example.com/api/user', {
-    method: 'DELETE',
-    headers: {
-      authorization: `Bearer ${verifyPayload.token}`,
+  await mockGoogleTokenInfo({
+    'google-token-valid': {
+      aud: 'google-client-id',
+      email: 'BROONO-TEST-LOGIN@gmail.com',
+      email_verified: true,
+      exp: String(Math.floor(Date.now() / 1000) + 3600),
     },
-  }, createEnv(db))
+  }, async () => {
+    const res = await app.request('http://example.com/api/auth/google', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ idToken: 'google-token-valid' }),
+    }, createEnv(db))
 
-  assert.equal(deleteRes.status, 200)
-  assert.equal(db.userIdByEmail.has(email), false)
-  assert.equal(db.usersById.has(verifyPayload.user.id), false)
-  assert.equal(db.magicLinks.some((entry) => entry.email === email), false)
+    const payload = await res.json() as { success: boolean; token: string; user: UserRecord }
+
+    assert.equal(res.status, 200)
+    assert.equal(payload.success, true)
+    assert.ok(payload.token)
+    assert.equal(payload.user.email, 'broono-test-login@gmail.com')
+    assert.equal(db.userIdByEmail.has('broono-test-login@gmail.com'), true)
+  })
+})
+
+test('google auth rejects email addresses outside the allowlist', async () => {
+  const db = new MemoryDb()
+  const env = createEnv(db)
+  env.GOOGLE_AUTH_ALLOWED_EMAILS = 'broono-test-login@gmail.com'
+
+  await mockGoogleTokenInfo({
+    'google-token-blocked': {
+      aud: 'google-client-id',
+      email: 'someoneelse@gmail.com',
+      email_verified: true,
+      exp: String(Math.floor(Date.now() / 1000) + 3600),
+    },
+  }, async () => {
+    const res = await app.request('http://example.com/api/auth/google', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ idToken: 'google-token-blocked' }),
+    }, env)
+
+    assert.equal(res.status, 403)
+    assert.deepEqual(await res.json(), {
+      error: 'This Google account is not authorized for Broono access.',
+    })
+  })
+})
+
+test('delete account removes backend records for the authenticated Google user', async () => {
+  const db = new MemoryDb()
+
+  await mockGoogleTokenInfo({
+    'google-token-delete': {
+      aud: 'google-client-id',
+      email: 'delete@example.com',
+      email_verified: true,
+      exp: String(Math.floor(Date.now() / 1000) + 3600),
+    },
+  }, async () => {
+    const authRes = await app.request('http://example.com/api/auth/google', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ idToken: 'google-token-delete' }),
+    }, createEnv(db))
+
+    const authPayload = await authRes.json() as { token: string; user: UserRecord }
+
+    const deleteRes = await app.request('http://example.com/api/user', {
+      method: 'DELETE',
+      headers: {
+        authorization: `Bearer ${authPayload.token}`,
+      },
+    }, createEnv(db))
+
+    assert.equal(deleteRes.status, 200)
+    assert.equal(db.userIdByEmail.has('delete@example.com'), false)
+    assert.equal(db.usersById.has(authPayload.user.id), false)
+  })
+})
+
+test('stripe checkout is disabled because billing is Google Play only', async () => {
+  const db = new MemoryDb()
+
+  await mockGoogleTokenInfo({
+    'google-token-billing': {
+      aud: 'google-client-id',
+      email: 'billing@example.com',
+      email_verified: true,
+      exp: String(Math.floor(Date.now() / 1000) + 3600),
+    },
+  }, async () => {
+    const authRes = await app.request('http://example.com/api/auth/google', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ idToken: 'google-token-billing' }),
+    }, createEnv(db))
+
+    const authPayload = await authRes.json() as { token: string }
+
+    const checkoutRes = await app.request('http://example.com/api/stripe/checkout', {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${authPayload.token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ email: 'billing@example.com' }),
+    }, createEnv(db))
+
+    assert.equal(checkoutRes.status, 410)
+    assert.deepEqual(await checkoutRes.json(), {
+      error: 'Broono Pro is sold only in the Android app through Google Play.',
+    })
+  })
 })

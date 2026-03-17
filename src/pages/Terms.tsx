@@ -25,13 +25,13 @@ export default function Terms() {
                     <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>3. Subscription Terms</h2>
                     <p><strong>Free Trial:</strong> New subscribers receive a 2-day free trial of Broono Pro.</p>
                     <p><strong>Subscription:</strong> After the trial, Broono Pro costs $2.99/month.</p>
+                    <p><strong>Billing Platform:</strong> Broono Pro is sold only in the Android app through Google Play.</p>
                     <p><strong>Auto-Renewal:</strong> Subscriptions automatically renew unless cancelled at least 24 hours before the end of the current billing period.</p>
                     <p><strong>Cancellation:</strong></p>
                     <ul style={{ paddingLeft: 20, margin: '8px 0' }}>
-                        <li>Android: Manage via Google Play Store &gt; Subscriptions</li>
-                        <li>Web: Manage via your account settings</li>
+                        <li>Manage via Google Play Store &gt; Subscriptions</li>
                     </ul>
-                    <p><strong>Refunds:</strong> Refunds are handled by Google Play (Android) or Stripe (web) per their respective policies.</p>
+                    <p><strong>Refunds:</strong> Refunds are handled by Google Play according to Google Play policies.</p>
                 </section>
 
                 <section>
@@ -40,7 +40,7 @@ export default function Terms() {
                         <li>You are responsible for maintaining the security of your account.</li>
                         <li>You must provide accurate information when creating an account.</li>
                         <li>You must not use the app for any unlawful purpose.</li>
-                        <li>Your health data is stored locally; you are responsible for backing it up.</li>
+                        <li>Your health data is stored locally; you are responsible for your device security and backups.</li>
                     </ul>
                 </section>
 

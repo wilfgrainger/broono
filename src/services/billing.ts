@@ -1,19 +1,12 @@
 /**
- * Billing Service – Platform-aware subscription management
+ * Billing service for Broono Pro.
  *
- * On Android (Capacitor native): Uses Google Play Billing via @capgo/native-purchases
- * On Web: Falls back to Stripe checkout (existing implementation)
- *
- * Product configuration:
- *   - Product ID: "broono_pro_monthly" (configured in Google Play Console)
- *   - Price: $2.99/month
- *   - Free trial: 2 days (configured in Google Play Console offer)
+ * Purchases are accepted only in the Android app through Google Play Billing.
+ * Web surfaces can display plan details, but they cannot start checkout.
  */
 
 import { Capacitor } from '@capacitor/core'
 import { PURCHASE_TYPE } from '@capgo/native-purchases'
-
-// ---------- Types ----------
 
 export interface SubscriptionInfo {
   status: 'unknown' | 'free' | 'trial' | 'pro' | 'expired' | 'canceled'
@@ -32,13 +25,9 @@ export interface ProductInfo {
   trialPeriod?: string
 }
 
-// ---------- Constants ----------
-
 export const PRODUCT_ID = 'broono_pro_monthly'
 export const MONTHLY_PRICE = '$2.99'
 export const TRIAL_DAYS = 2
-
-// ---------- Platform detection ----------
 
 export function isNativePlatform(): boolean {
   return Capacitor.isNativePlatform()
@@ -47,8 +36,6 @@ export function isNativePlatform(): boolean {
 export function getPlatform(): 'android' | 'web' {
   return Capacitor.getPlatform() === 'android' ? 'android' : 'web'
 }
-
-// ---------- Native (Android) billing via @capgo/native-purchases ----------
 
 let nativePurchasesPlugin: typeof import('@capgo/native-purchases').NativePurchases | null = null
 
@@ -60,9 +47,6 @@ async function getNativePurchases() {
   return nativePurchasesPlugin
 }
 
-/**
- * Initialize billing – call once at app startup
- */
 export async function initBilling(): Promise<void> {
   if (!isNativePlatform()) return
 
@@ -74,9 +58,6 @@ export async function initBilling(): Promise<void> {
   }
 }
 
-/**
- * Get available product/subscription info from the store
- */
 export async function getProduct(): Promise<ProductInfo> {
   if (!isNativePlatform()) {
     return {
@@ -118,12 +99,9 @@ export async function getProduct(): Promise<ProductInfo> {
   }
 }
 
-/**
- * Purchase the subscription (launches Google Play purchase flow on Android)
- */
 export async function purchaseSubscription(): Promise<{ success: boolean; productId?: string; purchaseToken?: string; error?: string }> {
   if (!isNativePlatform()) {
-    return { success: false, error: 'Use web checkout for browser purchases' }
+    return { success: false, error: 'Subscriptions are only available in the Android app through Google Play.' }
   }
 
   try {
@@ -151,9 +129,6 @@ export async function purchaseSubscription(): Promise<{ success: boolean; produc
   }
 }
 
-/**
- * Restore previous purchases (e.g. after reinstall)
- */
 export async function restorePurchases(): Promise<SubscriptionInfo> {
   if (!isNativePlatform()) {
     return { status: 'unknown', platform: 'web' }
@@ -184,9 +159,6 @@ export async function restorePurchases(): Promise<SubscriptionInfo> {
   }
 }
 
-/**
- * Check current subscription status
- */
 export async function getSubscriptionStatus(): Promise<SubscriptionInfo> {
   if (!isNativePlatform()) {
     return { status: 'unknown', platform: 'web' }

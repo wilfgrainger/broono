@@ -1,6 +1,6 @@
 # Google Play Store Setup Guide for Broono
 
-This guide covers all the manual steps needed to publish Broono on the Google Play Store with a 2-day free trial and $2.99/month subscription.
+This guide covers all the manual steps needed to publish Broono on the Google Play Store with a 2-day free trial and $2.99/month subscription. Broono Pro is sold only through Google Play.
 
 ---
 
@@ -302,11 +302,8 @@ Make sure these are set in your Cloudflare Worker:
 | `GOOGLE_PLAY_WEBHOOK_TOKEN` | Bearer token for Pub/Sub webhook auth |
 | `GOOGLE_CLIENT_ID` | Google OAuth Web client ID (must match frontend `VITE_GOOGLE_CLIENT_ID` and backend audience checks) |
 | `GOOGLE_ANDROID_CLIENT_ID` | Google OAuth Android client ID for `app.broono.android` (must match frontend `VITE_GOOGLE_ANDROID_CLIENT_ID` and backend audience checks) |
-| `STRIPE_SECRET_KEY` | Existing – for web payments |
-| `STRIPE_WEBHOOK_SECRET` | Existing – for Stripe webhooks |
-| `STRIPE_PRO_PRICE_ID` | Existing – Stripe price ID |
 | `JWT_SECRET` | Existing – for auth tokens |
-| `RESEND_API_KEY` | Existing – for magic link emails |
+| `GOOGLE_AUTH_ALLOWED_EMAILS` | Optional – comma-separated allowlist for review-only access |
 | `FRONTEND_URL` | Existing – e.g. `https://broono.app` |
 
 ---

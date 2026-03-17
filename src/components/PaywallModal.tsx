@@ -61,7 +61,7 @@ export default function PaywallModal({ isOpen, onClose, onUpgrade, featureName }
           Unlock Broono Pro
         </h2>
         <p style={{ fontSize: 15, color: '#64748b', lineHeight: 1.5, marginBottom: 24 }}>
-          <strong>{featureName}</strong> is part of Broono Pro. Free users keep access to core tracking, settings, and account controls.
+          <strong>{featureName}</strong> is part of Broono Pro. Start a 2-day free trial in the Android app through Google Play, while free users keep access to core tracking, settings, and account controls.
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 32 }}>
@@ -86,7 +86,7 @@ export default function PaywallModal({ isOpen, onClose, onUpgrade, featureName }
           onClick={onUpgrade}
           style={{ width: '100%', padding: '18px' }}
         >
-          See Upgrade Options <ArrowRight size={18} />
+          See Pro Details <ArrowRight size={18} />
         </button>
       </div>
       <style>{`

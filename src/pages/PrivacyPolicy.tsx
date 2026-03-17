@@ -16,7 +16,7 @@ export default function PrivacyPolicy() {
 
                 <section>
                     <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>2. Data We Collect</h2>
-                    <p><strong>Account Data:</strong> Email address (for authentication via magic link).</p>
+                    <p><strong>Account Data:</strong> Google account email address for authentication.</p>
                     <p><strong>Health &amp; Wellness Data (stored locally on your device only):</strong></p>
                     <ul style={{ paddingLeft: 20, margin: '8px 0' }}>
                         <li>Weight entries and progress</li>
@@ -26,7 +26,7 @@ export default function PrivacyPolicy() {
                         <li>Water intake tracking</li>
                         <li>Protein goals</li>
                     </ul>
-                    <p><strong>Subscription Data:</strong> Subscription status, purchase tokens (managed by Google Play).</p>
+                    <p><strong>Subscription Data:</strong> Subscription status and Google Play purchase tokens.</p>
                 </section>
 
                 <section>
@@ -37,21 +37,21 @@ export default function PrivacyPolicy() {
                         transmit, or store this data on our servers.
                     </p>
                     <p>
-                        Only your email address and subscription status are stored on our servers for authentication
-                        and subscription management purposes.
+                        Only your email address, account record, subscription status, and Google Play billing reference are
+                        stored on our servers for authentication and subscription management purposes.
                     </p>
                 </section>
 
                 <section>
                     <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>4. Subscriptions &amp; Payments</h2>
                     <p>
-                        Broono offers a subscription service (Broono Pro) with a {`2-day`} free trial period, followed by
-                        a monthly subscription of $2.99/month.
+                        Broono offers a subscription service (Broono Pro) with a 2-day free trial period, followed by a
+                        monthly subscription of $2.99/month.
                     </p>
                     <ul style={{ paddingLeft: 20, margin: '8px 0' }}>
-                        <li>Payment is processed through Google Play (on Android) or Stripe (on web).</li>
+                        <li>Payment is processed only through Google Play in the Android app.</li>
                         <li>Your subscription automatically renews unless cancelled at least 24 hours before the end of the current period.</li>
-                        <li>You can manage or cancel your subscription through Google Play Store settings or your account settings on web.</li>
+                        <li>You can manage or cancel your subscription through Google Play Store settings.</li>
                         <li>We do not store your credit card or payment details.</li>
                     </ul>
                 </section>
@@ -60,10 +60,9 @@ export default function PrivacyPolicy() {
                     <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>5. Third-Party Services</h2>
                     <p>We use the following third-party services:</p>
                     <ul style={{ paddingLeft: 20, margin: '8px 0' }}>
-                        <li><strong>Google Play Billing</strong> – For processing Android subscriptions</li>
-                        <li><strong>Stripe</strong> – For processing web subscriptions</li>
-                        <li><strong>Resend</strong> – For sending authentication emails</li>
-                        <li><strong>Cloudflare</strong> – For hosting and API infrastructure</li>
+                        <li><strong>Google Sign-In</strong> - For account authentication in the Android app</li>
+                        <li><strong>Google Play Billing</strong> - For processing Broono Pro subscriptions</li>
+                        <li><strong>Cloudflare</strong> - For hosting and API infrastructure</li>
                     </ul>
                 </section>
 
@@ -87,7 +86,7 @@ export default function PrivacyPolicy() {
                     <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>7. Data Security</h2>
                     <p>
                         We use industry-standard security measures including encrypted connections (HTTPS),
-                        secure authentication (magic links with hashed tokens), and JWT-based session management.
+                        Google-based account authentication, and JWT-based session management.
                     </p>
                 </section>
 

@@ -27,6 +27,7 @@ export default function Paywall() {
     const setAuth = useStore((s) => s.setAuth)
     const authToken = useStore((s) => s.authToken)
     const userEmail = useStore((s) => s.userEmail)
+    const nativePlatform = isNativePlatform()
 
 
     const verifySubscription = async (purchaseToken: string, productId: string): Promise<VerificationResult> => {
@@ -65,45 +66,27 @@ export default function Paywall() {
     }
 
     const handleSubscribe = async () => {
+        if (!nativePlatform) {
+            setError(`Broono Pro is available only in the Android app through Google Play. Sign in there to start your ${TRIAL_DAYS}-day free trial.`)
+            return
+        }
+
         setLoading(true)
         setError(null)
 
-        if (isNativePlatform()) {
-            // Android: Use Google Play Billing + backend verification
-            const result = await purchaseSubscription()
-            if (result.success && result.purchaseToken) {
-                const verification = await verifySubscription(result.purchaseToken, result.productId || PRODUCT_ID)
-                if (verification.success) {
-                    if (authToken && userEmail) {
-                        setAuth(authToken, userEmail, 'pro')
-                    }
-                    setError(null)
-                } else {
-                    setError(verification.errorMessage || 'Purchase verification failed. Please try Restore Purchases.')
+        const result = await purchaseSubscription()
+        if (result.success && result.purchaseToken) {
+            const verification = await verifySubscription(result.purchaseToken, result.productId || PRODUCT_ID)
+            if (verification.success) {
+                if (authToken && userEmail) {
+                    setAuth(authToken, userEmail, 'pro')
                 }
-            } else if (result.error && result.error !== 'Purchase cancelled') {
-                setError(result.error)
+                setError(null)
+            } else {
+                setError(verification.errorMessage || 'Purchase verification failed. Please try Restore Purchases.')
             }
-        } else {
-            // Web: Use Stripe checkout
-            try {
-                const res = await fetch(`${API_URL}/api/stripe/checkout`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${authToken}`,
-                    },
-                    body: JSON.stringify({ email: userEmail }),
-                })
-                const data = await res.json()
-                if (data.url && typeof data.url === 'string' && data.url.startsWith('https://')) {
-                    window.location.href = data.url
-                } else {
-                    setError('Failed to start checkout')
-                }
-            } catch {
-                setError('Network error. Please try again.')
-            }
+        } else if (result.error && result.error !== 'Purchase cancelled') {
+            setError(result.error)
         }
 
         setLoading(false)
@@ -162,7 +145,7 @@ export default function Paywall() {
                     Unlock Broono Pro
                 </h1>
                 <p style={{ fontSize: 15, color: '#64748b', lineHeight: 1.6, maxWidth: 320 }}>
-                    Your complete GLP-1 companion with full tracking and insights.
+                    Full tracking and insights, sold only in the Android app through Google Play.
                 </p>
             </div>
 
@@ -226,28 +209,46 @@ export default function Paywall() {
                 <p style={{ fontSize: 13, opacity: 0.8, marginBottom: 20 }}>
                     Try free for {TRIAL_DAYS} days. Cancel anytime.
                 </p>
-                <button
-                    onClick={handleSubscribe}
-                    disabled={loading}
-                    style={{
-                        width: '100%',
-                        padding: '16px 24px',
-                        background: 'white',
-                        color: '#005b7f',
-                        border: 'none',
-                        borderRadius: 12,
-                        fontSize: 16,
-                        fontWeight: 800,
-                        cursor: loading ? 'wait' : 'pointer',
-                        opacity: loading ? 0.7 : 1,
-                        transition: 'transform 0.15s, opacity 0.15s',
-                        fontFamily: 'Inter, sans-serif',
-                    }}
-                    onMouseDown={(e) => { if (!loading) (e.currentTarget).style.transform = 'scale(0.97)' }}
-                    onMouseUp={(e) => { (e.currentTarget).style.transform = 'scale(1)' }}
-                >
-                    {loading ? 'Processing...' : `Start Free Trial`}
-                </button>
+                {nativePlatform ? (
+                    <button
+                        onClick={handleSubscribe}
+                        disabled={loading}
+                        style={{
+                            width: '100%',
+                            padding: '16px 24px',
+                            background: 'white',
+                            color: '#005b7f',
+                            border: 'none',
+                            borderRadius: 12,
+                            fontSize: 16,
+                            fontWeight: 800,
+                            cursor: loading ? 'wait' : 'pointer',
+                            opacity: loading ? 0.7 : 1,
+                            transition: 'transform 0.15s, opacity 0.15s',
+                            fontFamily: 'Inter, sans-serif',
+                        }}
+                        onMouseDown={(e) => { if (!loading) (e.currentTarget).style.transform = 'scale(0.97)' }}
+                        onMouseUp={(e) => { (e.currentTarget).style.transform = 'scale(1)' }}
+                    >
+                        {loading ? 'Opening Google Play...' : `Start ${TRIAL_DAYS}-Day Free Trial`}
+                    </button>
+                ) : (
+                    <div
+                        style={{
+                            background: 'rgba(255,255,255,0.12)',
+                            borderRadius: 12,
+                            padding: '16px 18px',
+                            textAlign: 'left',
+                        }}
+                    >
+                        <p style={{ fontSize: 13, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 }}>
+                            Google Play billing only
+                        </p>
+                        <p style={{ fontSize: 14, lineHeight: 1.6, opacity: 0.92 }}>
+                            Start your {TRIAL_DAYS}-day free trial in the Android app through Google Play, then manage billing in Google Play subscriptions.
+                        </p>
+                    </div>
+                )}
             </div>
 
             {error && (
@@ -257,7 +258,7 @@ export default function Paywall() {
             )}
 
             {/* Restore purchases (Android) */}
-            {isNativePlatform() && (
+            {nativePlatform && (
                 <button
                     onClick={handleRestore}
                     disabled={loading}
@@ -280,11 +281,11 @@ export default function Paywall() {
             <div style={{ textAlign: 'center', marginTop: 16, maxWidth: 360 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 8 }}>
                     <Shield size={14} color="#94a3b8" />
-                    <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>Secure payment</span>
+                    <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>Secure Google Play billing</span>
                 </div>
                 <p style={{ fontSize: 11, color: '#94a3b8', lineHeight: 1.6 }}>
-                    {TRIAL_DAYS}-day free trial, then {MONTHLY_PRICE}/month. Cancel anytime in{' '}
-                    {isNativePlatform() ? 'Google Play settings' : 'your account settings'}.
+                    {TRIAL_DAYS}-day free trial, then {MONTHLY_PRICE}/month. Broono Pro is sold only through Google Play on Android.{` `}
+                    Cancel anytime in Google Play subscriptions.
                     By subscribing you agree to our{' '}
                     <a href="/privacy" style={{ color: '#64748b' }}>Privacy Policy</a> and{' '}
                     <a href="/terms" style={{ color: '#64748b' }}>Terms of Service</a>.

@@ -3,6 +3,7 @@ import { useStore } from '../store'
 import type { MedicationName, WeightUnit, UserProfile } from '../store'
 import { ArrowRight, ArrowLeft, Check, Syringe, Target, CalendarDays, Activity, Lock } from 'lucide-react'
 import ReviewRow from '../components/ReviewRow'
+import { formatWeight, getWeightUnitLabel } from '../utils/weight'
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -158,7 +159,7 @@ export default function Onboarding() {
                                     onClick={() => updateLocal({ weightUnit: u })}
                                     style={{ flex: 1, textAlign: 'center', justifyContent: 'center' }}
                                 >
-                                    {u}
+                                    {getWeightUnitLabel(u)}
                                 </PillSelect>
                             ))}
                         </div>
@@ -181,7 +182,7 @@ export default function Onboarding() {
                                 transform: 'translateY(-50%)',
                                 color: 'var(--text-light)',
                                 fontWeight: 600
-                            }}>{localProfile.weightUnit}</span>
+                            }}>{getWeightUnitLabel(localProfile.weightUnit)}</span>
                         </div>
                     </Slide>
                 )}
@@ -286,7 +287,7 @@ export default function Onboarding() {
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                             <ReviewRow label="Medication" value={`${localProfile.medicationName} (${localProfile.dose})`} />
-                            <ReviewRow label="Start Weight" value={`${localProfile.startWeight} ${localProfile.weightUnit}`} />
+                            <ReviewRow label="Start Weight" value={formatWeight(localProfile.startWeight, localProfile.weightUnit)} />
                             <ReviewRow label="Injection Day" value={DAY_NAMES[localProfile.injectionDayOfWeek]} />
                             <ReviewRow label="Water Goal" value={`${localProfile.waterGoalGlasses} glasses`} />
                             <ReviewRow label="Protein Goal" value={`${localProfile.proteinGoalG}g`} />
