@@ -19,8 +19,13 @@ type ExecResult = { changes?: number }
 
 class MemoryStmt {
   private values: unknown[] = []
+  private db: MemoryDb
+  private query: string
 
-  constructor(private db: MemoryDb, private query: string) {}
+  constructor(db: MemoryDb, query: string) {
+    this.db = db
+    this.query = query
+  }
 
   bind(...values: unknown[]) {
     this.values = values
