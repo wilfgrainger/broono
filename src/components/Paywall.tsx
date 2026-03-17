@@ -14,11 +14,11 @@ type VerificationResult = {
 }
 
 const features = [
-    'Unlimited check-ins & weight logging',
-    'Full progress charts & insights',
-    'Journal with AI-powered reflections',
-    'Personalized medication tracking',
-    'Data export for your doctor',
+    'Detailed progress charts and trend history',
+    'Unlimited journal history',
+    'Exportable summaries for care visits',
+    'Subscription restore and premium support',
+    'Full access to future Pro-only insights',
 ]
 
 export default function Paywall() {

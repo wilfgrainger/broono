@@ -8,7 +8,6 @@ export default function Verify() {
     const [searchParams] = useSearchParams()
     const navigate = useNavigate()
     const setAuth = useStore((s) => s.setAuth)
-    const completeOnboarding = useStore((s) => s.completeOnboarding)
 
     const [error, setError] = useState('')
 
@@ -35,8 +34,7 @@ export default function Verify() {
 
                 // Success - update store and redirect
                 setAuth(data.token, data.user.email, data.user.subscription_status)
-                completeOnboarding() // They are logged in, effectively onboarded
-                navigate('/') // Go to Dashboard
+                navigate('/')
             } catch (err: unknown) {
                 const error = err as Error;
                 setError(error.message || 'Verification failed. The link may have expired.')
@@ -44,7 +42,7 @@ export default function Verify() {
         }
 
         verify()
-    }, [searchParams, navigate, setAuth, completeOnboarding])
+    }, [searchParams, navigate, setAuth])
 
     if (error) {
         return (

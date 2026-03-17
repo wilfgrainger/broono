@@ -12,6 +12,7 @@ interface CheckInProps {
 export default function CheckIn({ onDone }: CheckInProps) {
     const logs = useStore((s) => s.logs)
     const addLog = useStore((s) => s.addLog)
+    const weightUnit = useStore((s) => s.profile.weightUnit)
     const lastSite = logs[0]?.site
 
     const [weight, setWeight] = useState('')
@@ -86,7 +87,7 @@ export default function CheckIn({ onDone }: CheckInProps) {
                             transition: 'color 0.2s',
                         }}
                     />
-                    <span style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-muted)' }}>lbs</span>
+                    <span style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-muted)' }}>{weightUnit}</span>
                 </div>
             </div>
 

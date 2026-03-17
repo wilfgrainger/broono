@@ -29,13 +29,39 @@ type Variables = {
 }
 
 const app = new Hono<{ Bindings: Bindings, Variables: Variables }>()
+const MAGIC_LINK_WINDOW_MS = 15 * 60 * 1000
+const MAGIC_LINK_MAX_ATTEMPTS = 5
+const magicLinkAttempts = new Map<string, number[]>()
+
+const getMagicLinkRateLimitKey = (request: Request, email: string) => {
+  const forwardedFor = request.headers.get('cf-connecting-ip')
+    ?? request.headers.get('x-forwarded-for')
+    ?? 'unknown'
+
+  return `${forwardedFor}:${email.toLowerCase()}`
+}
+
+const isMagicLinkRateLimited = (key: string) => {
+  const now = Date.now()
+  const attempts = (magicLinkAttempts.get(key) ?? [])
+    .filter((timestamp) => now - timestamp < MAGIC_LINK_WINDOW_MS)
+
+  if (attempts.length >= MAGIC_LINK_MAX_ATTEMPTS) {
+    magicLinkAttempts.set(key, attempts)
+    return true
+  }
+
+  attempts.push(now)
+  magicLinkAttempts.set(key, attempts)
+  return false
+}
 
 // Enforce strict CORS for the Cloudflare Pages domain (and local dev)
 app.use('*', async (c, next) => {
   const corsMiddleware = cors({
     origin: c.env.FRONTEND_URL,
     allowHeaders: ['Content-Type', 'Authorization'],
-    allowMethods: ['POST', 'GET', 'OPTIONS'],
+    allowMethods: ['POST', 'GET', 'DELETE', 'OPTIONS'],
     exposeHeaders: ['Content-Length'],
     maxAge: 600,
     credentials: true,
@@ -47,9 +73,16 @@ app.get('/', (c) => c.text('Broono API Gateway - Active'))
 
 // === AUTHENTICATION ===
 app.post('/api/auth/send-magic-link', async (c) => {
-  const { email } = await c.req.json()
+  const body = await c.req.json() as { email?: string }
+  const email = body.email?.trim().toLowerCase()
+
   if (!email || !email.includes('@')) {
     return c.json({ error: 'Invalid email' }, 400)
+  }
+
+  const rateLimitKey = getMagicLinkRateLimitKey(c.req.raw, email)
+  if (isMagicLinkRateLimited(rateLimitKey)) {
+    return c.json({ error: 'Too many sign-in attempts. Please wait 15 minutes and try again.' }, 429)
   }
 
   // Generate secure random token
@@ -100,8 +133,9 @@ app.post('/api/auth/send-magic-link', async (c) => {
 })
 
 app.post('/api/auth/verify', async (c) => {
-  const { email, token } = await c.req.json()
+  const { email, token } = await c.req.json() as { email?: string; token?: string }
   if (!email || !token) return c.json({ error: 'Missing credentials' }, 400)
+  const normalizedEmail = email.trim().toLowerCase()
 
   // Hash the incoming token
   const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token))
@@ -110,7 +144,7 @@ app.post('/api/auth/verify', async (c) => {
   // Check magic link in D1
   const link = await c.env.DB.prepare(
     'SELECT * FROM magic_links WHERE email = ? AND token_hash = ? AND used = 0'
-  ).bind(email, tokenHash).first<{ expires_at: number, id: string }>()
+  ).bind(normalizedEmail, tokenHash).first<{ expires_at: number, id: string }>()
 
   if (!link) return c.json({ error: 'Invalid or expired link' }, 401)
 
@@ -123,12 +157,12 @@ app.post('/api/auth/verify', async (c) => {
   await c.env.DB.prepare('UPDATE magic_links SET used = 1 WHERE id = ?').bind(link.id).run()
 
   // Get or Create User
-  let user = await c.env.DB.prepare('SELECT * FROM users WHERE email = ?').bind(email).first<{ id: string, email: string, subscription_status: string }>()
+  let user = await c.env.DB.prepare('SELECT * FROM users WHERE email = ?').bind(normalizedEmail).first<{ id: string, email: string, subscription_status: string }>()
   if (!user) {
     const userId = crypto.randomUUID()
     await c.env.DB.prepare(
       'INSERT INTO users (id, email, created_at, subscription_status) VALUES (?, ?, ?, ?)'
-    ).bind(userId, email, now, 'free').run()
+    ).bind(userId, normalizedEmail, now, 'free').run()
     user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(userId).first<{ id: string, email: string, subscription_status: string }>()
   }
 

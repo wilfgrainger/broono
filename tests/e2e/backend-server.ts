@@ -78,6 +78,23 @@ class MemoryStmt {
       return { changes: 1 }
     }
 
+    if (this.query.startsWith('DELETE FROM magic_links WHERE email = ?')) {
+      const [email] = this.values as [string]
+      const before = this.db.magicLinks.length
+      this.db.magicLinks = this.db.magicLinks.filter((entry) => entry.email !== email)
+      return { changes: before - this.db.magicLinks.length }
+    }
+
+    if (this.query.startsWith('DELETE FROM users WHERE id = ?')) {
+      const [id] = this.values as [string]
+      const user = this.db.usersById.get(id)
+      if (!user) return { changes: 0 }
+
+      this.db.usersById.delete(id)
+      this.db.userIdByEmail.delete(user.email)
+      return { changes: 1 }
+    }
+
     throw new Error(`Unsupported run query in test DB: ${this.query}`)
   }
 
@@ -176,6 +193,22 @@ const server = createServer(async (req, res) => {
 
     res.writeHead(200, { 'content-type': 'application/json' })
     res.end(JSON.stringify({ email, url: magicLink }))
+    return
+  }
+
+  if (url.pathname === '/_test/user') {
+    const email = url.searchParams.get('email') ?? ''
+    const userId = db.userIdByEmail.get(email)
+    const user = userId ? db.usersById.get(userId) : null
+
+    if (!user) {
+      res.writeHead(404, { 'content-type': 'application/json' })
+      res.end(JSON.stringify({ error: 'User not found' }))
+      return
+    }
+
+    res.writeHead(200, { 'content-type': 'application/json' })
+    res.end(JSON.stringify(user))
     return
   }
 

@@ -33,10 +33,10 @@ export default function App() {
     switch (activeTab) {
       case 'dashboard': return <Dashboard onNavigate={setActiveTab} />
       case 'checkin': return <CheckIn onDone={() => setActiveTab('dashboard')} />
-      case 'progress': return <Progress />
+      case 'progress': return subscriptionStatus === 'pro' ? <Progress /> : <Paywall />
       case 'news': return <NewsPage />
-      case 'journal': return <Journal />
-      case 'profile': return <ProfilePage />
+      case 'journal': return <Journal onRequestUpgrade={() => setActiveTab('progress')} />
+      case 'profile': return <ProfilePage onRequestUpgrade={() => setActiveTab('progress')} />
     }
   }
 
@@ -61,11 +61,6 @@ export default function App() {
   // Logged in but new user -> Show Onboarding
   if (!hasCompletedOnboarding) {
     return <Onboarding />
-  }
-
-  // Logged in, onboarded, but no active subscription -> Show Paywall
-  if (subscriptionStatus !== 'pro') {
-    return <Paywall />
   }
 
   return (

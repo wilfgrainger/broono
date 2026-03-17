@@ -10,8 +10,8 @@ export type Symptom = 'None' | 'Nausea' | 'Fatigue' | 'Headache' | 'Constipation
 
 export interface WeeklyLog {
   id: string
-  date: string          // ISO date string
-  displayDate: string   // e.g. "Oct 24"
+  date: string
+  displayDate: string
   weight: number
   site: InjectionSite | ''
   symptoms: Symptom[]
@@ -28,7 +28,7 @@ export interface JournalEntry {
 export interface UserProfile {
   medicationName: MedicationName
   dose: string
-  injectionDayOfWeek: number   // 0 = Sun … 6 = Sat
+  injectionDayOfWeek: number
   startWeight: number
   weightUnit: WeightUnit
   proteinGoalG: number
@@ -36,7 +36,7 @@ export interface UserProfile {
 }
 
 interface DailyWater {
-  date: string   // YYYY-MM-DD
+  date: string
   glasses: number
 }
 
@@ -46,32 +46,33 @@ interface AppState {
   logs: WeeklyLog[]
   journalEntries: JournalEntry[]
   dailyWater: DailyWater
-  
-  // Auth State
   authToken: string | null
   userEmail: string | null
   subscriptionStatus: 'free' | 'pro' | 'canceled'
-
-  // Profile actions
   updateProfile: (updates: Partial<UserProfile>) => void
   completeOnboarding: () => void
-
-  // Log actions
   addLog: (log: Omit<WeeklyLog, 'id'>) => void
   removeLog: (id: string) => void
-
-  // Journal actions
   addJournalEntry: (text: string) => void
   removeJournalEntry: (id: string) => void
-
-  // Water actions
   addWaterGlass: () => void
   resetWaterIfNewDay: () => void
-
-  // Auth actions
-  setAuth: (token: string, email: string, status?: 'free'|'pro'|'canceled') => void
+  setAuth: (token: string, email: string, status?: 'free' | 'pro' | 'canceled') => void
   logout: () => void
+  resetApp: () => void
 }
+
+type PersistedAppState = Pick<
+  AppState,
+  'hasCompletedOnboarding' |
+  'profile' |
+  'logs' |
+  'journalEntries' |
+  'dailyWater' |
+  'authToken' |
+  'userEmail' |
+  'subscriptionStatus'
+>
 
 function today(): string {
   return new Date().toISOString().split('T')[0]
@@ -86,80 +87,43 @@ function formatDisplayDate(isoDate: string): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
+const defaultProfile: UserProfile = {
+  medicationName: 'Zepbound',
+  dose: '5mg',
+  injectionDayOfWeek: 1,
+  startWeight: 0,
+  weightUnit: 'lbs',
+  proteinGoalG: 100,
+  waterGoalGlasses: 8,
+}
+
+const createPersistedState = (): PersistedAppState => ({
+  hasCompletedOnboarding: false,
+  profile: { ...defaultProfile },
+  logs: [],
+  journalEntries: [],
+  dailyWater: { date: today(), glasses: 0 },
+  authToken: null,
+  userEmail: null,
+  subscriptionStatus: 'free',
+})
+
 export const useStore = create<AppState>()(
   persist(
     (set) => ({
-      authToken: null,
-      userEmail: null,
-      subscriptionStatus: 'free',
-      hasCompletedOnboarding: false,
-      profile: {
-        medicationName: 'Zepbound',
-        dose: '5mg',
-        injectionDayOfWeek: 1, // Monday
-        startWeight: 195.0,
-        weightUnit: 'lbs',
-        proteinGoalG: 100,
-        waterGoalGlasses: 8,
-      },
-
-      logs: [
-        {
-          id: uid(),
-          date: '2024-10-24',
-          displayDate: 'Oct 24',
-          weight: 185.0,
-          site: 'Left Stomach',
-          symptoms: ['Mild Nausea' as Symptom],
-          notes: 'Feeling good.',
-        },
-        {
-          id: uid(),
-          date: '2024-10-17',
-          displayDate: 'Oct 17',
-          weight: 187.5,
-          site: 'Right Thigh',
-          symptoms: ['None'],
-          notes: 'Normal week.',
-        },
-        {
-          id: uid(),
-          date: '2024-10-10',
-          displayDate: 'Oct 10',
-          weight: 190.0,
-          site: 'Left Thigh',
-          symptoms: ['None'],
-          notes: '',
-        },
-        {
-          id: uid(),
-          date: '2024-10-03',
-          displayDate: 'Oct 3',
-          weight: 192.0,
-          site: 'Right Stomach',
-          symptoms: ['Nausea'],
-          notes: 'Started 5mg.',
-        },
-      ],
-
-      journalEntries: [
-        {
-          id: uid(),
-          date: '2024-10-24',
-          displayDate: 'Oct 24',
-          text: 'Drank a lot of water today. Clothes fit better. Food noise is completely gone.',
-        },
-      ],
-
-      dailyWater: { date: today(), glasses: 0 },
+      ...createPersistedState(),
 
       updateProfile: (updates) =>
         set((s) => ({ profile: { ...s.profile, ...updates } })),
 
       completeOnboarding: () => set({ hasCompletedOnboarding: true }),
 
-      setAuth: (token, email, status = 'free') => set({ authToken: token, userEmail: email, subscriptionStatus: status }),
+      setAuth: (token, email, status = 'free') =>
+        set({ authToken: token, userEmail: email, subscriptionStatus: status }),
+
       logout: () => set({ authToken: null, userEmail: null, subscriptionStatus: 'free' }),
+
+      resetApp: () => set(createPersistedState()),
 
       addLog: (log) =>
         set((s) => ({
@@ -189,11 +153,12 @@ export const useStore = create<AppState>()(
 
       addWaterGlass: () =>
         set((s) => {
-          const d = today()
-          const current = s.dailyWater.date === d ? s.dailyWater.glasses : 0
+          const date = today()
+          const current = s.dailyWater.date === date ? s.dailyWater.glasses : 0
+
           return {
             dailyWater: {
-              date: d,
+              date,
               glasses: Math.min(current + 1, s.profile.waterGoalGlasses),
             },
           }
@@ -201,21 +166,55 @@ export const useStore = create<AppState>()(
 
       resetWaterIfNewDay: () =>
         set((s) => {
-          const d = today()
-          if (s.dailyWater.date !== d) {
-            return { dailyWater: { date: d, glasses: 0 } }
+          const date = today()
+          if (s.dailyWater.date !== date) {
+            return { dailyWater: { date, glasses: 0 } }
           }
+
           return {}
         }),
     }),
     {
       name: 'broono-store',
-      version: 1,
+      version: 2,
+      migrate: (persistedState, version) => {
+        const baseState = createPersistedState()
+
+        if (!persistedState || typeof persistedState !== 'object') {
+          return baseState
+        }
+
+        const data = persistedState as Partial<PersistedAppState>
+
+        if (version < 2) {
+          return {
+            ...baseState,
+            authToken: data.authToken ?? null,
+            userEmail: data.userEmail ?? null,
+            subscriptionStatus: data.subscriptionStatus ?? 'free',
+            hasCompletedOnboarding: false,
+            profile: {
+              ...baseState.profile,
+              ...data.profile,
+              startWeight: data.profile?.startWeight && data.profile.startWeight > 0
+                ? data.profile.startWeight
+                : 0,
+            },
+          }
+        }
+
+        return {
+          ...baseState,
+          ...data,
+          profile: { ...baseState.profile, ...data.profile },
+          logs: Array.isArray(data.logs) ? data.logs : [],
+          journalEntries: Array.isArray(data.journalEntries) ? data.journalEntries : [],
+          dailyWater: data.dailyWater ?? baseState.dailyWater,
+        }
+      },
     }
   )
 )
-
-// ─── Derived selectors ──────────────────────────────────────────────────────
 
 export const getMedicationLevel = getMedicationLevelUtil
 export const getDaysUntilNextDose = getDaysUntilNextDoseUtil

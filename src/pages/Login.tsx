@@ -9,6 +9,7 @@ const GOOGLE_ANDROID_CLIENT_ID = import.meta.env.VITE_GOOGLE_ANDROID_CLIENT_ID?.
 export default function Login() {
     const [email, setEmail] = useState('')
     const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+    const [errorMessage, setErrorMessage] = useState('Failed to send magic link. Please try again.')
     const [agreedToTerms, setAgreedToTerms] = useState(false)
     const [agreedToHealthData, setAgreedToHealthData] = useState(false)
     const [googleAuthReady, setGoogleAuthReady] = useState(false)
@@ -66,6 +67,7 @@ export default function Login() {
         if (!email.includes('@')) return
 
         setStatus('loading')
+        setErrorMessage('Failed to send magic link. Please try again.')
 
         try {
             const res = await fetch(`${API_URL}/api/auth/send-magic-link`, {
@@ -77,10 +79,12 @@ export default function Login() {
             if (data.success) {
                 setStatus('success')
             } else {
+                setErrorMessage(data.error || 'Failed to send magic link. Please try again.')
                 setStatus('error')
             }
         } catch (err) {
             console.error(err)
+            setErrorMessage('Failed to send magic link. Please try again.')
             setStatus('error')
         }
     }
@@ -207,7 +211,7 @@ export default function Login() {
                     </div>
 
                     {status === 'error' && (
-                        <p style={{ color: '#e11d48', fontSize: 13, fontWeight: 500 }}>Failed to send magic link. Please try again.</p>
+                        <p style={{ color: '#e11d48', fontSize: 13, fontWeight: 500 }}>{errorMessage}</p>
                     )}
 
                     {isAndroid && googleAuthInitError && (
