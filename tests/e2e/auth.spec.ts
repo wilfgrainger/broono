@@ -66,6 +66,7 @@ test('public legal pages and login messaging render', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'broono.' })).toBeVisible()
   await expect(page.getByText('Google sign-in only')).toBeVisible()
   await expect(page.getByText('Sign-in is available in the Android app build only.')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Join the waitlist for launch updates' })).toBeVisible()
 
   await page.goto('/privacy')
   await expect(page.getByRole('heading', { name: 'Privacy Policy' })).toBeVisible()
@@ -74,6 +75,25 @@ test('public legal pages and login messaging render', async ({ page }) => {
   await page.goto('/terms')
   await expect(page.getByRole('heading', { name: 'Terms of Service' })).toBeVisible()
   await page.screenshot({ path: 'test-results/terms-page.png', fullPage: true })
+})
+
+test('waitlist page captures the first-100 lifetime access offer', async ({ page, request }) => {
+  await page.goto('/waitlist')
+
+  await expect(page.getByText('First 100 waitlist members get free lifetime access.')).toBeVisible()
+  await page.getByLabel('First name').fill('Jordan')
+  await page.getByLabel('Email').fill('jordan-waitlist@broono.test')
+  await page.getByLabel('What would make Broono a must-have for you?').fill('Progress charts and accountability.')
+  await page.getByRole('button', { name: 'Join the waitlist' }).click()
+
+  await expect(page.getByText('You qualified for free lifetime Pro access.')).toBeVisible()
+
+  const entryResponse = await request.get('http://127.0.0.1:8787/_test/waitlist?email=jordan-waitlist@broono.test')
+  expect(entryResponse.ok()).toBeTruthy()
+
+  const entry = await entryResponse.json() as { position: number; offer_tier: string }
+  expect(entry.position).toBe(1)
+  expect(entry.offer_tier).toBe('lifetime')
 })
 
 test('google-authenticated users land on onboarding before the paywall', async ({ page, request }) => {

@@ -11,6 +11,7 @@ import Onboarding from './pages/Onboarding'
 import Login from './pages/Login'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import Terms from './pages/Terms'
+import Waitlist from './pages/Waitlist'
 import Paywall from './components/Paywall'
 import { initBilling } from './services/billing'
 
@@ -45,6 +46,9 @@ export default function App() {
   }
   if (window.location.pathname === '/terms') {
     return <Terms />
+  }
+  if (window.location.pathname === '/waitlist') {
+    return <Waitlist />
   }
 
   // Not logged in -> Show Login
