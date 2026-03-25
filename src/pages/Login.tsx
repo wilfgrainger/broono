@@ -203,9 +203,28 @@ export default function Login() {
                         </button>
                     </>
                 ) : (
-                    <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6, margin: 0 }}>
-                        Sign-in is available in the Android app build only. Legal pages remain accessible on web.
-                    </p>
+                    <div style={{ display: 'grid', gap: 12 }}>
+                        <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6, margin: 0 }}>
+                            Sign-in is available in the Android app build only. Legal pages remain accessible on web.
+                        </p>
+                        <a
+                            href="/waitlist"
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: '14px 16px',
+                                borderRadius: 14,
+                                background: '#eef2ff',
+                                color: '#3730a3',
+                                textDecoration: 'none',
+                                fontWeight: 700,
+                                fontSize: 14,
+                            }}
+                        >
+                            Join the waitlist for launch updates
+                        </a>
+                    </div>
                 )}
             </div>
         </div>

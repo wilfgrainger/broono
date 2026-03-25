@@ -24,6 +24,17 @@ type Variables = {
   }
 }
 
+type WaitlistEntryRecord = {
+  id: string
+  email: string
+  first_name: string
+  created_at: number
+  source: string
+  notes: string | null
+  offer_tier: string
+  position: number
+}
+
 const app = new Hono<{ Bindings: Bindings, Variables: Variables }>()
 
 // Enforce strict CORS for the Cloudflare Pages domain (and local dev)
@@ -40,6 +51,103 @@ app.use('*', async (c, next) => {
 })
 
 app.get('/', (c) => c.text('Broono API Gateway - Active'))
+
+const WAITLIST_LIFETIME_CAP = 100
+
+app.get('/api/waitlist/status', async (c) => {
+  const total = await c.env.DB.prepare(
+    'SELECT COUNT(*) as total FROM waitlist_entries'
+  ).first<{ total: number | string }>()
+
+  const totalSignups = Number(total?.total ?? 0)
+  const spotsRemaining = Math.max(WAITLIST_LIFETIME_CAP - totalSignups, 0)
+
+  return c.json({
+    success: true,
+    totalSignups,
+    lifetimeCap: WAITLIST_LIFETIME_CAP,
+    spotsRemaining,
+  })
+})
+
+app.post('/api/waitlist', async (c) => {
+  const body = await c.req.json().catch(() => null) as {
+    email?: unknown
+    firstName?: unknown
+    source?: unknown
+    notes?: unknown
+  } | null
+
+  const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : ''
+  const firstName = typeof body?.firstName === 'string' ? body.firstName.trim() : ''
+  const source = typeof body?.source === 'string' ? body.source.trim().slice(0, 80) : 'waitlist-web'
+  const notes = typeof body?.notes === 'string' ? body.notes.trim().slice(0, 280) : ''
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return c.json({ error: 'A valid email address is required.' }, 400)
+  }
+
+  if (!firstName || firstName.length < 2) {
+    return c.json({ error: 'Please share your first name.' }, 400)
+  }
+
+  if (firstName.length > 80) {
+    return c.json({ error: 'First name must be 80 characters or fewer.' }, 400)
+  }
+
+  const existingEntry = await c.env.DB.prepare(
+    'SELECT * FROM waitlist_entries WHERE email = ?'
+  ).bind(email).first<WaitlistEntryRecord>()
+
+  if (existingEntry) {
+    const total = await c.env.DB.prepare(
+      'SELECT COUNT(*) as total FROM waitlist_entries'
+    ).first<{ total: number | string }>()
+
+    const totalSignups = Number(total?.total ?? existingEntry.position)
+    return c.json({
+      success: true,
+      alreadyJoined: true,
+      position: existingEntry.position,
+      offerTier: existingEntry.offer_tier,
+      awardedLifetimeAccess: existingEntry.offer_tier === 'lifetime',
+      spotsRemaining: Math.max(WAITLIST_LIFETIME_CAP - totalSignups, 0),
+      totalSignups,
+    })
+  }
+
+  const total = await c.env.DB.prepare(
+    'SELECT COUNT(*) as total FROM waitlist_entries'
+  ).first<{ total: number | string }>()
+
+  const totalSignups = Number(total?.total ?? 0)
+  const position = totalSignups + 1
+  const offerTier = position <= WAITLIST_LIFETIME_CAP ? 'lifetime' : 'standard'
+  const createdAt = Math.floor(Date.now() / 1000)
+
+  await c.env.DB.prepare(
+    'INSERT INTO waitlist_entries (id, email, first_name, created_at, source, notes, offer_tier, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+  ).bind(
+    crypto.randomUUID(),
+    email,
+    firstName,
+    createdAt,
+    source || 'waitlist-web',
+    notes || null,
+    offerTier,
+    position,
+  ).run()
+
+  return c.json({
+    success: true,
+    alreadyJoined: false,
+    position,
+    offerTier,
+    awardedLifetimeAccess: offerTier === 'lifetime',
+    spotsRemaining: Math.max(WAITLIST_LIFETIME_CAP - position, 0),
+    totalSignups: position,
+  }, 201)
+})
 
 // === AUTHENTICATION ===
 app.post('/api/auth/send-magic-link', async (c) => {

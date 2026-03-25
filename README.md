@@ -1,14 +1,16 @@
 # Broono
 
-Broono is a GLP-1 companion app designed to track your journey with medications like Zepbound, Mounjaro, Wegovy, or Ozempic.
+Broono is a GLP-1 companion app designed to track your journey with medications like Zepbound, Mounjaro, Wegovy, or Ozempic. The product is being packaged as a mobile-first app with a shared React + Capacitor codebase.
 
 ## Architecture
 
 - **Frontend**: React + Vite (TypeScript) - Deployed on Cloudflare Pages.
 - **Backend**: Hono + Cloudflare Workers - Serverless API.
 - **Database**: Cloudflare D1.
-- **Auth**: Magic Links via Resend.
-- **Payments**: Stripe.
+- **Auth**: Google Sign-In with backend audience validation for web and Android clients.
+- **Payments**: Google Play Billing today, with the repo structured to add Apple App Store billing next.
+
+For the Android-first / iOS-next rollout plan, see `docs/mobile_launch_strategy.md`. For launch collateral, use `.github/launch_materials/`.
 
 ## Getting Started
 
@@ -31,6 +33,11 @@ Broono is a GLP-1 companion app designed to track your journey with medications 
 #### Frontend
 ```bash
 pnpm dev
+```
+
+Public waitlist route:
+```bash
+http://localhost:5173/waitlist
 ```
 
 #### Backend

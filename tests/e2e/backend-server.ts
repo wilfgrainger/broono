@@ -15,6 +15,17 @@ type UserRecord = {
   google_play_token?: string | null
 }
 
+type WaitlistRecord = {
+  id: string
+  email: string
+  first_name: string
+  created_at: number
+  source: string
+  notes: string | null
+  offer_tier: string
+  position: number
+}
+
 type ExecResult = { changes?: number }
 
 class MemoryStmt {
@@ -57,6 +68,34 @@ class MemoryStmt {
       return { changes: 1 }
     }
 
+    if (this.query.startsWith('INSERT INTO waitlist_entries')) {
+      const [id, email, firstName, createdAt, source, notes, offerTier, position] = this.values as [
+        string,
+        string,
+        string,
+        number,
+        string,
+        string | null,
+        string,
+        number,
+      ]
+
+      const entry: WaitlistRecord = {
+        id,
+        email,
+        first_name: firstName,
+        created_at: createdAt,
+        source,
+        notes,
+        offer_tier: offerTier,
+        position,
+      }
+
+      this.db.waitlistByEmail.set(email, entry)
+      this.db.waitlistCount = Math.max(this.db.waitlistCount, position)
+      return { changes: 1 }
+    }
+
     throw new Error(`Unsupported run query in test DB: ${this.query}`)
   }
 
@@ -72,6 +111,15 @@ class MemoryStmt {
       return (this.db.usersById.get(id) as T | undefined) ?? null
     }
 
+    if (this.query.startsWith('SELECT * FROM waitlist_entries WHERE email = ?')) {
+      const [email] = this.values as [string]
+      return (this.db.waitlistByEmail.get(email) as T | undefined) ?? null
+    }
+
+    if (this.query.startsWith('SELECT COUNT(*) as total FROM waitlist_entries')) {
+      return { total: this.db.waitlistCount } as T
+    }
+
     throw new Error(`Unsupported first query in test DB: ${this.query}`)
   }
 }
@@ -79,6 +127,8 @@ class MemoryStmt {
 class MemoryDb {
   usersById = new Map<string, UserRecord>()
   userIdByEmail = new Map<string, string>()
+  waitlistByEmail = new Map<string, WaitlistRecord>()
+  waitlistCount = 0
 
   prepare(query: string) {
     return new MemoryStmt(this, query)
@@ -177,6 +227,21 @@ const server = createServer(async (req, res) => {
 
     res.writeHead(200, { 'content-type': 'application/json' })
     res.end(JSON.stringify(user))
+    return
+  }
+
+  if (url.pathname === '/_test/waitlist') {
+    const email = (url.searchParams.get('email') ?? '').trim().toLowerCase()
+    const entry = db.waitlistByEmail.get(email)
+
+    if (!entry) {
+      res.writeHead(404, { 'content-type': 'application/json' })
+      res.end(JSON.stringify({ error: 'Waitlist entry not found' }))
+      return
+    }
+
+    res.writeHead(200, { 'content-type': 'application/json' })
+    res.end(JSON.stringify(entry))
     return
   }
 

@@ -16,3 +16,14 @@ CREATE TABLE IF NOT EXISTS users (
   protein_goal INTEGER DEFAULT 100,
   water_goal INTEGER DEFAULT 8
 );
+
+CREATE TABLE IF NOT EXISTS waitlist_entries (
+  id TEXT PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  first_name TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  source TEXT NOT NULL DEFAULT 'waitlist-web',
+  notes TEXT,
+  offer_tier TEXT NOT NULL DEFAULT 'standard',
+  position INTEGER NOT NULL UNIQUE
+);

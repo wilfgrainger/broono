@@ -13,6 +13,17 @@ type UserRecord = {
   google_play_token?: string | null
 }
 
+type WaitlistRecord = {
+  id: string
+  email: string
+  first_name: string
+  created_at: number
+  source: string
+  notes: string | null
+  offer_tier: string
+  position: number
+}
+
 class MemoryStmt {
   values: unknown[] = []
 
@@ -48,6 +59,34 @@ class MemoryStmt {
       return { changes: 1 }
     }
 
+    if (this.query.startsWith('INSERT INTO waitlist_entries')) {
+      const [id, email, firstName, createdAt, source, notes, offerTier, position] = this.values as [
+        string,
+        string,
+        string,
+        number,
+        string,
+        string | null,
+        string,
+        number,
+      ]
+
+      const entry: WaitlistRecord = {
+        id,
+        email,
+        first_name: firstName,
+        created_at: createdAt,
+        source,
+        notes,
+        offer_tier: offerTier,
+        position,
+      }
+
+      this.db.waitlistByEmail.set(email, entry)
+      this.db.waitlistCount = Math.max(this.db.waitlistCount, position)
+      return { changes: 1 }
+    }
+
     throw new Error(`Unsupported run query: ${this.query}`)
   }
 
@@ -63,6 +102,15 @@ class MemoryStmt {
       return (this.db.usersById.get(id) as T | undefined) ?? null
     }
 
+    if (this.query.startsWith('SELECT * FROM waitlist_entries WHERE email = ?')) {
+      const [email] = this.values as [string]
+      return (this.db.waitlistByEmail.get(email) as T | undefined) ?? null
+    }
+
+    if (this.query.startsWith('SELECT COUNT(*) as total FROM waitlist_entries')) {
+      return { total: this.db.waitlistCount } as T
+    }
+
     throw new Error(`Unsupported first query: ${this.query}`)
   }
 }
@@ -70,6 +118,8 @@ class MemoryStmt {
 class MemoryDb {
   usersById = new Map<string, UserRecord>()
   userIdByEmail = new Map<string, string>()
+  waitlistByEmail = new Map<string, WaitlistRecord>()
+  waitlistCount = 0
 
   prepare(query: string) {
     return new MemoryStmt(this, query)
@@ -270,4 +320,75 @@ test('stripe checkout is disabled because billing is Google Play only', async ()
       error: 'Broono Pro is sold only in the Android app through Google Play.',
     })
   })
+})
+
+test('waitlist awards lifetime access to the first 100 signups', async () => {
+  const db = new MemoryDb()
+
+  for (let i = 1; i <= 100; i += 1) {
+    const res = await app.request('http://example.com/api/waitlist', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        email: `person${i}@example.com`,
+        firstName: `Person${i}`,
+        source: 'unit-test',
+      }),
+    }, createEnv(db))
+
+    assert.equal(res.status, 201)
+  }
+
+  const res = await app.request('http://example.com/api/waitlist', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      email: 'vip@example.com',
+      firstName: 'Vip',
+      source: 'unit-test',
+    }),
+  }, createEnv(db))
+
+  const payload = await res.json() as {
+    position: number
+    awardedLifetimeAccess: boolean
+    offerTier: string
+  }
+
+  assert.equal(res.status, 201)
+  assert.equal(payload.position, 101)
+  assert.equal(payload.awardedLifetimeAccess, false)
+  assert.equal(payload.offerTier, 'standard')
+})
+
+test('waitlist reuses an existing position for duplicate emails', async () => {
+  const db = new MemoryDb()
+
+  const firstResponse = await app.request('http://example.com/api/waitlist', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      email: 'repeat@example.com',
+      firstName: 'Repeat',
+      source: 'unit-test',
+    }),
+  }, createEnv(db))
+
+  const secondResponse = await app.request('http://example.com/api/waitlist', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      email: 'repeat@example.com',
+      firstName: 'Repeat',
+      source: 'unit-test',
+    }),
+  }, createEnv(db))
+
+  const firstPayload = await firstResponse.json() as { position: number; alreadyJoined: boolean }
+  const secondPayload = await secondResponse.json() as { position: number; alreadyJoined: boolean }
+
+  assert.equal(firstPayload.position, 1)
+  assert.equal(secondPayload.position, 1)
+  assert.equal(secondPayload.alreadyJoined, true)
+  assert.equal(db.waitlistCount, 1)
 })
