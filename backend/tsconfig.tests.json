@@ -1,9 +1,0 @@
-{
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "types": ["@cloudflare/workers-types", "node"],
-    "outDir": "./dist-test",
-    "rootDir": "."
-  },
-  "include": ["src/**/*.ts", "tests/**/*.ts"]
-}
