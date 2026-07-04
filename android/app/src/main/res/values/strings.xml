@@ -1,7 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources>
-    <string name="app_name">Broono</string>
-    <string name="title_activity_main">Broono</string>
-    <string name="package_name">app.broono.android</string>
-    <string name="custom_url_scheme">app.broono.android</string>
-</resources>
