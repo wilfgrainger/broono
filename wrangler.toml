@@ -1,0 +1,8 @@
+name = "broono-api"
+main = "worker/index.ts"
+compatibility_date = "2026-07-04"
+
+[[kv_namespaces]]
+binding = "BROONO_STATE"
+id = "mock-free-tier-kv"
+preview_id = "mock-free-tier-kv-preview"
