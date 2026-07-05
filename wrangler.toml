@@ -1,0 +1,7 @@
+name = "broono-api"
+main = "worker/index.ts"
+compatibility_date = "2026-07-04"
+
+# The hosted demo intentionally ships without production D1/KV bindings so
+# `wrangler versions upload` can deploy with zero account-specific resources.
+# Add BROONO_STATE KV/D1 bindings here when real persistence is provisioned.
