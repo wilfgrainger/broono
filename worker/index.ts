@@ -1,4 +1,4 @@
-type Env = { ASSETS: Fetcher; BROONO_STATE?: KVNamespace };
+type Env = { BROONO_STATE?: KVNamespace };
 
 const json = (body: unknown, init?: ResponseInit) => new Response(JSON.stringify(body), {
   ...init,
@@ -19,6 +19,6 @@ export default {
     if (url.pathname.startsWith('/leaderboard/')) {
       return json({ ok: true, scope: url.pathname.split('/').pop(), rows: [] });
     }
-    return env.ASSETS.fetch(request);
+    return json({ ok: false, error: 'Not found' }, { status: 404 });
   },
 };
