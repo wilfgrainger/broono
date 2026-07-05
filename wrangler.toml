@@ -2,7 +2,6 @@ name = "broono-api"
 main = "worker/index.ts"
 compatibility_date = "2026-07-04"
 
-[[kv_namespaces]]
-binding = "BROONO_STATE"
-id = "mock-free-tier-kv"
-preview_id = "mock-free-tier-kv-preview"
+# The hosted demo intentionally ships without production D1/KV bindings so
+# `wrangler versions upload` can deploy with zero account-specific resources.
+# Add BROONO_STATE KV/D1 bindings here when real persistence is provisioned.
