@@ -41,6 +41,28 @@ describe('broono Cloudflare Worker', () => {
     }), {});
 
     expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toMatchObject({ ok: false, error: 'Expected JSON object body' });
+    await expect(response.json()).resolves.toMatchObject({ ok: false, error: 'Expected JSON object body under 64KB' });
+  });
+
+  it('applies security headers and allows configured origins', async () => {
+    const response = await worker.fetch(new Request('https://api.broono.test/health', {
+      headers: { origin: 'https://broono.app' },
+    }), { ENVIRONMENT: 'preview' });
+
+    expect(response.headers.get('access-control-allow-origin')).toBe('https://broono.app');
+    expect(response.headers.get('content-security-policy')).toContain("default-src 'none'");
+    expect(response.headers.get('x-content-type-options')).toBe('nosniff');
+    expect(response.headers.get('cache-control')).toBe('no-store');
+  });
+
+  it('rejects untrusted origins and invalid user ids', async () => {
+    const blockedOrigin = await worker.fetch(new Request('https://api.broono.test/health', {
+      headers: { origin: 'https://evil.example' },
+    }), {});
+    const invalidUser = await worker.fetch(new Request('https://api.broono.test/sync?userId=../admin'), {});
+
+    expect(blockedOrigin.status).toBe(403);
+    expect(invalidUser.status).toBe(400);
+    await expect(invalidUser.json()).resolves.toMatchObject({ ok: false, error: 'Invalid user id' });
   });
 });
