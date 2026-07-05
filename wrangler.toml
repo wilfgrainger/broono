@@ -1,7 +1,31 @@
 name = "broono-api"
 main = "worker/index.ts"
 compatibility_date = "2026-07-04"
+workers_dev = true
+preview_urls = true
 
-# The hosted demo intentionally ships without production D1/KV bindings so
-# `wrangler versions upload` can deploy with zero account-specific resources.
-# Add BROONO_STATE KV/D1 bindings here when real persistence is provisioned.
+[observability]
+enabled = true
+
+[vars]
+ENVIRONMENT = "production"
+
+# BROONO_STATE is optional so first-time `wrangler deploy` can create the
+# Worker before account-specific storage exists. After creating a KV namespace
+# with `npx wrangler kv namespace create BROONO_STATE`, add this binding:
+# [[kv_namespaces]]
+# binding = "BROONO_STATE"
+# id = "<production namespace id>"
+
+[env.preview]
+name = "broono-api-preview"
+workers_dev = true
+preview_urls = true
+
+[env.preview.vars]
+ENVIRONMENT = "preview"
+
+# For preview persistence, create a separate namespace and add:
+# [[env.preview.kv_namespaces]]
+# binding = "BROONO_STATE"
+# id = "<preview namespace id>"
