@@ -100,7 +100,13 @@ const isStorePlatform = (platform: string): platform is StorePlatform => platfor
 const readReceipts = (): PurchaseReceipt[] => {
   if (typeof globalThis.localStorage === 'undefined') return [];
   const raw = globalThis.localStorage.getItem(receiptStorageKey);
-  return raw ? (JSON.parse(raw) as PurchaseReceipt[]) : [];
+  if (!raw) return [];
+
+  try {
+    return JSON.parse(raw) as PurchaseReceipt[];
+  } catch {
+    return [];
+  }
 };
 
 const writeReceipts = (receipts: PurchaseReceipt[]) => {
