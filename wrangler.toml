@@ -2,13 +2,6 @@ name = "broono-api"
 main = "worker/index.ts"
 compatibility_date = "2026-07-04"
 
-# Serve the Vite production bundle from the same Worker deployment that hosts
-# the lightweight API routes. This makes https://broono.app/ render the mobile
-# game shell instead of only uploading the API Worker script.
-[assets]
-directory = "./dist"
-not_found_handling = "single-page-application"
-
 # The hosted demo intentionally ships without production D1/KV bindings so
 # `wrangler versions upload` can deploy with zero account-specific resources.
 # Add BROONO_STATE KV/D1 bindings here when real persistence is provisioned.

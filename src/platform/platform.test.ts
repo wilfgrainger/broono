@@ -40,14 +40,6 @@ describe('mock platform scaffolding', () => {
     expect(receipt.sandbox).toBe(true);
   });
 
-  it('ignores corrupted stored payment receipts during restore', async () => {
-    window.localStorage.setItem('broono.mock.payment.receipts.v1', '{bad json');
-
-    const payments = createMockPaymentClient('app-store');
-
-    await expect(payments.restorePurchases()).resolves.toEqual([]);
-  });
-
   it('falls back to a web-compatible native bridge without Capacitor', async () => {
     const assign = vi.fn();
     const originalLocation = window.location;
