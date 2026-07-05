@@ -1,0 +1,74 @@
+name: Build and deploy Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: cloudflare-pages-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  validate:
+    name: Validate mobile web app
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Build static app
+        run: npm run build
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run mobile end-to-end tests
+        run: npm run test:e2e
+
+      - name: Upload built Pages artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: broono-pages-dist
+          path: dist
+          if-no-files-found: error
+
+  deploy:
+    name: Deploy Cloudflare Pages production
+    needs: validate
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    env:
+      CLOUDFLARE_PAGES_PROJECT_NAME: ${{ vars.CLOUDFLARE_PAGES_PROJECT_NAME || 'broono' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download built Pages artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: broono-pages-dist
+          path: dist
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=${{ env.CLOUDFLARE_PAGES_PROJECT_NAME }} --branch=main
