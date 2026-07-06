@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+backend/node_modules/
+
+# Next.js
+.next/
+out/
+
+# Build outputs
+dist/
+backend/dist-test/
+
+# Cloudflare
+.wrangler/
+
+# Test results
+test-results/
+
+# Logs
+*.log
+
+# Environment variables
+.env*
+
+# OS
+.DS_Store
+Thumbs.db

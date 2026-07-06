@@ -1,0 +1,7 @@
+name = "broono-frontend"
+pages_build_output_dir = "out"
+compatibility_date = "2024-04-03"
+
+[[services]]
+binding = "broono-api"
+service = "broono-api"

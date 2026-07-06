@@ -1,0 +1,19 @@
+{
+  "name": "broono-api",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "dev": "wrangler dev src/index.ts",
+    "deploy": "wrangler deploy src/index.ts"
+  },
+  "dependencies": {
+    "hono": "4.12.5",
+    "jose": "5.10.0"
+  },
+  "devDependencies": {
+    "wrangler": "4.70.0",
+    "@cloudflare/workers-types": "4.20260301.1",
+    "typescript": "5.9.3"
+  }
+}

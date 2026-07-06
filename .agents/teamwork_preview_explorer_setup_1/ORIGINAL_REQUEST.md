@@ -1,0 +1,2 @@
+## 2026-07-04T16:39:04Z
+Explore the project repository at c:\Users\wilf6\dev\broono. List all files (including hidden/gitignored ones if any) by running commands or searching. Find out if package.json, vite.config.ts, tsconfig.json, wrangler.toml, wrangler.json, or other configuration files exist. Check dependencies in backend and root. Verify what directories and source files exist. Report your findings in detail in c:\Users\wilf6\dev\broono\.agents\teamwork_preview_explorer_setup_1\handoff.md and send a message.
