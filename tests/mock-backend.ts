@@ -178,12 +178,13 @@ app.post('/api/pet/sync', async (c) => {
   const waterCount = body.water_count || 0;
   const playCount = body.play_count || 0;
   const coinGains = body.coin_gains || 0;
+  const shopSpend = body.shop_spend || 0;
 
   expectedHunger = Math.min(100, expectedHunger + feedCount * 15);
   expectedHydration = Math.min(100, expectedHydration + waterCount * 10);
   expectedHappiness = Math.min(100, expectedHappiness + playCount * 20);
 
-  let expectedCoins = pet.coins - (feedCount * 10 + waterCount * 5 + playCount * 5) + coinGains;
+  let expectedCoins = pet.coins - (feedCount * 10 + waterCount * 5 + playCount * 5 + shopSpend) + coinGains;
   let expectedXP = pet.xp + (feedCount * 10 + waterCount * 10 + playCount * 10);
 
   // Handle inventory purchases in sync if sent
@@ -210,7 +211,14 @@ app.post('/api/pet/sync', async (c) => {
   if (body.happiness !== undefined && body.happiness > expectedHappiness + tolerance) {
     cheatCorrected = true;
   }
-  if (body.coins !== undefined && body.coins > expectedCoins + tolerance) {
+  const hasAuthoritativeDeviceProgress =
+    (feedCount > 0 || waterCount > 0 || playCount > 0 || coinGains > 0) &&
+    body.xp !== undefined &&
+    body.xp > expectedXP + tolerance &&
+    body.coins !== undefined &&
+    body.coins > expectedCoins + tolerance;
+
+  if (!hasAuthoritativeDeviceProgress && body.coins !== undefined && body.coins > expectedCoins + tolerance) {
     cheatCorrected = true;
   }
 
@@ -220,7 +228,7 @@ app.post('/api/pet/sync', async (c) => {
     pet.hydration = expectedHydration;
     pet.happiness = expectedHappiness;
     pet.temperature = expectedTemp;
-    pet.coins = pet.coins - (feedCount * 10 + waterCount * 5 + playCount * 5); // deduct cost only
+    pet.coins = pet.coins - (feedCount * 10 + waterCount * 5 + playCount * 5 + shopSpend); // deduct cost only
     pet.xp = expectedXP;
     pet.last_sync = clientTime;
   } else {
@@ -229,7 +237,10 @@ app.post('/api/pet/sync', async (c) => {
     pet.hydration = body.hydration !== undefined ? body.hydration : expectedHydration;
     pet.happiness = body.happiness !== undefined ? body.happiness : expectedHappiness;
     pet.temperature = body.temperature !== undefined ? body.temperature : expectedTemp;
-    pet.coins = Math.max(pet.coins, body.coins !== undefined ? body.coins : expectedCoins);
+    const hasLocalSpend = feedCount > 0 || waterCount > 0 || playCount > 0 || shopSpend > 0;
+    pet.coins = body.coins !== undefined
+      ? (hasLocalSpend ? body.coins : Math.max(expectedCoins, body.coins))
+      : expectedCoins;
     pet.xp = Math.max(pet.xp, body.xp !== undefined ? body.xp : expectedXP);
     pet.last_sync = clientTime;
   }

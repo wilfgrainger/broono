@@ -8,7 +8,10 @@
     "lint": "eslint .",
     "mock-backend": "tsx tests/mock-backend.ts",
     "serve": "sirv out -p 3000 --single",
-    "test:e2e": "concurrently -k -s first \"pnpm mock-backend\" \"pnpm serve\" \"playwright test\""
+    "test:e2e": "concurrently -k -s first \"pnpm mock-backend\" \"pnpm serve\" \"playwright test\"",
+    "deploy:api": "wrangler deploy --config backend/wrangler.toml",
+    "deploy:web": "wrangler pages deploy out --project-name broono-frontend --commit-dirty=true",
+    "deploy": "pnpm build && pnpm deploy:api && pnpm deploy:web"
   },
   "dependencies": {
     "@capacitor/core": "8.2.0",
@@ -23,6 +26,7 @@
   },
   "devDependencies": {
     "@capacitor/cli": "8.2.0",
+    "@eslint/js": "^9.39.3",
     "@hono/node-server": "^1.13.7",
     "@playwright/test": "^1.50.0",
     "@tailwindcss/postcss": "^4.3.2",
@@ -38,6 +42,7 @@
     "tailwindcss": "^4.3.2",
     "tsx": "^4.19.2",
     "typescript": "5.9.3",
+    "typescript-eslint": "^8.62.1",
     "vite": "7.3.1",
     "vite-plugin-pwa": "1.2.0",
     "wrangler": "4.70.0"

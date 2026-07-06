@@ -2,6 +2,14 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  (typeof window !== 'undefined' && window.location.hostname === 'localhost'
+    ? 'http://localhost:3001'
+    : '');
+
+const apiUrl = (path: string) => `${API_BASE}${path}`;
+
 interface PetState {
   id: string;
   user_id: string;
@@ -60,6 +68,10 @@ export default function Page() {
   const [waterCount, setWaterCount] = useState(0);
   const [playCount, setPlayCount] = useState(0);
   const [coinGains, setCoinGains] = useState(0);
+  const feedCountRef = useRef(0);
+  const waterCountRef = useRef(0);
+  const playCountRef = useRef(0);
+  const coinGainsRef = useRef(0);
 
   // Leaderboard state
   const [leaderboardTab, setLeaderboardTab] = useState<'global' | 'country' | 'friends'>('global');
@@ -192,7 +204,12 @@ export default function Page() {
     }
   }, [token, activeTab]);
 
-  const triggerSync = async (currentPet: PetState, overrides: Partial<PetState> = {}, customToken?: string) => {
+  const triggerSync = async (
+    currentPet: PetState,
+    overrides: Partial<PetState> = {},
+    customToken?: string,
+    extraActions: { shop_spend?: number } = {},
+  ) => {
     const activeToken = customToken || token;
     if (!activeToken) return;
     setSyncStatus('Syncing...');
@@ -207,14 +224,15 @@ export default function Page() {
         inventory: overrides.inventory !== undefined ? overrides.inventory : currentPet.inventory,
         status: overrides.status !== undefined ? overrides.status : currentPet.status,
         name: overrides.name !== undefined ? overrides.name : currentPet.name,
-        feed_count: feedCount,
-        water_count: waterCount,
-        play_count: playCount,
-        coin_gains: coinGains,
+        feed_count: feedCountRef.current,
+        water_count: waterCountRef.current,
+        play_count: playCountRef.current,
+        coin_gains: coinGainsRef.current,
+        shop_spend: extraActions.shop_spend || 0,
         client_time: Date.now(),
       };
 
-      const res = await fetch('http://localhost:3001/api/pet/sync', {
+      const res = await fetch(apiUrl('/api/pet/sync'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -232,6 +250,10 @@ export default function Page() {
         const data = await res.json();
         const serverPet = data.pet;
         
+        feedCountRef.current = 0;
+        waterCountRef.current = 0;
+        playCountRef.current = 0;
+        coinGainsRef.current = 0;
         setFeedCount(0);
         setWaterCount(0);
         setPlayCount(0);
@@ -251,7 +273,7 @@ export default function Page() {
   const fetchLeaderboard = async () => {
     if (!token) return;
     try {
-      const res = await fetch('http://localhost:3001/api/leaderboard', {
+      const res = await fetch(apiUrl('/api/leaderboard'), {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -273,7 +295,7 @@ export default function Page() {
     if (!loginEmail) return;
 
     try {
-      const res = await fetch('http://localhost:3001/api/auth/mock', {
+      const res = await fetch(apiUrl('/api/auth/mock'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: loginEmail, country: loginCountry })
@@ -309,6 +331,10 @@ export default function Page() {
         setWaterCount(0);
         setPlayCount(0);
         setCoinGains(0);
+        feedCountRef.current = 0;
+        waterCountRef.current = 0;
+        playCountRef.current = 0;
+        coinGainsRef.current = 0;
         setActiveTab('pet');
 
         // Sync immediately with the new token to fetch seeded backend data
@@ -347,6 +373,7 @@ export default function Page() {
       last_sync: Date.now()
     };
     setPet(nextPet);
+    feedCountRef.current += 1;
     setFeedCount(prev => prev + 1);
     localStorage.setItem('pet_state', JSON.stringify(nextPet));
   };
@@ -363,6 +390,7 @@ export default function Page() {
       last_sync: Date.now()
     };
     setPet(nextPet);
+    waterCountRef.current += 1;
     setWaterCount(prev => prev + 1);
     localStorage.setItem('pet_state', JSON.stringify(nextPet));
   };
@@ -379,6 +407,7 @@ export default function Page() {
       last_sync: Date.now()
     };
     setPet(nextPet);
+    playCountRef.current += 1;
     setPlayCount(prev => prev + 1);
     localStorage.setItem('pet_state', JSON.stringify(nextPet));
   };
@@ -391,6 +420,7 @@ export default function Page() {
       last_sync: Date.now()
     };
     setPet(nextPet);
+    coinGainsRef.current += 150;
     setCoinGains(prev => prev + 150);
     localStorage.setItem('pet_state', JSON.stringify(nextPet));
   };
@@ -429,7 +459,7 @@ export default function Page() {
     };
     setPet(nextPet);
     localStorage.setItem('pet_state', JSON.stringify(nextPet));
-    triggerSync(pet, { coins: pet.coins - cost, inventory: nextInventory });
+    triggerSync(nextPet, { coins: nextPet.coins, inventory: nextInventory }, undefined, { shop_spend: cost });
   };
 
   if (!mounted) return null;
