@@ -7,7 +7,9 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "deploy:worker": "wrangler deploy --env=\"\"",
-    "deploy:worker:dry-run": "wrangler deploy --dry-run --env=\"\""
+    "deploy:worker:dry-run": "wrangler deploy --dry-run --env=\"\"",
+    "deploy:web": "npm run build && wrangler pages deploy dist --project-name broono --commit-dirty=true",
+    "deploy": "npm run deploy:worker && npm run deploy:web"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
