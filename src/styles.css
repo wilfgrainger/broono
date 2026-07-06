@@ -169,7 +169,7 @@ button {
 .level-banner {
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 10px;
+  margin-bottom: 9px;
 }
 
 .eyebrow {
@@ -195,10 +195,11 @@ button {
 }
 
 .level-banner h1 {
+  max-width: 12ch;
   margin: 0;
   color: #25183e;
-  font-size: clamp(2.2rem, 10vw, 3.5rem);
-  line-height: .84;
+  font-size: clamp(2rem, 9vw, 3.15rem);
+  line-height: .88;
   letter-spacing: 0;
   font-weight: 1000;
   text-shadow: 0 3px 0 #fff, 0 6px 0 rgba(255, 93, 160, .22);
@@ -216,8 +217,106 @@ button {
     radial-gradient(circle at center, #fff 0 48%, transparent 49%),
     conic-gradient(#ff4d9d var(--progress), rgba(43, 24, 73, .14) 0);
   box-shadow: 0 5px 0 #2b1849;
-  font-size: .92rem;
+  font-size: .9rem;
   font-weight: 1000;
+}
+
+.target-ring span {
+  display: grid;
+  place-items: center;
+  line-height: .9;
+}
+
+.target-ring small {
+  margin-top: 3px;
+  color: #7b629a;
+  font-size: .55rem;
+  text-transform: uppercase;
+}
+
+.coach-card {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 9px;
+  border: 3px solid #2b1849;
+  border-radius: 20px;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, .92), rgba(255, 244, 168, .85)),
+    linear-gradient(135deg, #fff, #e9fdff);
+  box-shadow: 0 5px 0 #2b1849;
+}
+
+.coach-card strong,
+.coach-card span {
+  display: block;
+}
+
+.coach-card strong {
+  color: #25183e;
+  font-size: .98rem;
+  line-height: 1.02;
+  font-weight: 1000;
+}
+
+.coach-card span {
+  margin-top: 3px;
+  color: #604978;
+  font-size: .76rem;
+  line-height: 1.22;
+  font-weight: 900;
+}
+
+.mini-pet {
+  position: relative;
+  width: 58px;
+  height: 54px;
+  border: 4px solid #2b1849;
+  border-radius: 43% 43% 35% 35%;
+  background: linear-gradient(145deg, #76f1ff, #7666ff 58%, #ff70bd);
+  box-shadow: 0 5px 0 rgba(43, 24, 73, .28), inset 0 2px 0 rgba(255, 255, 255, .55);
+}
+
+.mini-ear {
+  position: absolute;
+  top: -17px;
+  width: 20px;
+  height: 24px;
+  border: 4px solid #2b1849;
+  border-bottom: 0;
+  border-radius: 16px 16px 3px 3px;
+  background: #79edff;
+}
+
+.mini-ear.left {
+  left: 7px;
+  transform: rotate(-16deg);
+}
+
+.mini-ear.right {
+  right: 7px;
+  transform: rotate(16deg);
+}
+
+.mini-face::before,
+.mini-face::after {
+  content: "";
+  position: absolute;
+  top: 22px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #2b1849;
+}
+
+.mini-face::before {
+  left: 18px;
+}
+
+.mini-face::after {
+  right: 18px;
 }
 
 .score-row {
@@ -238,14 +337,14 @@ button {
   border-radius: 999px;
   background: rgba(255, 255, 255, .72);
   color: #40265f;
-  font-size: .72rem;
+  font-size: .7rem;
   font-weight: 1000;
   white-space: nowrap;
 }
 
 .pet-stage {
   position: relative;
-  height: 170px;
+  height: 112px;
   margin-bottom: 10px;
   border: 3px solid rgba(43, 24, 73, .16);
   border-radius: 22px;
@@ -261,28 +360,28 @@ button {
 
 .stage-candy {
   position: absolute;
-  width: 38px;
-  height: 38px;
+  width: 30px;
+  height: 30px;
   border: 3px solid #2b1849;
   border-radius: 50%;
   box-shadow: 0 3px 0 #2b1849, inset 0 2px 0 rgba(255, 255, 255, .72);
 }
 
 .candy-one {
-  top: 24px;
+  top: 20px;
   left: 28px;
   background: linear-gradient(145deg, #fff45e, #ff9f32);
 }
 
 .candy-two {
-  top: 34px;
+  top: 26px;
   right: 40px;
   background: linear-gradient(145deg, #ff93c8, #ff3f88);
   transform: scale(.82);
 }
 
 .candy-three {
-  bottom: 27px;
+  bottom: 20px;
   right: 94px;
   background: linear-gradient(145deg, #9affd0, #26d989);
   transform: scale(.62);
@@ -291,9 +390,9 @@ button {
 .pet-character {
   position: absolute;
   left: 50%;
-  bottom: 20px;
-  width: 112px;
-  height: 108px;
+  bottom: 11px;
+  width: 82px;
+  height: 78px;
   transform: translateX(-50%);
   border: 4px solid #2b1849;
   border-radius: 44% 44% 38% 38%;
@@ -304,9 +403,9 @@ button {
 
 .pet-ear {
   position: absolute;
-  top: -23px;
-  width: 38px;
-  height: 42px;
+  top: -18px;
+  width: 28px;
+  height: 32px;
   border: 4px solid #2b1849;
   border-bottom: 0;
   border-radius: 24px 24px 4px 4px;
@@ -314,20 +413,20 @@ button {
 }
 
 .pet-ear.left {
-  left: 11px;
+  left: 8px;
   transform: rotate(-18deg);
 }
 
 .pet-ear.right {
-  right: 11px;
+  right: 8px;
   transform: rotate(18deg);
 }
 
 .pet-face {
   position: absolute;
   left: 50%;
-  top: 38px;
-  width: 54px;
+  top: 27px;
+  width: 42px;
   height: 23px;
   transform: translateX(-50%);
 }
@@ -354,9 +453,9 @@ button {
 .pet-belly {
   position: absolute;
   left: 50%;
-  bottom: 13px;
-  width: 42px;
-  height: 24px;
+  bottom: 10px;
+  width: 32px;
+  height: 18px;
   border-radius: 50%;
   background: rgba(255, 255, 255, .3);
   transform: translateX(-50%);
@@ -369,9 +468,9 @@ button {
 
 .pet-caption {
   position: absolute;
-  left: 10px;
-  right: 10px;
-  bottom: 9px;
+  left: 9px;
+  right: 9px;
+  bottom: 7px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -410,17 +509,38 @@ button {
   position: relative;
   border: 3px solid #2b1849;
   border-radius: 22px;
-  padding: 9px;
+  padding: 8px;
   background:
     linear-gradient(135deg, rgba(255, 255, 255, .72), rgba(255, 255, 255, .2)),
     linear-gradient(155deg, #7040e8, #ff55a1);
   box-shadow: inset 0 2px 0 rgba(255, 255, 255, .44), 0 5px 0 #2b1849;
 }
 
+.board-callout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 32px;
+  margin-bottom: 8px;
+  border: 2px solid rgba(255, 255, 255, .5);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .78);
+  color: #321f50;
+  font-size: .78rem;
+  font-weight: 1000;
+}
+
+.board-callout svg {
+  width: 15px;
+  height: 15px;
+  color: #e92379;
+}
+
 .snack-board {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 6px;
+  gap: 5px;
 }
 
 .snack-tile {
@@ -430,26 +550,32 @@ button {
   aspect-ratio: 1;
   min-width: 0;
   border: 3px solid #2b1849;
-  border-radius: 17px;
+  border-radius: 18px;
   box-shadow: 0 5px 0 #2b1849, inset 0 3px 0 rgba(255, 255, 255, .72);
   cursor: pointer;
   transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
 }
 
-.snack-tile span {
+.snack-icon {
+  position: relative;
   display: grid;
   place-items: center;
-  width: 55%;
-  height: 55%;
+  width: 62%;
+  height: 62%;
   border-radius: 999px;
-  background: rgba(255, 255, 255, .55);
-  color: rgba(43, 24, 73, .72);
-  font-size: clamp(.78rem, 3.4vw, 1rem);
-  font-weight: 1000;
+  background: rgba(255, 255, 255, .62);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, .7);
+}
+
+.snack-icon::before,
+.snack-icon::after {
+  content: "";
+  position: absolute;
 }
 
 .snack-tile.playable {
-  filter: saturate(1.18);
+  filter: saturate(1.3);
+  animation: playable-pulse 1.6s ease-in-out infinite;
 }
 
 .snack-tile.playable::after {
@@ -459,6 +585,23 @@ button {
   border: 2px solid rgba(255, 255, 255, .72);
   border-radius: 12px;
   pointer-events: none;
+}
+
+.snack-tile small {
+  position: absolute;
+  right: -4px;
+  top: -6px;
+  display: grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  border: 2px solid #2b1849;
+  border-radius: 999px;
+  background: #fff5a2;
+  color: #2b1849;
+  box-shadow: 0 2px 0 #2b1849;
+  font-size: .68rem;
+  font-weight: 1000;
 }
 
 .snack-tile:active,
@@ -475,6 +618,94 @@ button {
 .tile-mint { background: linear-gradient(145deg, #aaffd5, #21d983); }
 .tile-soda { background: linear-gradient(145deg, #93f4ff, #2c9ce9); }
 .tile-grape { background: linear-gradient(145deg, #d0a0ff, #7148e8); }
+
+.tile-berry .snack-icon {
+  width: 58%;
+  height: 58%;
+  background: radial-gradient(circle at 35% 30%, #fff 0 10%, transparent 11%), #ff2e77;
+}
+
+.tile-berry .snack-icon::before {
+  left: 50%;
+  top: -7px;
+  width: 14px;
+  height: 10px;
+  border-radius: 10px 10px 2px 10px;
+  background: #34d476;
+  transform: translateX(-50%) rotate(-18deg);
+}
+
+.tile-lemon .snack-icon {
+  width: 66%;
+  height: 46%;
+  border-radius: 999px 24px 999px 24px;
+  background: radial-gradient(circle at 34% 33%, #fff 0 12%, transparent 13%), #ffe257;
+  transform: rotate(-22deg);
+}
+
+.tile-mint .snack-icon {
+  width: 60%;
+  height: 46%;
+  border-radius: 999px 12px 999px 12px;
+  background: linear-gradient(135deg, #dbffed, #26d989);
+  transform: rotate(-32deg);
+}
+
+.tile-mint .snack-icon::before {
+  left: 49%;
+  top: 4px;
+  width: 2px;
+  height: 78%;
+  border-radius: 999px;
+  background: rgba(43, 24, 73, .22);
+  transform: rotate(12deg);
+}
+
+.tile-soda .snack-icon {
+  width: 53%;
+  height: 68%;
+  border-radius: 12px 12px 16px 16px;
+  background: linear-gradient(180deg, #eaffff 0 18%, #4edbff 19% 100%);
+}
+
+.tile-soda .snack-icon::before {
+  top: -6px;
+  left: 50%;
+  width: 20px;
+  height: 7px;
+  border-radius: 999px;
+  background: #f7fdff;
+  transform: translateX(-50%);
+}
+
+.tile-soda .snack-icon::after {
+  left: 50%;
+  top: 34%;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .78);
+  transform: translateX(-50%);
+}
+
+.tile-grape .snack-icon {
+  width: 60%;
+  height: 60%;
+  background:
+    radial-gradient(circle at 34% 32%, #a96bff 0 18%, transparent 19%),
+    radial-gradient(circle at 66% 32%, #8a55f2 0 18%, transparent 19%),
+    radial-gradient(circle at 50% 60%, #7148e8 0 22%, transparent 23%);
+}
+
+.tile-grape .snack-icon::before {
+  left: 50%;
+  top: -7px;
+  width: 13px;
+  height: 9px;
+  border-radius: 10px 10px 2px 10px;
+  background: #34d476;
+  transform: translateX(-50%) rotate(-24deg);
+}
 
 .result-layer {
   position: absolute;
@@ -948,6 +1179,11 @@ button {
   50% { transform: translateX(-50%) translateY(-8px) rotate(1deg); }
 }
 
+@keyframes playable-pulse {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
 @media (max-width: 390px) {
   .hud-pills {
     flex-direction: column;
@@ -956,7 +1192,7 @@ button {
   }
 
   .level-banner h1 {
-    font-size: 2.12rem;
+    font-size: 1.95rem;
   }
 
   .score-row {
@@ -969,7 +1205,7 @@ button {
   }
 
   .pet-stage {
-    height: 156px;
+    height: 108px;
   }
 
   .snack-board {

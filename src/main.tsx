@@ -14,7 +14,7 @@ import {
   ShieldCheck,
   ShoppingBag,
   Sparkles,
-  Star,
+  Target,
   Trophy,
   UserRound,
   WandSparkles,
@@ -84,17 +84,29 @@ function App() {
         <div className="level-banner">
           <div>
             <span className="eyebrow"><Crown /> Level {run.level}</span>
-            <h1>Snack Pop Quest</h1>
+            <h1>Pop snacks. Feed Broono.</h1>
           </div>
           <div className="target-ring" style={{ '--progress': `${progressPercent}%` } as React.CSSProperties}>
-            <span>{progressPercent}%</span>
+            <span>{progressPercent}%<small>goal</small></span>
+          </div>
+        </div>
+
+        <div className="coach-card">
+          <div className="mini-pet" aria-hidden="true">
+            <span className="mini-ear left" />
+            <span className="mini-ear right" />
+            <span className="mini-face" />
+          </div>
+          <div>
+            <strong>Tap 2+ matching snacks.</strong>
+            <span>Bigger groups fill the bowl faster. Run out of moves and Broono goes hungry.</span>
           </div>
         </div>
 
         <div className="score-row" aria-label="Score and moves">
-          <span><Star /> {run.score.toLocaleString()} / {run.targetScore.toLocaleString()}</span>
+          <span><Target /> Goal {run.score.toLocaleString()} / {run.targetScore.toLocaleString()}</span>
           <span><Zap /> {run.movesLeft} moves</span>
-          <span><Medal /> Best {run.bestCluster}</span>
+          <span><Medal /> Best group {run.bestCluster}</span>
         </div>
 
         <div className={`pet-stage mood-${pet.mood}`} aria-label={`${pet.name} ${pet.species}`}>
@@ -111,7 +123,7 @@ function App() {
           </div>
           <div className="pet-caption">
             <strong>{pet.name}</strong>
-            <span>{pet.mood === 'full' ? 'Sugar rush' : pet.mood === 'hyped' ? 'Combo ready' : pet.mood === 'sleepy' ? 'Needs a heart' : 'Wants snacks'}</span>
+            <span>{pet.mood === 'full' ? 'Sugar rush' : pet.mood === 'hyped' ? 'Combo ready' : pet.mood === 'sleepy' ? 'Needs a heart' : 'Waiting for a snack pop'}</span>
           </div>
         </div>
 
@@ -122,6 +134,7 @@ function App() {
         )}
 
         <div className="board-shell">
+          <div className="board-callout"><Sparkles /> Glowing tiles are playable groups</div>
           <div className="snack-board" role="grid" aria-label="Snack tiles">
             {run.board.map((row, rowIndex) => row.map((tile, colIndex) => {
               const clusterSize = getCluster(run.board, rowIndex, colIndex).length;
@@ -135,7 +148,8 @@ function App() {
                   aria-label={`${visual.label} snack row ${rowIndex + 1} column ${colIndex + 1} cluster ${clusterSize}`}
                   data-testid={`tile-${rowIndex}-${colIndex}`}
                 >
-                  <span>{visual.glyph}</span>
+                  <span className="snack-icon" aria-hidden="true" />
+                  {clusterSize >= 2 && <small aria-hidden="true">{clusterSize}</small>}
                 </button>
               );
             }))}
@@ -154,7 +168,7 @@ function App() {
 
         <div className="booster-tray" aria-label="Boosters">
           <button onClick={() => triggerBooster('shuffle')} disabled={inventory.boosters.shuffle <= 0 || run.status !== 'playing'}>
-            <RefreshCw /> Shuffle <strong>{inventory.boosters.shuffle}</strong>
+            <RefreshCw /> Shuffle board <strong>{inventory.boosters.shuffle}</strong>
           </button>
           <button onClick={() => triggerBooster('spoon')} disabled={inventory.boosters.spoon <= 0 || run.status !== 'playing'}>
             <WandSparkles /> Mega spoon <strong>{inventory.boosters.spoon}</strong>

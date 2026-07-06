@@ -9,7 +9,8 @@ test.beforeEach(async ({ page }) => {
 
 test('renders a mobile-first playable snack puzzle shell', async ({ page }) => {
   await expect(page.getByLabel('Broono Snack Pop Quest')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Snack Pop Quest' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Pop snacks. Feed Broono.' })).toBeVisible();
+  await expect(page.getByText('Tap 2+ matching snacks.')).toBeVisible();
   await expect(page.getByLabel('Snack Pop board')).toBeVisible();
 
   const viewport = page.viewportSize();
@@ -23,6 +24,7 @@ test('renders a mobile-first playable snack puzzle shell', async ({ page }) => {
 test('supports the core tap-to-pop puzzle loop with scoring and boosters', async ({ page }) => {
   await expect(page.getByLabel('Score and moves')).toContainText('0 / 640');
   await expect(page.getByLabel('Score and moves')).toContainText('22 moves');
+  await expect(page.getByText('Glowing tiles are playable groups')).toBeVisible();
   await expect(page.locator('.coin-pill')).toContainText('360');
 
   await page.locator('.snack-tile.playable').first().click();

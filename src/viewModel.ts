@@ -13,9 +13,9 @@ export {
 export { paymentProducts } from './platform/payment';
 
 export const tileVisuals = {
-  berry: { label: 'Berry', glyph: 'B' },
-  lemon: { label: 'Lemon', glyph: 'L' },
-  mint: { label: 'Mint', glyph: 'M' },
-  soda: { label: 'Soda', glyph: 'S' },
-  grape: { label: 'Grape', glyph: 'G' },
+  berry: { label: 'Berry' },
+  lemon: { label: 'Lemon' },
+  mint: { label: 'Mint' },
+  soda: { label: 'Soda' },
+  grape: { label: 'Grape' },
 } as const;
