@@ -1,36 +1,67 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { awardMiniGameCoins, careForPet, createStarterGameState, applyOfflineDecay, canOpenPremiumShop, grantIapReward, type AuthProvider, type GameState, type PaymentProductId, type VitalName } from '../game';
+import {
+  advanceLevel,
+  createStarterGameState,
+  canOpenPrizeShop,
+  grantIapReward,
+  playTile,
+  retryLevel,
+  useBooster,
+  type AuthProvider,
+  type BoosterId,
+  type GameState,
+  type PaymentProductId,
+} from '../game';
 import { createApiSync, createMockPaymentClient, type PurchaseReceipt } from '../platform';
 
-const STORAGE_KEY = 'broono.gameState.v1';
+const STORAGE_KEY = 'broono.gameState.v2';
+const LEGACY_STORAGE_KEY = 'broono.gameState.v1';
 
-function normalizeState(state: GameState): GameState {
+function normalizeState(state: unknown, provider: AuthProvider): GameState {
+  if (
+    typeof state !== 'object'
+    || state === null
+    || !('run' in state)
+    || !('inventory' in state)
+    || !('user' in state)
+  ) {
+    return createStarterGameState(provider);
+  }
+
+  const parsed = state as GameState;
   return {
-    ...state,
+    ...parsed,
     inventory: {
-      ...state.inventory,
-      premiumPassActive: state.inventory.premiumPassActive ?? false,
+      ...parsed.inventory,
+      hearts: parsed.inventory.hearts ?? 5,
+      boosters: {
+        shuffle: parsed.inventory.boosters?.shuffle ?? 2,
+        spoon: parsed.inventory.boosters?.spoon ?? 1,
+      },
+      premiumPassActive: parsed.inventory.premiumPassActive ?? false,
     },
-    purchaseHistory: state.purchaseHistory ?? [],
+    purchaseHistory: parsed.purchaseHistory ?? [],
   };
 }
 
 function loadState(provider: AuthProvider): GameState {
-  if (typeof localStorage === 'undefined') return createStarterGameState(provider, Date.now() - 21_600_000);
+  if (typeof localStorage === 'undefined') return createStarterGameState(provider);
   const stored = localStorage.getItem(STORAGE_KEY);
-  if (!stored) return createStarterGameState(provider, Date.now() - 21_600_000);
+  if (!stored) {
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
+    return createStarterGameState(provider);
+  }
+
   try {
-    return normalizeState(JSON.parse(stored) as GameState);
+    return normalizeState(JSON.parse(stored), provider);
   } catch {
-    return createStarterGameState(provider, Date.now() - 21_600_000);
+    localStorage.removeItem(STORAGE_KEY);
+    return createStarterGameState(provider);
   }
 }
 
 export function useGameLoop(provider: AuthProvider = 'guest') {
-  const [state, setState] = useState<GameState>(() => {
-    const loaded = loadState(provider);
-    return { ...loaded, pet: applyOfflineDecay(loaded.pet) };
-  });
+  const [state, setState] = useState<GameState>(() => loadState(provider));
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced'>('idle');
   const [lastReceipt, setLastReceipt] = useState<PurchaseReceipt | null>(null);
   const paymentClient = useMemo(() => createMockPaymentClient(), []);
@@ -49,16 +80,30 @@ export function useGameLoop(provider: AuthProvider = 'guest') {
     return () => window.clearInterval(id);
   }, [state]);
 
-  const care = useCallback((vital: VitalName) => {
-    setState((current) => ({ ...current, pet: careForPet(current.pet, vital) }));
+  const popTile = useCallback((row: number, col: number) => {
+    setState((current) => playTile(current, row, col));
   }, []);
 
-  const completeMiniGame = useCallback(() => {
-    setState((current) => awardMiniGameCoins(current));
+  const nextLevel = useCallback(() => {
+    setState((current) => advanceLevel(current));
+  }, []);
+
+  const retry = useCallback(() => {
+    setState((current) => retryLevel(current));
+  }, []);
+
+  const triggerBooster = useCallback((boosterId: BoosterId) => {
+    setState((current) => useBooster(current, boosterId));
   }, []);
 
   const signInAs = useCallback((nextProvider: AuthProvider) => {
-    setState((current) => ({ ...current, user: { ...createStarterGameState(nextProvider).user, totalCoins: current.user.totalCoins } }));
+    setState((current) => ({
+      ...current,
+      user: {
+        ...createStarterGameState(nextProvider).user,
+        totalCoins: current.user.totalCoins,
+      },
+    }));
   }, []);
 
   const purchase = useCallback(async (productId: PaymentProductId) => {
@@ -69,12 +114,14 @@ export function useGameLoop(provider: AuthProvider = 'guest') {
 
   return useMemo(() => ({
     state,
-    care,
-    completeMiniGame,
+    popTile,
+    nextLevel,
+    retry,
+    triggerBooster,
     signInAs,
     purchase,
     lastReceipt,
     syncStatus,
-    shopUnlocked: canOpenPremiumShop(state.inventory.coins),
-  }), [care, completeMiniGame, lastReceipt, purchase, signInAs, state, syncStatus]);
+    shopUnlocked: canOpenPrizeShop(state.run.level),
+  }), [lastReceipt, nextLevel, popTile, purchase, retry, signInAs, state, syncStatus, triggerBooster]);
 }
