@@ -1,21 +1,26 @@
 export {
-  BOARD_HEIGHT,
-  BOARD_WIDTH,
-  getCluster,
-  labelForTile,
+  categories,
   leaderboard,
-  shopItems,
-  tileColors,
-  type BoosterId,
+  styleThemes,
+  wardrobeItems,
+  type BroonoCard,
   type PaymentProductId,
-  type TileColor,
+  type StyleCategory,
+  type StyleTag,
+  type WardrobeItem,
 } from './game';
-export { paymentProducts } from './platform/payment';
 
-export const tileVisuals = {
-  berry: { label: 'Berry' },
-  lemon: { label: 'Lemon' },
-  mint: { label: 'Mint' },
-  soda: { label: 'Soda' },
-  grape: { label: 'Grape' },
+export const categoryLabels = {
+  hair: 'Hair',
+  top: 'Top',
+  bottom: 'Bottom',
+  shoes: 'Shoes',
+  prop: 'Prop',
+  backdrop: 'Scene',
+} as const;
+
+export const reactionLabels = {
+  clever: 'So clever',
+  colors: 'Love colors',
+  wild: 'Wild choice',
 } as const;

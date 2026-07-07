@@ -7,11 +7,11 @@ test.beforeEach(async ({ page }) => {
   await page.goto('/');
 });
 
-test('renders a mobile-first playable snack puzzle shell', async ({ page }) => {
-  await expect(page.getByLabel('Broono Snack Pop Quest')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Pop snacks. Feed Broono.' })).toBeVisible();
-  await expect(page.getByText('Tap 2+ matching snacks.')).toBeVisible();
-  await expect(page.getByLabel('Snack Pop board')).toBeVisible();
+test('renders the mobile-first Style Showdown shell', async ({ page }) => {
+  await expect(page.getByLabel('Broono Style Showdown')).toBeVisible();
+  await expect(page.getByText('Style Showdown')).toBeVisible();
+  await expect(page.getByLabel('Daily style challenge')).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Midnight Museum|Rainbow Goalkeeper|Space Camp DJ|Forest Popstar|Retro Pet Detective/ })).toBeVisible();
 
   const viewport = page.viewportSize();
   expect(viewport?.width).toBeLessThanOrEqual(430);
@@ -21,69 +21,48 @@ test('renders a mobile-first playable snack puzzle shell', async ({ page }) => {
   expect(shellBox?.width).toBeGreaterThan(300);
 });
 
-test('supports the core tap-to-pop puzzle loop with scoring and boosters', async ({ page }) => {
-  await expect(page.getByLabel('Score and moves')).toContainText('0 / 640');
-  await expect(page.getByLabel('Score and moves')).toContainText('22 moves');
-  await expect(page.getByText('Glowing tiles are playable groups')).toBeVisible();
-  await expect(page.locator('.coin-pill')).toContainText('360');
+test('lets players style a look and create a Broono Card', async ({ page }) => {
+  await expect(page.getByLabel('Styled avatar preview')).toBeVisible();
+  await expect(page.getByText('Pick pieces that match the theme tags.')).toBeVisible();
+  await expect(page.locator('.score-orb')).toContainText('%');
 
-  await page.locator('.snack-tile.playable').first().click();
+  await page.getByRole('button', { name: /Varsity Cape/ }).click();
+  await page.getByRole('button', { name: /Create Broono Card/ }).click();
 
-  await expect(page.getByRole('status')).toContainText('snack pop');
-  await expect(page.getByLabel('Score and moves')).toContainText('21 moves');
-  await expect(page.locator('.coin-pill')).not.toContainText('360');
-
-  const boosters = page.getByLabel('Boosters');
-  await boosters.getByRole('button', { name: /shuffle/i }).click();
-  await expect(boosters.getByRole('button', { name: /shuffle/i })).toContainText('1');
+  await expect(page.getByRole('status')).toContainText('Broono Card');
+  await expect(page.getByText('Saved locally. Share exports stay on-device until a parent enables sharing.')).toBeVisible();
+  await expect(page.locator('.coin-pill')).toContainText('405');
 });
 
-test('shows the five brutally ranked game ideas and chosen concept', async ({ page }) => {
-  await expect(page.getByRole('heading', { name: 'Five simple hit candidates' })).toBeVisible();
-  await expect(page.getByText('#1 Snack Pop Quest')).toBeVisible();
-  await expect(page.getByText('Chosen: lowest maintenance, strongest broad appeal, cleanest monetization.')).toBeVisible();
-  await expect(page.getByText('#5 Sticker Heist')).toBeVisible();
+test('keeps monetization out of the child-facing flow and supports Friday gifts', async ({ page }) => {
+  await expect(page.getByText('No chat. No public profiles. Just safe creative cards.')).toBeVisible();
+  await expect(page.getByText('Weekly free drops create habit without pressure, ads, loot boxes, or paywalls.')).toBeVisible();
+  await expect(page.getByText(/Booster Bank|Snack Pouch|Most value|\\$2\\.99/)).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Claim gift' }).click();
+  await expect(page.getByRole('button', { name: 'Gift claimed' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: /Lollipop Lens/ })).toBeEnabled();
 });
 
-test('auth buttons swap mocked mobile sign-in identities without leaving the app', async ({ page }) => {
-  await expect(page.getByText('Guest Popper')).toBeVisible();
+test('supports safe voting with pre-written reactions only', async ({ page }) => {
+  const voting = page.getByLabel('Safe voting');
+  await expect(voting).toContainText('No comments');
+  await expect(voting.getByText('Broono Card')).toHaveCount(3);
+
+  const firstReaction = voting.getByRole('button', { name: /So clever/ }).first();
+  await expect(firstReaction).toContainText('12');
+  await firstReaction.click();
+  await expect(firstReaction).toContainText('13');
+});
+
+test('auth buttons swap mocked identities without gating play', async ({ page }) => {
+  await expect(page.getByText('Guest Stylist')).toBeVisible();
+  await expect(page.getByRole('button', { name: /Create Broono Card/ })).toBeVisible();
 
   await page.getByRole('button', { name: 'Continue with Google' }).click();
-  await expect(page.getByText('Google Popper')).toBeVisible();
-  await expect(page.locator('.coin-pill')).toContainText('360');
+  await expect(page.getByText('Google Stylist')).toBeVisible();
+  await expect(page.getByRole('button', { name: /Create Broono Card/ })).toBeVisible();
 
   await page.getByRole('button', { name: 'Continue with Apple' }).click();
-  await expect(page.getByText('Apple Popper')).toBeVisible();
-  await expect(page.locator('.coin-pill')).toContainText('360');
-});
-
-test('shows ethical shop gating and grants mocked payment rewards', async ({ page }) => {
-  await expect(page.getByText('Opens at level 3')).toBeVisible();
-  await expect(page.getByText('Gummy Cape')).toBeVisible();
-  await expect(page.locator('.shop-row').filter({ hasText: 'Gummy Cape' })).toContainText('900 coins');
-
-  await expect(page.getByRole('heading', { name: 'Booster Bank' })).toBeVisible();
-  await expect(page.getByText('Grown-up approval')).toBeVisible();
-
-  await page.getByRole('button', { name: /snack pouch/i }).click();
-  await expect(page.locator('.coin-pill')).toContainText('860');
-  await expect(page.getByLabel('Boosters').getByRole('button', { name: /shuffle/i })).toContainText('3');
-  await expect(page.getByText(/Mock receipt mock-app-store-coin_pouch-/)).toBeVisible();
-});
-
-test('renders global, country, and friends leaderboard rows', async ({ page }) => {
-  await expect(page.getByRole('heading', { name: 'Pop League' })).toBeVisible();
-
-  const leaderboard = page.locator('.leaderboard-panel');
-  await expect(leaderboard.getByRole('heading', { name: 'Global' })).toBeVisible();
-  await expect(leaderboard.getByText('#1 Mika - L31 - JP')).toBeVisible();
-  await expect(leaderboard.getByText('18,420')).toBeVisible();
-
-  await expect(leaderboard.getByRole('heading', { name: 'Country' })).toBeVisible();
-  await expect(leaderboard.getByText('#2 Sol - L21 - US')).toBeVisible();
-  await expect(leaderboard.getByText('12,110')).toBeVisible();
-
-  await expect(leaderboard.getByRole('heading', { name: 'Friends & Family' })).toBeVisible();
-  await expect(leaderboard.getByText('#3 Kit - L1 - CA')).toBeVisible();
-  await expect(leaderboard.getByText('420', { exact: true })).toBeVisible();
+  await expect(page.getByText('Apple Stylist')).toBeVisible();
 });

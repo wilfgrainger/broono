@@ -1,21 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  advanceLevel,
-  canOpenPrizeShop,
-  createBoard,
+  claimFridayGift,
   createStarterGameState,
   createStarterPet,
-  findLargestCluster,
-  getCluster,
-  grantIapReward,
-  hasPlayableCluster,
-  iapRewards,
   leaderboard,
-  playTile,
-  retryLevel,
-  shopItems,
-  useBooster,
-  type Board,
+  remixTheme,
+  scoreLook,
+  selectWardrobeItem,
+  submitLook,
+  themeForSeed,
+  voteForCard,
+  wardrobeItems,
 } from './game';
 
 type AuthUser = { id: string; displayName: string; country: string };
@@ -70,25 +65,6 @@ class MemoryStorage implements Pick<Storage, 'getItem' | 'setItem' | 'removeItem
   }
 }
 
-const playableBoard: Board = [
-  ['berry', 'berry', 'lemon', 'mint', 'soda', 'grape'],
-  ['lemon', 'mint', 'lemon', 'mint', 'soda', 'grape'],
-  ['mint', 'grape', 'grape', 'mint', 'lemon', 'berry'],
-  ['soda', 'soda', 'grape', 'lemon', 'berry', 'mint'],
-  ['berry', 'lemon', 'mint', 'soda', 'grape', 'lemon'],
-  ['grape', 'mint', 'soda', 'berry', 'lemon', 'soda'],
-  ['mint', 'soda', 'berry', 'grape', 'mint', 'berry'],
-];
-
-const withBoard = (board: Board) => ({
-  ...createStarterGameState(),
-  run: {
-    ...createStarterGameState().run,
-    board,
-    seed: 'test-board',
-  },
-});
-
 const saveSyncedPet = (storage: Pick<Storage, 'setItem'>, userId: string, pet: ReturnType<typeof createStarterPet>) => {
   storage.setItem(`broono:${userId}:pet`, JSON.stringify(pet));
 };
@@ -98,98 +74,73 @@ const loadSyncedPet = (storage: Pick<Storage, 'getItem'>, userId: string) => {
   return payload ? JSON.parse(payload) as ReturnType<typeof createStarterPet> : createStarterPet();
 };
 
-describe('snack pop board mechanics', () => {
-  it('creates deterministic playable boards from the same seed', () => {
-    const board = createBoard('same-seed');
-
-    expect(board).toEqual(createBoard('same-seed'));
-    expect(board).not.toEqual(createBoard('different-seed'));
-    expect(hasPlayableCluster(board)).toBe(true);
+describe('style showdown model', () => {
+  it('selects deterministic daily themes', () => {
+    expect(themeForSeed('2026-07-07')).toEqual(themeForSeed('2026-07-07'));
+    expect(themeForSeed('2026-07-07')).not.toEqual(themeForSeed('2026-07-08'));
   });
 
-  it('finds connected snack clusters without crossing colors', () => {
-    expect(getCluster(playableBoard, 0, 0)).toEqual([
-      { row: 0, col: 0 },
-      { row: 0, col: 1 },
-    ]);
-    expect(getCluster(playableBoard, 0, 2).length).toBe(2);
+  it('creates a starter look with every category represented', () => {
+    const state = createStarterGameState('guest', '2026-07-07');
+
+    expect(Object.values(state.run.selectedItemIds).filter(Boolean)).toHaveLength(6);
+    expect(state.run.scorePreview).toBeGreaterThan(60);
+    expect(state.inventory.ownedItemIds).toEqual(expect.arrayContaining(['hair-cloud-puffs', 'top-moon-jacket']));
   });
 
-  it('scores a valid pop, spends one move, refills the board, and grants coins', () => {
-    const state = withBoard(playableBoard);
-    const next = playTile(state, 0, 0);
-
-    expect(next.run.score).toBe(40);
-    expect(next.run.movesLeft).toBe(state.run.movesLeft - 1);
-    expect(next.run.bestCluster).toBe(2);
-    expect(next.inventory.coins).toBe(state.inventory.coins + 1);
-    expect(next.run.board).not.toEqual(playableBoard);
-    expect(hasPlayableCluster(next.run.board)).toBe(true);
-  });
-
-  it('adds combo pressure for larger pops and marks the level won at target', () => {
-    const state = {
-      ...withBoard(playableBoard),
-      run: {
-        ...withBoard(playableBoard).run,
-        targetScore: 20,
-      },
+  it('scores looks higher when selected items match theme tags', () => {
+    const state = createStarterGameState('guest', '2026-07-07');
+    const lowMatch = {
+      hair: 'hair-cloud-puffs',
+      top: 'top-moss-hoodie',
+      bottom: 'bottom-detective-cords',
+      shoes: 'shoes-leaf-stompers',
+      prop: 'prop-magnifier-lollipop',
+      backdrop: 'backdrop-neon-woods',
     };
-    const next = playTile(state, 0, 0);
 
-    expect(next.run.status).toBe('won');
-    expect(next.pet.mood).toBe('full');
-    expect(next.inventory.coins).toBe(state.inventory.coins + 36);
+    expect(scoreLook(state.run.theme, state.run.selectedItemIds)).toBeGreaterThan(scoreLook(state.run.theme, lowMatch));
   });
 
-  it('advances after wins and consumes hearts on retry', () => {
-    const won = { ...withBoard(playableBoard), run: { ...withBoard(playableBoard).run, status: 'won' as const } };
-    const nextLevel = advanceLevel(won);
-    const retried = retryLevel(nextLevel);
+  it('updates the selected look and preview score only for owned items', () => {
+    const state = createStarterGameState();
+    const owned = selectWardrobeItem(state, 'top-varsity-cape');
+    const locked = selectWardrobeItem(state, 'top-moss-hoodie');
 
-    expect(nextLevel.run.level).toBe(2);
-    expect(nextLevel.inventory.hearts).toBe(5);
-    expect(retried.run.level).toBe(2);
-    expect(retried.inventory.hearts).toBe(4);
+    expect(owned.run.selectedItemIds.top).toBe('top-varsity-cape');
+    expect(owned.pet.mood).toMatch(/sparkly|focused/);
+    expect(locked.run.selectedItemIds.top).toBe(state.run.selectedItemIds.top);
   });
 
-  it('uses boosters for board recovery and biggest-cluster clearing', () => {
-    const state = withBoard(playableBoard);
-    const shuffled = useBooster(state, 'shuffle');
-    const spooned = useBooster(state, 'spoon');
+  it('submits a Broono Card, rewards coins, and stores local history', () => {
+    const state = createStarterGameState();
+    const submitted = submitLook(state, new Date('2026-07-07T12:00:00.000Z'));
 
-    expect(shuffled.inventory.boosters.shuffle).toBe(1);
-    expect(shuffled.run.board).not.toEqual(state.run.board);
-    expect(findLargestCluster(state.run.board).length).toBeGreaterThanOrEqual(2);
-    expect(spooned.inventory.boosters.spoon).toBe(0);
-    expect(spooned.run.score).toBeGreaterThan(0);
-  });
-});
-
-describe('premium shop and mocked purchases', () => {
-  it('keeps the prize shop gated until level 3', () => {
-    expect(canOpenPrizeShop(2)).toBe(false);
-    expect(canOpenPrizeShop(3)).toBe(true);
-    expect(shopItems.filter((item) => item.premium).every((item) => item.cost > 0)).toBe(true);
+    expect(submitted.run.submittedCard?.title).toBeTruthy();
+    expect(submitted.run.submittedCard?.score).toBe(submitted.run.scorePreview);
+    expect(submitted.run.savedCards).toHaveLength(1);
+    expect(submitted.inventory.coins).toBe(state.inventory.coins + 45);
   });
 
-  it('grants coins, cosmetics, boosters, and idempotent receipt history', () => {
-    const state = grantIapReward(createStarterGameState(), 'starter_bundle', 'receipt-1');
-    const replayed = grantIapReward(state, 'starter_bundle', 'receipt-1');
+  it('votes with pre-written reactions and remixes to a new safe theme', () => {
+    const state = createStarterGameState('guest', '2026-07-07');
+    const card = state.run.voteCards[0];
+    const voted = voteForCard(state, card.id, 'clever');
+    const remixed = remixTheme(voted, 'forced-remix');
 
-    expect(iapRewards.starter_bundle.coins).toBe(900);
-    expect(state.inventory.coins).toBe(1260);
-    expect(state.inventory.ownedItemIds).toEqual(expect.arrayContaining(['gummy-cape', 'star-tray']));
-    expect(state.inventory.boosters.spoon).toBe(3);
-    expect(replayed.inventory.coins).toBe(state.inventory.coins);
-    expect(replayed.purchaseHistory).toEqual(['receipt-1']);
+    expect(voted.run.voteCards[0].reactions.clever).toBe(card.reactions.clever + 1);
+    expect(remixed.run.theme.id).toBeTruthy();
+    expect(remixed.run.submittedCard).toBeUndefined();
   });
 
-  it('activates the snack pass entitlement from the subscription product', () => {
-    const state = grantIapReward(createStarterGameState(), 'care_pass_monthly', 'receipt-pass');
+  it('claims the Friday gift once without random loot behavior', () => {
+    const state = createStarterGameState();
+    const claimed = claimFridayGift(state);
+    const replayed = claimFridayGift(claimed);
 
-    expect(state.inventory.premiumPassActive).toBe(true);
-    expect(state.inventory.ownedItemIds).toContain('vip-crown');
+    expect(claimed.inventory.fridayGiftClaimed).toBe(true);
+    expect(claimed.inventory.ownedItemIds).toContain('prop-magnifier-lollipop');
+    expect(replayed.inventory.ownedItemIds).toEqual(claimed.inventory.ownedItemIds);
   });
 });
 
@@ -209,7 +160,7 @@ describe('auth mocks', () => {
     expect(listener).toHaveBeenCalledWith({ status: 'anonymous', user: null });
   });
 
-  it('can drive signed-in and signed-out states for leaderboard tests', () => {
+  it('can drive signed-in and signed-out states for style tests', () => {
     const listener = vi.fn();
     const unsubscribe = auth.onAuthStateChanged(listener);
 
@@ -226,7 +177,7 @@ describe('auth mocks', () => {
     expect(listener).toHaveBeenLastCalledWith({ status: 'anonymous', user: null });
   });
 
-  it('matches authenticated players to seeded leaderboard rows', () => {
+  it('keeps leaderboard data coarse if reused later', () => {
     auth.signIn({ id: 'user-1', displayName: 'Ava', country: 'US' });
 
     expect(leaderboard.country.some((row) => row.name === auth.current.user?.displayName && row.region === auth.current.user.country)).toBe(true);
@@ -235,30 +186,37 @@ describe('auth mocks', () => {
 });
 
 describe('state sync test adapter', () => {
-  it('hydrates a saved pet for a user', () => {
+  it('hydrates a saved Broono host for a user', () => {
     const storage = new MemoryStorage();
-    const pet = { ...createStarterPet(), mood: 'hyped' as const };
+    const pet = { ...createStarterPet(), mood: 'proud' as const };
 
     saveSyncedPet(storage, 'user-1', pet);
 
     expect(loadSyncedPet(storage, 'user-1')).toEqual(pet);
   });
 
-  it('isolates synced pets by authenticated user id', () => {
+  it('isolates synced Broono state by authenticated user id', () => {
     const storage = new MemoryStorage();
-    const userOnePet = { ...createStarterPet(), name: 'Broono One' };
-    const userTwoPet = { ...createStarterPet(), name: 'Broono Two' };
+    const userOnePet = { ...createStarterPet(), favoriteTag: 'glam' as const };
+    const userTwoPet = { ...createStarterPet(), favoriteTag: 'retro' as const };
 
     saveSyncedPet(storage, 'user-1', userOnePet);
     saveSyncedPet(storage, 'user-2', userTwoPet);
 
-    expect(loadSyncedPet(storage, 'user-1').name).toBe('Broono One');
-    expect(loadSyncedPet(storage, 'user-2').name).toBe('Broono Two');
+    expect(loadSyncedPet(storage, 'user-1').favoriteTag).toBe('glam');
+    expect(loadSyncedPet(storage, 'user-2').favoriteTag).toBe('retro');
   });
 
-  it('creates a fresh starter pet when no synced state exists', () => {
+  it('creates a fresh Broono host when no synced state exists', () => {
     const storage = new MemoryStorage();
 
     expect(loadSyncedPet(storage, 'missing-user')).toEqual(createStarterPet());
+  });
+});
+
+describe('wardrobe content safety', () => {
+  it('uses a closed, curated item list without free text', () => {
+    expect(wardrobeItems.length).toBeGreaterThanOrEqual(18);
+    expect(wardrobeItems.every((item) => item.name.length > 0 && item.tags.length > 0)).toBe(true);
   });
 });

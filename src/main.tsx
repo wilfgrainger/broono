@@ -2,278 +2,258 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   BadgeCheck,
-  CreditCard,
+  Camera,
   Crown,
-  Gem,
   Gift,
   Heart,
-  Lock,
-  Medal,
-  Play,
+  Palette,
   RefreshCw,
   ShieldCheck,
-  ShoppingBag,
   Sparkles,
-  Target,
+  Star,
   Trophy,
   UserRound,
   WandSparkles,
-  Zap,
 } from 'lucide-react';
-import { getCluster, leaderboard, paymentProducts, shopItems, tileVisuals, type PaymentProductId, type TileColor } from './viewModel';
+import { categories, categoryLabels, reactionLabels, wardrobeItems, type BroonoCard, type StyleCategory, type WardrobeItem } from './viewModel';
 import { useGameLoop } from './hooks/useGameLoop';
 import { nativeBridge } from './platform';
 import { supportedAuthProviders } from './platform/auth';
 import './styles.css';
 
-const ideaRanks = [
-  {
-    rank: 1,
-    name: 'Snack Pop Quest',
-    verdict: 'Chosen: lowest maintenance, strongest broad appeal, cleanest monetization.',
-  },
-  {
-    rank: 2,
-    name: 'Snack Rail Sort',
-    verdict: 'Fast and readable, but content burns out unless orders get expensive to author.',
-  },
-  {
-    rank: 3,
-    name: 'Tiny Merge Garden',
-    verdict: 'Sticky collection loop, but merge economies become spreadsheet-heavy quickly.',
-  },
-  {
-    rank: 4,
-    name: 'Rhythm Hop Picnic',
-    verdict: 'Great feel if perfect, unforgiving if latency or audio timing is rough.',
-  },
-  {
-    rank: 5,
-    name: 'Sticker Heist',
-    verdict: 'Cute hidden-object idea, but needs lots of art to avoid repetition.',
-  },
-];
+const outfitCategories: StyleCategory[] = ['hair', 'top', 'bottom', 'shoes', 'prop'];
 
-function App() {
-  const { state, popTile, nextLevel, retry, triggerBooster, signInAs, purchase, lastReceipt, syncStatus, shopUnlocked } = useGameLoop();
-  const { run, inventory, user, pet } = state;
-  const platform = nativeBridge.platform;
-  const progressPercent = Math.min(100, Math.round((run.score / run.targetScore) * 100));
+function itemFor(category: StyleCategory, selected: Partial<Record<StyleCategory, string>>) {
+  return wardrobeItems.find((item) => item.id === selected[category]);
+}
 
-  const handlePurchase = (productId: PaymentProductId) => {
-    void purchase(productId);
-  };
+function AvatarPreview({ selected }: { selected: Partial<Record<StyleCategory, string>> }) {
+  const hair = itemFor('hair', selected);
+  const top = itemFor('top', selected);
+  const bottom = itemFor('bottom', selected);
+  const shoes = itemFor('shoes', selected);
+  const prop = itemFor('prop', selected);
+  const backdrop = itemFor('backdrop', selected);
 
   return (
-    <main className="app-shell" aria-label="Broono Snack Pop Quest">
-      <header className="top-hud" aria-label="Broono status">
+    <div className="studio-stage" style={{ '--scene': backdrop?.color ?? '#55d6ff' } as React.CSSProperties} aria-label="Styled avatar preview">
+      <div className="stage-sun" />
+      <div className="stage-ribbon ribbon-one" />
+      <div className="stage-ribbon ribbon-two" />
+      <div className="avatar">
+        <span className="avatar-hair" style={{ '--item': hair?.color ?? '#8ef3ff' } as React.CSSProperties} />
+        <span className="avatar-face" />
+        <span className="avatar-top" style={{ '--item': top?.color ?? '#4933b8' } as React.CSSProperties} />
+        <span className="avatar-bottom" style={{ '--item': bottom?.color ?? '#ff70bd' } as React.CSSProperties} />
+        <span className="avatar-shoes" style={{ '--item': shoes?.color ?? '#fff1a6' } as React.CSSProperties} />
+        <span className="avatar-prop" style={{ '--item': prop?.color ?? '#ff5ba8' } as React.CSSProperties} />
+      </div>
+      <div className="broono-host" aria-label="Broono host">
+        <span className="broono-ear left" />
+        <span className="broono-ear right" />
+        <span className="broono-face" />
+      </div>
+    </div>
+  );
+}
+
+function BroonoCardView({ card, compact = false }: { card: BroonoCard; compact?: boolean }) {
+  return (
+    <div className={compact ? 'broono-card compact' : 'broono-card'}>
+      <span className="card-kicker"><Camera /> Broono Card</span>
+      <strong>{card.title}</strong>
+      <small>{card.rank} / {card.score}% theme match</small>
+    </div>
+  );
+}
+
+function WardrobeRail({
+  category,
+  selectedId,
+  ownedItemIds,
+  onSelect,
+}: {
+  category: StyleCategory;
+  selectedId?: string;
+  ownedItemIds: string[];
+  onSelect: (itemId: string) => void;
+}) {
+  const items = wardrobeItems.filter((item) => item.category === category);
+  return (
+    <div className="wardrobe-rail">
+      <h3>{categoryLabels[category]}</h3>
+      <div className="item-row">
+        {items.map((item: WardrobeItem) => {
+          const owned = ownedItemIds.includes(item.id);
+          return (
+            <button
+              key={item.id}
+              className={`item-chip ${selectedId === item.id ? 'selected' : ''}`}
+              disabled={!owned}
+              onClick={() => onSelect(item.id)}
+              aria-label={`${item.name} ${owned ? '' : 'locked'}`}
+            >
+              <span style={{ '--item': item.color } as React.CSSProperties} />
+              <strong>{item.name}</strong>
+              <small>{owned ? item.tags.slice(0, 2).join(' + ') : 'Friday gift'}</small>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const { state, selectItem, submit, vote, remix, claimGift, signInAs, syncStatus } = useGameLoop();
+  const { run, inventory, user, pet } = state;
+  const platform = nativeBridge.platform;
+  const theme = run.theme;
+  const selected = run.selectedItemIds;
+  const submitted = run.submittedCard;
+
+  return (
+    <main className="app-shell" aria-label="Broono Style Showdown">
+      <header className="top-hud">
         <div className="brand-lockup">
           <span className="brand-mark">B</span>
           <div>
             <strong>Broono</strong>
-            <small>Snack Pop Quest</small>
+            <small>Style Showdown</small>
           </div>
         </div>
         <div className="hud-pills">
-          <span className="hud-pill heart-pill"><Heart /> {inventory.hearts}</span>
-          <span className="hud-pill coin-pill"><Sparkles /> {inventory.coins.toLocaleString()}</span>
+          <span className="hud-pill"><Heart /> Safe</span>
+          <span className="hud-pill coin-pill"><Sparkles /> {inventory.coins}</span>
         </div>
       </header>
 
-      <section className="playfield" aria-label="Snack Pop board">
-        <div className="level-banner">
+      <section className="hero-panel" aria-label="Daily style challenge">
+        <div className="theme-copy">
+          <span className="eyebrow"><Crown /> Today's theme</span>
+          <h1>{theme.title}</h1>
+          <p>{theme.prompt}</p>
+        </div>
+        <div className="theme-tags" aria-label="Theme tags">
+          {theme.tags.map((tag) => <span key={tag}>{tag}</span>)}
+        </div>
+      </section>
+
+      <section className="studio-panel" aria-label="Style studio">
+        <div className="studio-heading">
           <div>
-            <span className="eyebrow"><Crown /> Level {run.level}</span>
-            <h1>Pop snacks. Feed Broono.</h1>
+            <h2><Palette /> Style the look</h2>
+            <p>No chat. No public profiles. Just safe creative cards.</p>
           </div>
-          <div className="target-ring" style={{ '--progress': `${progressPercent}%` } as React.CSSProperties}>
-            <span>{progressPercent}%<small>goal</small></span>
+          <div className="score-orb" style={{ '--score': `${run.scorePreview}%` } as React.CSSProperties}>
+            <span>{run.scorePreview}%</span>
           </div>
         </div>
 
-        <div className="coach-card">
-          <div className="mini-pet" aria-hidden="true">
-            <span className="mini-ear left" />
-            <span className="mini-ear right" />
-            <span className="mini-face" />
+        <AvatarPreview selected={selected} />
+
+        <div className="broono-line">
+          <div className={`tiny-broono mood-${pet.mood}`}>
+            <span className="tiny-ear left" />
+            <span className="tiny-ear right" />
+            <span className="tiny-face" />
           </div>
           <div>
-            <strong>Tap 2+ matching snacks.</strong>
-            <span>Bigger groups fill the bowl faster. Run out of moves and Broono goes hungry.</span>
+            <strong>{pet.name} says:</strong>
+            <span>{submitted ? 'That look is ready for the runway card.' : 'Pick pieces that match the theme tags.'}</span>
           </div>
         </div>
 
-        <div className="score-row" aria-label="Score and moves">
-          <span><Target /> Goal {run.score.toLocaleString()} / {run.targetScore.toLocaleString()}</span>
-          <span><Zap /> {run.movesLeft} moves</span>
-          <span><Medal /> Best group {run.bestCluster}</span>
+        <div className="action-row">
+          <button className="primary-action" onClick={submit}><Camera /> Create Broono Card</button>
+          <button className="secondary-action" onClick={remix}><RefreshCw /> New theme</button>
         </div>
 
-        <div className={`pet-stage mood-${pet.mood}`} aria-label={`${pet.name} ${pet.species}`}>
-          <div className="pet-sky">
-            <span className="stage-candy candy-one" />
-            <span className="stage-candy candy-two" />
-            <span className="stage-candy candy-three" />
-          </div>
-          <div className="pet-character">
-            <span className="pet-ear left" />
-            <span className="pet-ear right" />
-            <span className="pet-face" />
-            <span className="pet-belly" />
-          </div>
-          <div className="pet-caption">
-            <strong>{pet.name}</strong>
-            <span>{pet.mood === 'full' ? 'Sugar rush' : pet.mood === 'hyped' ? 'Combo ready' : pet.mood === 'sleepy' ? 'Needs a heart' : 'Waiting for a snack pop'}</span>
-          </div>
-        </div>
-
-        {run.lastPop && (
-          <div className="pop-toast" role="status">
-            <Sparkles /> {run.lastPop.clusterSize} snack pop: +{run.lastPop.points} points, +{run.lastPop.coins} coins
+        {submitted && (
+          <div className="result-card" role="status">
+            <BroonoCardView card={submitted} />
+            <p>Saved locally. Share exports stay on-device until a parent enables sharing.</p>
           </div>
         )}
-
-        <div className="board-shell">
-          <div className="board-callout"><Sparkles /> Glowing tiles are playable groups</div>
-          <div className="snack-board" role="grid" aria-label="Snack tiles">
-            {run.board.map((row, rowIndex) => row.map((tile, colIndex) => {
-              const clusterSize = getCluster(run.board, rowIndex, colIndex).length;
-              const visual = tileVisuals[tile as TileColor];
-              return (
-                <button
-                  key={`${rowIndex}-${colIndex}-${tile}-${run.turn}`}
-                  className={`snack-tile tile-${tile} ${clusterSize >= 2 ? 'playable' : ''}`}
-                  onClick={() => popTile(rowIndex, colIndex)}
-                  role="gridcell"
-                  aria-label={`${visual.label} snack row ${rowIndex + 1} column ${colIndex + 1} cluster ${clusterSize}`}
-                  data-testid={`tile-${rowIndex}-${colIndex}`}
-                >
-                  <span className="snack-icon" aria-hidden="true" />
-                  {clusterSize >= 2 && <small aria-hidden="true">{clusterSize}</small>}
-                </button>
-              );
-            }))}
-          </div>
-
-          {run.status !== 'playing' && (
-            <div className={`result-layer ${run.status}`} role="dialog" aria-label="Level result">
-              <h2>{run.status === 'won' ? 'Level crushed' : 'Out of moves'}</h2>
-              <p>{run.status === 'won' ? `${pet.name} earned a snack crown.` : 'Retry with a fresh board.'}</p>
-              <button className="primary-action" onClick={run.status === 'won' ? nextLevel : retry}>
-                <Play /> {run.status === 'won' ? 'Next level' : 'Retry'}
-              </button>
-            </div>
-          )}
-        </div>
-
-        <div className="booster-tray" aria-label="Boosters">
-          <button onClick={() => triggerBooster('shuffle')} disabled={inventory.boosters.shuffle <= 0 || run.status !== 'playing'}>
-            <RefreshCw /> Shuffle board <strong>{inventory.boosters.shuffle}</strong>
-          </button>
-          <button onClick={() => triggerBooster('spoon')} disabled={inventory.boosters.spoon <= 0 || run.status !== 'playing'}>
-            <WandSparkles /> Mega spoon <strong>{inventory.boosters.spoon}</strong>
-          </button>
-        </div>
       </section>
 
-      <section className="quest-strip" aria-label="Daily quests">
-        <div className="quest-card complete">
-          <BadgeCheck /> Pop 6+
-        </div>
-        <div className={run.status === 'won' ? 'quest-card complete' : 'quest-card'}>
-          <Trophy /> Win level
-        </div>
-        <div className={run.movesLeft >= 5 ? 'quest-card complete' : 'quest-card'}>
-          <Gem /> 5 moves spare
-        </div>
-      </section>
-
-      <section className="panel idea-panel" aria-label="Game idea analysis">
+      <section className="wardrobe-panel" aria-label="Wardrobe">
         <div className="section-heading">
-          <h2><Crown /> Five simple hit candidates</h2>
-          <span>Brutal pick</span>
+          <h2><WandSparkles /> Wardrobe</h2>
+          <span>{inventory.ownedItemIds.length}/{wardrobeItems.length} owned</span>
         </div>
-        <div className="idea-list">
-          {ideaRanks.map((idea) => (
-            <div key={idea.name} className={idea.rank === 1 ? 'idea-row chosen' : 'idea-row'}>
-              <strong>#{idea.rank} {idea.name}</strong>
-              <span>{idea.verdict}</span>
-            </div>
-          ))}
-        </div>
+        {outfitCategories.map((category) => (
+          <WardrobeRail
+            key={category}
+            category={category}
+            selectedId={selected[category]}
+            ownedItemIds={inventory.ownedItemIds}
+            onSelect={selectItem}
+          />
+        ))}
+        <WardrobeRail
+          category="backdrop"
+          selectedId={selected.backdrop}
+          ownedItemIds={inventory.ownedItemIds}
+          onSelect={selectItem}
+        />
       </section>
 
-      <section className="panel shop-panel">
-        <div className="section-heading">
-          <h2><ShoppingBag /> Prize Shop</h2>
-          <span className={shopUnlocked ? 'unlocked' : 'locked'}>{shopUnlocked ? 'Open' : 'Opens at level 3'}</span>
+      <section className="gift-panel" aria-label="Friday gift">
+        <div>
+          <span className="eyebrow"><Gift /> Friday gift</span>
+          <h2>Claim a safe remix prop.</h2>
+          <p>Weekly free drops create habit without pressure, ads, loot boxes, or paywalls.</p>
         </div>
-        <div className="shop-grid">
-          {shopItems.map((item, index) => {
-            const owned = inventory.ownedItemIds.includes(item.id);
-            return (
-              <div key={item.id} className={`shop-row ${owned ? 'owned' : ''}`}>
-                <span className={`shop-gem gem-${index % 5}`} />
-                <span>{item.name}<small>{item.category}</small></span>
-                <strong>{owned ? 'Owned' : `${item.cost} coins`}</strong>
+        <button className="gift-button" onClick={claimGift} disabled={inventory.fridayGiftClaimed}>
+          <Gift /> {inventory.fridayGiftClaimed ? 'Gift claimed' : 'Claim gift'}
+        </button>
+      </section>
+
+      <section className="vote-panel" aria-label="Safe voting">
+        <div className="section-heading">
+          <h2><Trophy /> Vote safely</h2>
+          <span><ShieldCheck /> No comments</span>
+        </div>
+        <div className="vote-grid">
+          {run.voteCards.map((card) => (
+            <div className="vote-card" key={card.id}>
+              <BroonoCardView card={card} compact />
+              <div className="reaction-row">
+                {Object.entries(reactionLabels).map(([id, label]) => (
+                  <button key={id} onClick={() => vote(card.id, id as keyof BroonoCard['reactions'])}>
+                    <Star /> {label} <strong>{card.reactions[id as keyof BroonoCard['reactions']]}</strong>
+                  </button>
+                ))}
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       </section>
 
-      <section className="panel bank-panel">
+      <section className="cards-panel" aria-label="Saved Broono Cards">
         <div className="section-heading">
-          <h2><CreditCard /> Booster Bank</h2>
-          <span><ShieldCheck /> Grown-up approval</span>
+          <h2><BadgeCheck /> My cards</h2>
+          <span>{run.savedCards.length}/7 saved</span>
         </div>
-        <div className="iap-grid">
-          {paymentProducts.map((product, index) => (
-            <button key={product.id} className={`iap-card tier-${index}`} onClick={() => handlePurchase(product.id)}>
-              <span className="iap-badge"><Gift /> {product.badge}</span>
-              <strong>{product.displayName}</strong>
-              <small>{product.description}</small>
-              <em>{product.localizedPrice}</em>
-              <span className="iap-reward">+{product.coinAmount.toLocaleString()} coins</span>
-            </button>
-          ))}
-        </div>
-        {lastReceipt && (
-          <p className="receipt-toast"><BadgeCheck /> Mock receipt {lastReceipt.transactionId} granted from {lastReceipt.platform}.</p>
+        {run.savedCards.length === 0 ? (
+          <p className="empty-state">Create your first Broono Card to start a local style album.</p>
+        ) : (
+          <div className="saved-grid">
+            {run.savedCards.map((card) => <BroonoCardView key={card.id} card={card} compact />)}
+          </div>
         )}
       </section>
 
-      <section className="panel social-panel">
+      <section className="parent-panel" aria-label="Parent safe account area">
         <div className="section-heading">
-          <h2><UserRound /> Player</h2>
+          <h2><UserRound /> Account</h2>
           <span>{platform} / sync {syncStatus}</span>
         </div>
-        <div className="login-card">
-          <div className="player-chip"><UserRound /> {user.displayName}</div>
-          <div className="auth-row">
-            {supportedAuthProviders.map((provider) => (
-              <button key={provider.id} onClick={() => signInAs(provider.id)}>{provider.label}</button>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="panel leaderboard-panel">
-        <div className="section-heading">
-          <h2><Trophy /> Pop League</h2>
-          <span><Lock /> Friends safe</span>
-        </div>
-        <div className="leaderboard-grid">
-          {Object.entries(leaderboard).map(([scope, rows]) => (
-            <div key={scope} className="leaderboard-card">
-              <h3>{scope === 'global' ? 'Global' : scope === 'country' ? 'Country' : 'Friends & Family'}</h3>
-              {rows.map((row, index) => (
-                <p key={row.name} className={index === 0 ? 'top-row' : ''}>
-                  <span>#{index + 1} {row.name} - L{row.level} - {row.region}</span>
-                  <strong>{row.score.toLocaleString()}</strong>
-                </p>
-              ))}
-            </div>
+        <div className="player-chip"><UserRound /> {user.displayName}</div>
+        <div className="auth-row">
+          {supportedAuthProviders.map((provider) => (
+            <button key={provider.id} onClick={() => signInAs(provider.id)}>{provider.label}</button>
           ))}
         </div>
       </section>
