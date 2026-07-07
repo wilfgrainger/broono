@@ -14,8 +14,7 @@ body {
   margin: 0;
   min-width: 320px;
   background:
-    radial-gradient(circle at 18% 18%, #ffd84f 0 9px, transparent 10px),
-    radial-gradient(circle at 84% 24%, #55d6ff 0 10px, transparent 11px),
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, .05) 0 12px, transparent 12px 24px),
     linear-gradient(145deg, #2e1559 0%, #110e2e 100%);
 }
 
@@ -33,8 +32,8 @@ button {
   padding: 14px 12px 34px;
   overflow: hidden;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, .65), transparent 28%),
-    linear-gradient(180deg, #a7f3ff 0%, #d8fbff 18%, #ffd8f0 48%, #fff1a6 74%, #d7ffe5 100%);
+    linear-gradient(180deg, rgba(255, 255, 255, .72), transparent 23%),
+    linear-gradient(180deg, #51e6ff 0%, #a7f7ff 17%, #ffb4e1 48%, #ffe36b 72%, #7cf7b3 100%);
 }
 
 .app-shell::before {
@@ -43,9 +42,126 @@ button {
   inset: 0;
   pointer-events: none;
   background:
-    linear-gradient(90deg, rgba(255, 255, 255, .18) 1px, transparent 1px),
-    linear-gradient(rgba(255, 255, 255, .18) 1px, transparent 1px);
-  background-size: 28px 28px;
+    linear-gradient(90deg, rgba(255, 255, 255, .2) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, .18) 1px, transparent 1px),
+    linear-gradient(135deg, transparent 0 46%, rgba(255, 255, 255, .18) 47% 53%, transparent 54% 100%);
+  background-size: 28px 28px, 28px 28px, 84px 84px;
+  mask-image: linear-gradient(#000, transparent 82%);
+}
+
+.walkthrough-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(24, 10, 42, .72);
+  backdrop-filter: blur(10px);
+}
+
+.walkthrough-card {
+  width: min(100%, 500px);
+  max-height: min(92vh, 780px);
+  overflow: auto;
+  padding: 18px;
+  border: 4px solid #291744;
+  border-radius: 28px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, .96) 0 34%, rgba(255, 242, 120, .96) 35% 48%, rgba(255, 100, 184, .92) 49% 62%, rgba(79, 226, 255, .95) 63% 100%);
+  box-shadow: 0 12px 0 #291744, 0 30px 80px rgba(0, 0, 0, .38);
+}
+
+.walkthrough-card h2 {
+  max-width: 12ch;
+  margin: 0 0 14px;
+  color: #24143a;
+  font-size: clamp(2rem, 9vw, 3.1rem);
+  line-height: .86;
+  font-weight: 1000;
+  text-shadow: 0 3px 0 #fff, 0 6px 0 rgba(255, 91, 168, .28);
+}
+
+.walkthrough-steps {
+  display: grid;
+  gap: 10px;
+}
+
+.walkthrough-step {
+  display: grid;
+  grid-template-columns: 30px 44px minmax(0, 1fr);
+  gap: 9px;
+  align-items: center;
+  min-height: 86px;
+  padding: 10px;
+  border: 3px solid #291744;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, .88);
+  box-shadow: 0 5px 0 #291744;
+}
+
+.step-number,
+.step-icon {
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  font-weight: 1000;
+}
+
+.step-number {
+  width: 28px;
+  height: 28px;
+  background: #291744;
+  color: #fff;
+}
+
+.step-icon {
+  width: 42px;
+  height: 42px;
+  border: 3px solid #291744;
+  background: linear-gradient(#fff06f, #ff63b8);
+  color: #291744;
+}
+
+.step-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.walkthrough-step strong,
+.walkthrough-step p {
+  display: block;
+}
+
+.walkthrough-step strong {
+  color: #24143a;
+  font-size: .96rem;
+  font-weight: 1000;
+}
+
+.walkthrough-step p {
+  margin: 3px 0 0;
+  color: #5a3b73;
+  font-size: .78rem;
+  line-height: 1.22;
+  font-weight: 850;
+}
+
+.walkthrough-start {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 54px;
+  margin-top: 14px;
+  border: 4px solid #291744;
+  border-radius: 20px;
+  background: linear-gradient(#fff, #fff06f 45%, #ff9f32);
+  box-shadow: 0 7px 0 #291744;
+  color: #291744;
+  cursor: pointer;
+  font-weight: 1000;
 }
 
 .top-hud,
@@ -120,7 +236,8 @@ button {
   gap: 7px;
 }
 
-.hud-pill {
+.hud-pill,
+.guide-button {
   gap: 5px;
   min-height: 32px;
   padding: 6px 9px;
@@ -132,6 +249,18 @@ button {
   font-size: .74rem;
   font-weight: 1000;
   white-space: nowrap;
+}
+
+.guide-button {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  background: linear-gradient(#fff, #ffd7ef);
+}
+
+.guide-button svg {
+  width: 15px;
+  height: 15px;
 }
 
 .hud-pill svg,
@@ -168,8 +297,20 @@ button {
 .hero-panel {
   padding: 15px;
   background:
-    radial-gradient(circle at 90% 16%, rgba(255, 255, 255, .9), transparent 18%),
-    linear-gradient(135deg, #fff7c8 0%, #ffd9f1 50%, #dffaff 100%);
+    linear-gradient(112deg, rgba(255, 255, 255, .8) 0 16%, transparent 17% 100%),
+    linear-gradient(135deg, #fff06f 0%, #ff72bd 48%, #51e6ff 100%);
+  color: #fff;
+}
+
+.hero-panel::after,
+.studio-panel::after,
+.broono-card::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: 19px;
+  pointer-events: none;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, .72);
 }
 
 .eyebrow {
@@ -188,22 +329,51 @@ button {
 }
 
 .theme-copy h1 {
-  max-width: 8ch;
+  max-width: 9ch;
   margin: 0;
-  color: #24143a;
+  color: #fff;
   font-size: clamp(2.65rem, 12vw, 4rem);
   line-height: .84;
   letter-spacing: 0;
   font-weight: 1000;
-  text-shadow: 0 3px 0 #fff, 0 7px 0 rgba(255, 91, 168, .24);
+  text-shadow: 0 3px 0 #291744, 0 7px 0 rgba(41, 23, 68, .26);
 }
 
 .theme-copy p {
   margin: 13px 0 0;
-  color: #5a4274;
+  color: #fff;
   font-size: .98rem;
   line-height: 1.32;
   font-weight: 850;
+}
+
+.how-flow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 18px minmax(0, 1fr) 18px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  margin-top: 13px;
+}
+
+.how-flow span {
+  display: grid;
+  place-items: center;
+  min-height: 40px;
+  padding: 7px;
+  border: 3px solid #291744;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .92);
+  box-shadow: 0 4px 0 #291744;
+  color: #291744;
+  font-size: .67rem;
+  font-weight: 1000;
+  text-align: center;
+}
+
+.how-flow i {
+  height: 5px;
+  border-radius: 999px;
+  background: #291744;
 }
 
 .theme-tags {
@@ -216,7 +386,7 @@ button {
   padding: 7px 9px;
   border: 2px solid #291744;
   border-radius: 999px;
-  background: #fff;
+  background: rgba(255, 255, 255, .94);
   box-shadow: 0 3px 0 #291744;
   color: #3b245b;
   font-size: .74rem;
@@ -225,7 +395,8 @@ button {
 
 .studio-panel {
   padding: 14px;
-  background: linear-gradient(160deg, #fff 0%, #fff0fa 58%, #e7fbff 100%);
+  background:
+    linear-gradient(125deg, rgba(255, 255, 255, .96) 0 44%, rgba(255, 238, 91, .7) 45% 54%, rgba(255, 102, 184, .55) 55% 70%, rgba(78, 224, 255, .72) 71% 100%);
 }
 
 .studio-heading {
@@ -265,14 +436,14 @@ button {
   flex: 0 0 auto;
   display: grid;
   place-items: center;
-  width: 66px;
-  height: 66px;
+  width: 72px;
+  height: 72px;
   border: 3px solid #291744;
   border-radius: 50%;
   background:
     radial-gradient(circle at center, #fff 0 47%, transparent 48%),
-    conic-gradient(#ff5ba8 var(--score), rgba(41, 23, 68, .14) 0);
-  box-shadow: 0 5px 0 #291744;
+    conic-gradient(#ff2e9a var(--score), rgba(41, 23, 68, .14) 0);
+  box-shadow: 0 6px 0 #291744, 0 0 0 5px rgba(255, 255, 255, .55);
   font-size: .9rem;
   font-weight: 1000;
 }
@@ -284,9 +455,22 @@ button {
   border-radius: 24px;
   overflow: hidden;
   background:
-    radial-gradient(circle at 22% 18%, rgba(255, 255, 255, .85) 0 20px, transparent 21px),
-    linear-gradient(180deg, color-mix(in srgb, var(--scene), #fff 35%) 0%, #f7f2ff 54%, color-mix(in srgb, var(--scene), #ff5ba8 28%) 100%);
-  box-shadow: 0 6px 0 #291744;
+    linear-gradient(104deg, transparent 0 36%, rgba(255, 255, 255, .22) 37% 45%, transparent 46% 100%),
+    linear-gradient(180deg, color-mix(in srgb, var(--scene), #fff 26%) 0%, #f9f2ff 50%, color-mix(in srgb, var(--scene), #ff2e9a 35%) 100%);
+  box-shadow: 0 7px 0 #291744, inset 0 0 0 5px rgba(255, 255, 255, .18);
+}
+
+.studio-stage::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -30px;
+  width: 220px;
+  height: 370px;
+  transform: translateX(-50%);
+  clip-path: polygon(44% 0, 56% 0, 100% 100%, 0 100%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .55), rgba(255, 255, 255, .05));
+  pointer-events: none;
 }
 
 .stage-sun,
@@ -303,7 +487,7 @@ button {
   height: 48px;
   border: 3px solid #291744;
   border-radius: 50%;
-  background: #ffe066;
+  background: linear-gradient(#fff16f, #ff9f32);
   box-shadow: 0 4px 0 #291744, inset 0 2px 0 rgba(255, 255, 255, .65);
 }
 
@@ -345,7 +529,7 @@ button {
   height: 78px;
   border: 4px solid #291744;
   border-radius: 46% 46% 44% 44%;
-  background: #ffd7b5;
+  background: linear-gradient(145deg, #ffd7b5, #ffc092);
   transform: translateX(-50%);
   z-index: 2;
 }
@@ -361,7 +545,7 @@ button {
   background: var(--item);
   transform: translateX(-50%);
   z-index: 1;
-  box-shadow: inset 0 3px 0 rgba(255, 255, 255, .45);
+  box-shadow: inset 0 5px 0 rgba(255, 255, 255, .55), 0 4px 0 rgba(41, 23, 68, .16);
 }
 
 .avatar-face {
@@ -404,6 +588,7 @@ button {
   background: var(--item);
   transform: translateX(-50%);
   z-index: 2;
+  box-shadow: inset 0 5px 0 rgba(255, 255, 255, .34);
 }
 
 .avatar-bottom {
@@ -417,6 +602,7 @@ button {
   background: var(--item);
   transform: translateX(-50%);
   z-index: 2;
+  box-shadow: inset 0 4px 0 rgba(255, 255, 255, .28);
 }
 
 .avatar-shoes {
@@ -459,7 +645,7 @@ button {
   border-radius: 50%;
   background: var(--item);
   z-index: 4;
-  box-shadow: 0 4px 0 rgba(41, 23, 68, .22);
+  box-shadow: 0 4px 0 rgba(41, 23, 68, .22), inset 0 4px 0 rgba(255, 255, 255, .5);
 }
 
 .broono-host {
@@ -469,8 +655,8 @@ button {
   height: 80px;
   border: 4px solid #291744;
   border-radius: 44% 44% 38% 38%;
-  background: linear-gradient(145deg, #78f0ff, #7b5cff 56%, #ff70bd);
-  box-shadow: 0 7px 0 rgba(41, 23, 68, .24), inset 0 3px 0 rgba(255, 255, 255, .48);
+  background: linear-gradient(145deg, #7fffff, #6f51ff 50%, #ff35a7);
+  box-shadow: 0 8px 0 rgba(41, 23, 68, .28), inset 0 5px 0 rgba(255, 255, 255, .52);
   animation: host-bob 2.8s ease-in-out infinite;
 }
 
@@ -535,7 +721,8 @@ button {
   padding: 9px;
   border: 2px solid rgba(41, 23, 68, .16);
   border-radius: 18px;
-  background: rgba(255, 255, 255, .75);
+  background: rgba(255, 255, 255, .88);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, .82);
 }
 
 .tiny-broono {
@@ -544,7 +731,7 @@ button {
   height: 44px;
   border: 4px solid #291744;
   border-radius: 44% 44% 38% 38%;
-  background: linear-gradient(145deg, #78f0ff, #7b5cff 56%, #ff70bd);
+  background: linear-gradient(145deg, #7fffff, #6f51ff 56%, #ff35a7);
 }
 
 .tiny-ear {
@@ -618,11 +805,11 @@ button {
 }
 
 .primary-action {
-  background: linear-gradient(#fff06f, #ff9f32);
+  background: linear-gradient(#fff76f 0%, #ffb83f 55%, #ff7a32 100%);
 }
 
 .secondary-action {
-  background: linear-gradient(#fff, #e7fbff);
+  background: linear-gradient(#fff, #dffaff);
 }
 
 .primary-action:active,
@@ -652,6 +839,7 @@ button {
 }
 
 .broono-card {
+  position: relative;
   display: grid;
   gap: 5px;
   min-height: 128px;
@@ -659,9 +847,9 @@ button {
   border: 3px solid #291744;
   border-radius: 20px;
   background:
-    radial-gradient(circle at 84% 22%, rgba(255, 255, 255, .85), transparent 18%),
-    linear-gradient(135deg, #fff6b8, #ffd7ee 58%, #dffaff);
-  box-shadow: 0 5px 0 #291744;
+    linear-gradient(112deg, rgba(255, 255, 255, .78) 0 18%, transparent 19% 100%),
+    linear-gradient(135deg, #fff06f, #ff66b8 58%, #51e6ff);
+  box-shadow: 0 6px 0 #291744, 0 12px 24px rgba(41, 23, 68, .14);
 }
 
 .broono-card.compact {
@@ -688,14 +876,16 @@ button {
 }
 
 .broono-card strong {
-  color: #24143a;
+  color: #fff;
+  text-shadow: 0 2px 0 #291744;
   font-size: 1rem;
   line-height: 1.05;
   font-weight: 1000;
 }
 
 .broono-card small {
-  color: #654d7e;
+  color: #fff;
+  text-shadow: 0 1px 0 rgba(41, 23, 68, .5);
   font-size: .76rem;
   font-weight: 900;
 }
@@ -761,7 +951,7 @@ button {
   padding: 10px;
   border: 3px solid #291744;
   border-radius: 18px;
-  background: linear-gradient(#fff, #f6fbff);
+  background: linear-gradient(145deg, #fff 0%, #f6fbff 58%, #ffe8f5 100%);
   box-shadow: 0 5px 0 #291744;
   text-align: left;
   cursor: pointer;
@@ -774,7 +964,8 @@ button {
 }
 
 .item-chip.selected {
-  background: linear-gradient(#fff6b8, #ffd7ee);
+  background: linear-gradient(145deg, #fff06f, #ffd7ee 60%, #dffaff);
+  box-shadow: 0 5px 0 #291744, 0 0 0 4px rgba(255, 91, 168, .22);
 }
 
 .item-chip > span {
@@ -784,7 +975,7 @@ button {
   border: 3px solid #291744;
   border-radius: 13px;
   background: var(--item);
-  box-shadow: inset 0 2px 0 rgba(255, 255, 255, .62);
+  box-shadow: inset 0 4px 0 rgba(255, 255, 255, .72), 0 3px 0 rgba(41, 23, 68, .16);
 }
 
 .item-chip strong {

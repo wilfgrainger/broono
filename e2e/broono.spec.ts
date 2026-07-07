@@ -5,6 +5,9 @@ test.beforeEach(async ({ page }) => {
     window.localStorage.clear();
   });
   await page.goto('/');
+  await expect(page.getByRole('dialog', { name: 'How Broono Style Showdown works' })).toBeVisible();
+  await expect(page.getByText('Style the theme. Make the card. Vote safely.')).toBeVisible();
+  await page.getByRole('button', { name: /Start styling/ }).click();
 });
 
 test('renders the mobile-first Style Showdown shell', async ({ page }) => {
@@ -12,6 +15,9 @@ test('renders the mobile-first Style Showdown shell', async ({ page }) => {
   await expect(page.getByText('Style Showdown')).toBeVisible();
   await expect(page.getByLabel('Daily style challenge')).toBeVisible();
   await expect(page.getByRole('heading', { name: /Midnight Museum|Rainbow Goalkeeper|Space Camp DJ|Forest Popstar|Retro Pet Detective/ })).toBeVisible();
+  await expect(page.getByLabel('Game flow')).toContainText('Choose pieces');
+  await expect(page.getByLabel('Game flow')).toContainText('Create card');
+  await expect(page.getByLabel('Game flow')).toContainText('Vote safely');
 
   const viewport = page.viewportSize();
   expect(viewport?.width).toBeLessThanOrEqual(430);
@@ -19,11 +25,14 @@ test('renders the mobile-first Style Showdown shell', async ({ page }) => {
   const shellBox = await page.locator('.app-shell').boundingBox();
   expect(shellBox?.width).toBeLessThanOrEqual(viewport?.width ?? 430);
   expect(shellBox?.width).toBeGreaterThan(300);
+
+  await page.getByRole('button', { name: /Guide/ }).click();
+  await expect(page.getByRole('dialog', { name: 'How Broono Style Showdown works' })).toBeVisible();
 });
 
 test('lets players style a look and create a Broono Card', async ({ page }) => {
   await expect(page.getByLabel('Styled avatar preview')).toBeVisible();
-  await expect(page.getByText('Pick pieces that match the theme tags.')).toBeVisible();
+  await expect(page.getByText('Pick pieces that match the theme tags, then press Create Broono Card.')).toBeVisible();
   await expect(page.locator('.score-orb')).toContainText('%');
 
   await page.getByRole('button', { name: /Varsity Cape/ }).click();
@@ -35,7 +44,7 @@ test('lets players style a look and create a Broono Card', async ({ page }) => {
 });
 
 test('keeps monetization out of the child-facing flow and supports Friday gifts', async ({ page }) => {
-  await expect(page.getByText('No chat. No public profiles. Just safe creative cards.')).toBeVisible();
+  await expect(page.getByText('Tap wardrobe cards below. Match the tags, then create a runway card.')).toBeVisible();
   await expect(page.getByText('Weekly free drops create habit without pressure, ads, loot boxes, or paywalls.')).toBeVisible();
   await expect(page.getByText(/Booster Bank|Snack Pouch|Most value|\\$2\\.99/)).toHaveCount(0);
 

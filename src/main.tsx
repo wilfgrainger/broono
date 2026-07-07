@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import {
   BadgeCheck,
   Camera,
+  CheckCircle2,
   Crown,
   Gift,
   Heart,
@@ -22,6 +23,30 @@ import { supportedAuthProviders } from './platform/auth';
 import './styles.css';
 
 const outfitCategories: StyleCategory[] = ['hair', 'top', 'bottom', 'shoes', 'prop'];
+const walkthroughStorageKey = 'broono.styleShowdown.walkthrough.v1';
+
+const walkthroughSteps = [
+  {
+    icon: <Crown />,
+    title: 'Read the theme',
+    body: 'Every round starts with a weird prompt like Midnight Museum. The tags tell you what style wins.',
+  },
+  {
+    icon: <Palette />,
+    title: 'Build a look',
+    body: 'Tap wardrobe pieces to change hair, outfit, prop, shoes, and scene. Broono previews the whole card.',
+  },
+  {
+    icon: <Camera />,
+    title: 'Make a card',
+    body: 'Create a Broono Card when the look feels right. It saves locally and earns style tokens.',
+  },
+  {
+    icon: <Trophy />,
+    title: 'Vote and remix',
+    body: 'React with safe preset buttons, then remix the next theme. No chat, no public profiles.',
+  },
+];
 
 function itemFor(category: StyleCategory, selected: Partial<Record<StyleCategory, string>>) {
   return wardrobeItems.find((item) => item.id === selected[category]);
@@ -63,6 +88,37 @@ function BroonoCardView({ card, compact = false }: { card: BroonoCard; compact?:
       <span className="card-kicker"><Camera /> Broono Card</span>
       <strong>{card.title}</strong>
       <small>{card.rank} / {card.score}% theme match</small>
+    </div>
+  );
+}
+
+function Walkthrough({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
+  if (!open) return null;
+  return (
+    <div className="walkthrough-backdrop" role="dialog" aria-label="How Broono Style Showdown works" aria-modal="true">
+      <div className="walkthrough-card">
+        <span className="eyebrow"><Sparkles /> Quick walkthrough</span>
+        <h2>Style the theme. Make the card. Vote safely.</h2>
+        <div className="walkthrough-steps">
+          {walkthroughSteps.map((step, index) => (
+            <div className="walkthrough-step" key={step.title}>
+              <span className="step-number">{index + 1}</span>
+              <span className="step-icon">{step.icon}</span>
+              <div>
+                <strong>{step.title}</strong>
+                <p>{step.body}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+        <button className="walkthrough-start" onClick={onClose}><CheckCircle2 /> Start styling</button>
+      </div>
     </div>
   );
 }
@@ -111,9 +167,20 @@ function App() {
   const theme = run.theme;
   const selected = run.selectedItemIds;
   const submitted = run.submittedCard;
+  const [walkthroughOpen, setWalkthroughOpen] = React.useState(() => {
+    if (typeof localStorage === 'undefined') return true;
+    return localStorage.getItem(walkthroughStorageKey) !== 'seen';
+  });
+
+  const closeWalkthrough = () => {
+    localStorage.setItem(walkthroughStorageKey, 'seen');
+    setWalkthroughOpen(false);
+  };
 
   return (
     <main className="app-shell" aria-label="Broono Style Showdown">
+      <Walkthrough open={walkthroughOpen} onClose={closeWalkthrough} />
+
       <header className="top-hud">
         <div className="brand-lockup">
           <span className="brand-mark">B</span>
@@ -123,6 +190,7 @@ function App() {
           </div>
         </div>
         <div className="hud-pills">
+          <button className="guide-button" onClick={() => setWalkthroughOpen(true)}><Sparkles /> Guide</button>
           <span className="hud-pill"><Heart /> Safe</span>
           <span className="hud-pill coin-pill"><Sparkles /> {inventory.coins}</span>
         </div>
@@ -130,9 +198,16 @@ function App() {
 
       <section className="hero-panel" aria-label="Daily style challenge">
         <div className="theme-copy">
-          <span className="eyebrow"><Crown /> Today's theme</span>
+          <span className="eyebrow"><Crown /> Step 1 / Today's theme</span>
           <h1>{theme.title}</h1>
           <p>{theme.prompt}</p>
+        </div>
+        <div className="how-flow" aria-label="Game flow">
+          <span>Choose pieces</span>
+          <i />
+          <span>Create card</span>
+          <i />
+          <span>Vote safely</span>
         </div>
         <div className="theme-tags" aria-label="Theme tags">
           {theme.tags.map((tag) => <span key={tag}>{tag}</span>)}
@@ -142,8 +217,8 @@ function App() {
       <section className="studio-panel" aria-label="Style studio">
         <div className="studio-heading">
           <div>
-            <h2><Palette /> Style the look</h2>
-            <p>No chat. No public profiles. Just safe creative cards.</p>
+            <h2><Palette /> Step 2 / Style the look</h2>
+            <p>Tap wardrobe cards below. Match the tags, then create a runway card.</p>
           </div>
           <div className="score-orb" style={{ '--score': `${run.scorePreview}%` } as React.CSSProperties}>
             <span>{run.scorePreview}%</span>
@@ -160,13 +235,13 @@ function App() {
           </div>
           <div>
             <strong>{pet.name} says:</strong>
-            <span>{submitted ? 'That look is ready for the runway card.' : 'Pick pieces that match the theme tags.'}</span>
+            <span>{submitted ? 'Card made. Now vote on other safe looks or remix a new theme.' : 'Pick pieces that match the theme tags, then press Create Broono Card.'}</span>
           </div>
         </div>
 
         <div className="action-row">
-          <button className="primary-action" onClick={submit}><Camera /> Create Broono Card</button>
-          <button className="secondary-action" onClick={remix}><RefreshCw /> New theme</button>
+          <button className="primary-action" onClick={submit}><Camera /> Step 3: Create Broono Card</button>
+          <button className="secondary-action" onClick={remix}><RefreshCw /> Remix theme</button>
         </div>
 
         {submitted && (
@@ -179,7 +254,7 @@ function App() {
 
       <section className="wardrobe-panel" aria-label="Wardrobe">
         <div className="section-heading">
-          <h2><WandSparkles /> Wardrobe</h2>
+          <h2><WandSparkles /> Tap pieces to style</h2>
           <span>{inventory.ownedItemIds.length}/{wardrobeItems.length} owned</span>
         </div>
         {outfitCategories.map((category) => (
@@ -212,7 +287,7 @@ function App() {
 
       <section className="vote-panel" aria-label="Safe voting">
         <div className="section-heading">
-          <h2><Trophy /> Vote safely</h2>
+          <h2><Trophy /> Step 4 / Vote safely</h2>
           <span><ShieldCheck /> No comments</span>
         </div>
         <div className="vote-grid">
