@@ -12,8 +12,11 @@ We may reuse genre mechanics: day/night survival, gathering, crafting, camp defe
 
 ## First playable slice
 
-- Top-down keyboard and touch movement.
-- Original procedural woodland presentation with no external art dependency.
+- Third-person 3D keyboard and touch movement.
+- Original procedural low-poly woodland with terrain relief, layered trees, fog, shadows and dynamic day/night lighting.
+- Original modeled zombie-dog Broono with idle/run motion, emissive eye, collar and undead detailing.
+- Modeled campfire, animated flame, firelight, readable wood/scrap pickups and mirelings.
+- Survival HUD with health, hunger, phase progress, supplies, hotbar and mobile controls.
 - Day/night timer and 99-night progression.
 - Wood and scrap gathering.
 - Warm-light fuel loop.
@@ -28,4 +31,4 @@ We may reuse genre mechanics: day/night survival, gathering, crafting, camp defe
 4. Add the first lost-animal rescue landmark.
 5. Add seeded procedural maps and deterministic run IDs.
 6. Add party codes and server-authoritative cooperative sessions.
-7. Produce original Broono animation, creatures, sound and biome assets.
+7. Expand Broono's procedural motion into authored animation clips; add sound and biome asset packs.
