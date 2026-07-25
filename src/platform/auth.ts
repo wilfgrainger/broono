@@ -1,103 +1,65 @@
-export type AuthProvider = 'guest' | 'google' | 'apple';
-
-export type UserProfile = {
+export type Player = {
   id: string;
-  email: string;
-  displayName: string;
-  country: string;
-  provider: AuthProvider;
-  totalCoins: number;
-  friendCode: string;
+  name: string;
+  avatar?: string;
 };
 
-export type OAuthSession = {
-  token: string;
-  user: UserProfile;
+const apiBase = import.meta.env.VITE_API_URL ?? 'https://api.broono.app';
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize(options: { client_id: string; callback: (value: { credential: string }) => void }): void;
+          prompt(): void;
+        };
+      };
+    };
+  }
+}
+
+export const storedPlayer = (): Player | undefined => {
+  const raw = localStorage.getItem('broono.player');
+  if (!raw) return undefined;
+  try { return JSON.parse(raw) as Player; } catch { return undefined; }
 };
 
-export type AuthSession = OAuthSession & {
-  accessToken: string;
-  expiresAt: string;
+export const signInWithGoogle = async (): Promise<Player> => {
+  if (!googleClientId) throw new Error('Google sign-in is not configured yet');
+  await loadGoogleIdentity();
+
+  const credential = await new Promise<string>((resolve, reject) => {
+    const timeout = window.setTimeout(() => reject(new Error('Google sign-in timed out')), 60_000);
+    window.google!.accounts.id.initialize({
+      client_id: googleClientId,
+      callback: ({ credential }) => {
+        clearTimeout(timeout);
+        resolve(credential);
+      },
+    });
+    window.google!.accounts.id.prompt();
+  });
+
+  const response = await fetch(`${apiBase}/auth/google`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ credential }),
+  });
+  if (!response.ok) throw new Error('Google sign-in was rejected');
+  const result = await response.json() as { token: string; player: Player };
+  localStorage.setItem('broono.token', result.token);
+  localStorage.setItem('broono.player', JSON.stringify(result.player));
+  return result.player;
 };
 
-export type MockAuthProviderConfig = {
-  clientId?: string;
-  redirectUri?: string;
-  scopes?: string[];
-  seedUser?: Partial<UserProfile>;
-};
-
-const providerScopes: Record<Exclude<AuthProvider, 'guest'>, string[]> = {
-  google: ['openid', 'email', 'profile'],
-  apple: ['name', 'email'],
-};
-
-const createStarterUser = (provider: AuthProvider = 'guest'): UserProfile => ({
-  id: `${provider}-demo-user`,
-  email: provider === 'apple' ? 'player@privaterelay.appleid.com' : `${provider}@broono.app`,
-  displayName: provider === 'guest' ? 'Guest Ranger' : provider === 'apple' ? 'Apple Ranger' : 'Google Ranger',
-  country: 'US',
-  provider,
-  totalCoins: 940,
-  friendCode: 'BRN-0420',
+const loadGoogleIdentity = () => new Promise<void>((resolve, reject) => {
+  if (window.google) return resolve();
+  const script = document.createElement('script');
+  script.src = 'https://accounts.google.com/gsi/client';
+  script.async = true;
+  script.onload = () => resolve();
+  script.onerror = () => reject(new Error('Could not load Google sign-in'));
+  document.head.append(script);
 });
-
-export async function signIn(provider: Exclude<AuthProvider, 'guest'>): Promise<OAuthSession> {
-  const user = createStarterUser(provider);
-  return {
-    token: `mock-${provider}-jwt-for-cloudflare-worker`,
-    user,
-  };
-}
-
-export class MockOAuthProvider {
-  readonly provider: Exclude<AuthProvider, 'guest'>;
-  readonly clientId: string;
-  readonly redirectUri: string;
-  readonly scopes: string[];
-  private readonly seedUser: Partial<UserProfile>;
-
-  constructor(provider: Exclude<AuthProvider, 'guest'>, config: MockAuthProviderConfig = {}) {
-    this.provider = provider;
-    this.clientId = config.clientId ?? `mock-${provider}-client-id`;
-    this.redirectUri = config.redirectUri ?? 'broono://auth/callback';
-    this.scopes = config.scopes ?? providerScopes[provider];
-    this.seedUser = config.seedUser ?? {};
-  }
-
-  async signIn(): Promise<AuthSession> {
-    const baseUser = createStarterUser(this.provider);
-    const user = {
-      ...baseUser,
-      ...this.seedUser,
-      id: this.seedUser.id ?? `${this.provider}-demo-user`,
-      provider: this.provider,
-    };
-    const token = `mock-${this.provider}-jwt-for-cloudflare-worker`;
-
-    return {
-      token,
-      accessToken: token,
-      expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-      user,
-    };
-  }
-
-  async signOut(): Promise<{ provider: Exclude<AuthProvider, 'guest'>; signedOut: true }> {
-    return { provider: this.provider, signedOut: true };
-  }
-}
-
-export const createGoogleAuthProvider = (config?: MockAuthProviderConfig) => new MockOAuthProvider('google', config);
-
-export const createAppleAuthProvider = (config?: MockAuthProviderConfig) => new MockOAuthProvider('apple', config);
-
-export const supportedAuthProviders = [
-  { id: 'google', label: 'Continue with Google', appStoreRequiredPeer: 'apple' },
-  { id: 'apple', label: 'Continue with Apple', appStoreRequiredPeer: 'google' },
-] as const;
-
-export const mockAuthProviders = {
-  google: createGoogleAuthProvider,
-  apple: createAppleAuthProvider,
-};

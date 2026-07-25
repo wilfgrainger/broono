@@ -1,31 +1,32 @@
 {
+  "name": "broono",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "tsc -b && vite build",
+    "build": "tsc --noEmit && tsc -p worker/tsconfig.json --noEmit && vite build",
     "preview": "vite preview --host 0.0.0.0",
     "test": "vitest run",
-    "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui",
-    "deploy:worker": "wrangler deploy --env=\"\"",
-    "deploy:worker:dry-run": "wrangler deploy --dry-run --env=\"\"",
-    "deploy:web": "npm run build && wrangler pages deploy dist --project-name broono --commit-dirty=true",
-    "deploy": "npm run deploy:worker && npm run deploy:web"
+    "deploy:web": "npm run build && wrangler pages deploy dist --project-name broono --branch main",
+    "deploy:api": "wrangler deploy",
+    "deploy": "npm run deploy:api && npm run deploy:web",
+    "mobile:sync": "npm run build && cap sync"
   },
   "dependencies": {
-    "@vitejs/plugin-react": "latest",
-    "lucide-react": "latest",
-    "react": "latest",
-    "react-dom": "latest",
-    "typescript": "latest",
-    "vite": "latest"
+    "@capacitor/core": "8.4.2",
+    "jose": "6.2.4",
+    "phaser": "4.2.1"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.4.1",
-    "@playwright/test": "^1.61.1",
-    "@types/react": "latest",
-    "@types/react-dom": "latest",
-    "jsdom": "latest",
-    "vitest": "latest",
-    "wrangler": "^4.107.0"
+    "@capacitor/cli": "8.4.2",
+    "@cloudflare/workers-types": "5.20260724.1",
+    "typescript": "7.0.2",
+    "vite": "8.1.5",
+    "vitest": "4.1.10",
+    "wrangler": "4.114.0"
+  },
+  "engines": {
+    "node": ">=24"
   }
 }

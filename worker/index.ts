@@ -1,86 +1,42 @@
-type BroonoKv = {
-  get(key: string): Promise<string | null>;
-  put(key: string, value: string): Promise<void>;
-};
+import { createRemoteJWKSet, jwtVerify, SignJWT } from 'jose';
 
 type Env = {
-  BROONO_STATE?: BroonoKv;
-  ENVIRONMENT?: string;
+  DB: D1Database;
+  GOOGLE_CLIENT_ID: string;
+  SESSION_SECRET: string;
   ALLOWED_ORIGINS?: string;
+  ENVIRONMENT?: string;
 };
 
-type JsonRecord = Record<string, unknown>;
+const googleKeys = createRemoteJWKSet(new URL('https://www.googleapis.com/oauth2/v3/certs'));
+const jsonHeaders = { 'content-type': 'application/json', 'x-content-type-options': 'nosniff' };
 
-const defaultAllowedOrigins = ['https://broono.app', 'https://www.broono.app'];
-const maxSyncBodyBytes = 64 * 1024;
-const userIdPattern = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/;
+const json = (body: unknown, status = 200, headers: HeadersInit = {}) =>
+  new Response(JSON.stringify(body), { status, headers: { ...jsonHeaders, ...headers } });
 
-const securityHeaders = {
-  'content-security-policy': "default-src 'none'; frame-ancestors 'none'; base-uri 'none'",
-  'referrer-policy': 'no-referrer',
-  'x-content-type-options': 'nosniff',
-  'x-frame-options': 'DENY',
-};
+const origins = (env: Env) => (env.ALLOWED_ORIGINS ?? 'https://broono.app,https://www.broono.app')
+  .split(',').map((value) => value.trim()).filter(Boolean);
 
-const parseAllowedOrigins = (env: Env) => (
-  env.ALLOWED_ORIGINS?.split(',').map((origin) => origin.trim()).filter(Boolean) ?? defaultAllowedOrigins
-);
-
-const requestOriginAllowed = (request: Request, env: Env) => {
+const cors = (request: Request, env: Env): Record<string, string> => {
   const origin = request.headers.get('origin');
-  if (!origin) return undefined;
-  const allowedOrigins = parseAllowedOrigins(env);
-  return allowedOrigins.includes(origin) ? origin : null;
+  return origin && origins(env).includes(origin)
+    ? { 'access-control-allow-origin': origin, vary: 'Origin' }
+    : {};
 };
 
-const corsHeadersFor = (request: Request, env: Env) => {
-  const allowedOrigin = requestOriginAllowed(request, env);
-  return {
-    ...(allowedOrigin ? { 'access-control-allow-origin': allowedOrigin, vary: 'Origin' } : {}),
-    'access-control-allow-methods': 'GET,POST,OPTIONS',
-    'access-control-allow-headers': 'content-type,authorization',
-    'access-control-max-age': '86400',
-  };
+const readBody = async (request: Request) => {
+  if (Number(request.headers.get('content-length') ?? 0) > 128_000) return undefined;
+  try { return await request.json() as Record<string, unknown>; } catch { return undefined; }
 };
 
-const responseHeadersFor = (request: Request, env: Env) => ({
-  ...securityHeaders,
-  ...corsHeadersFor(request, env),
-  'cache-control': 'no-store',
-});
+const signingKey = (env: Env) => new TextEncoder().encode(env.SESSION_SECRET);
 
-const json = (request: Request, env: Env, body: unknown, init?: ResponseInit) => new Response(JSON.stringify(body), {
-  ...init,
-  headers: { 'content-type': 'application/json', ...responseHeadersFor(request, env), ...(init?.headers ?? {}) },
-});
-
-const stateKeyFor = (userId: string) => `state:${userId}`;
-
-const isValidUserId = (userId: string) => userIdPattern.test(userId);
-
-const validateUserId = (userId: string | undefined | null) => {
-  const normalized = userId?.trim() || 'guest';
-  return isValidUserId(normalized) ? normalized : undefined;
-};
-
-const userIdFrom = (state: unknown, request: Request) => {
-  if (typeof state === 'object' && state && 'user' in state) {
-    const user = (state as { user?: { id?: unknown } }).user;
-    if (typeof user?.id === 'string') return validateUserId(user.id);
-  }
-
-  const url = new URL(request.url);
-  return validateUserId(url.searchParams.get('userId'));
-};
-
-const readJsonBody = async (request: Request): Promise<JsonRecord | undefined> => {
+const playerId = async (request: Request, env: Env) => {
+  const value = request.headers.get('authorization');
+  if (!value?.startsWith('Bearer ')) return undefined;
   try {
-    const contentLength = Number(request.headers.get('content-length') ?? '0');
-    if (contentLength > maxSyncBodyBytes) return undefined;
-    const rawBody = await request.text();
-    if (new TextEncoder().encode(rawBody).byteLength > maxSyncBodyBytes) return undefined;
-    const body = JSON.parse(rawBody) as unknown;
-    return typeof body === 'object' && body !== null && !Array.isArray(body) ? body as JsonRecord : undefined;
+    const { payload } = await jwtVerify(value.slice(7), signingKey(env), { issuer: 'broono.app', audience: 'broono-game' });
+    return payload.sub;
   } catch {
     return undefined;
   }
@@ -88,55 +44,96 @@ const readJsonBody = async (request: Request): Promise<JsonRecord | undefined> =
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    const url = new URL(request.url);
+    const responseCors = cors(request, env);
+
     if (request.method === 'OPTIONS') {
-      const allowedOrigin = requestOriginAllowed(request, env);
       return new Response(null, {
-        status: allowedOrigin === null ? 403 : 204,
-        headers: { ...securityHeaders, ...corsHeadersFor(request, env) },
+        status: 204,
+        headers: {
+          ...responseCors,
+          'access-control-allow-methods': 'GET,POST,OPTIONS',
+          'access-control-allow-headers': 'authorization,content-type',
+          'access-control-max-age': '86400',
+        },
       });
     }
 
-    if (requestOriginAllowed(request, env) === null) {
-      return json(request, env, { ok: false, error: 'Origin not allowed' }, { status: 403 });
+    if (request.headers.has('origin') && !Object.keys(responseCors).length) {
+      return json({ ok: false, error: 'Origin not allowed' }, 403);
     }
 
-    const url = new URL(request.url);
-    if (url.pathname === '/health') {
-      return json(request, env, { ok: true, service: 'broono-api', environment: env.ENVIRONMENT ?? 'production' });
+    if (url.pathname === '/health' && request.method === 'GET') {
+      return json({ ok: true, service: 'broono-api', environment: env.ENVIRONMENT ?? 'production' }, 200, responseCors);
     }
 
-    if (url.pathname === '/sync' && request.method === 'POST') {
-      const state = await readJsonBody(request);
-      if (!state) return json(request, env, { ok: false, error: 'Expected JSON object body under 64KB' }, { status: 400 });
+    if (url.pathname === '/auth/google' && request.method === 'POST') {
+      const body = await readBody(request);
+      const credential = body?.credential;
+      if (typeof credential !== 'string') return json({ ok: false, error: 'Credential required' }, 400, responseCors);
 
-      const userId = userIdFrom(state, request);
-      if (!userId) return json(request, env, { ok: false, error: 'Invalid user id' }, { status: 400 });
+      try {
+        const { payload } = await jwtVerify(credential, googleKeys, {
+          audience: env.GOOGLE_CLIENT_ID,
+          issuer: ['https://accounts.google.com', 'accounts.google.com'],
+        });
+        if (!payload.sub || !payload.email) return json({ ok: false, error: 'Incomplete Google identity' }, 401, responseCors);
 
-      await env.BROONO_STATE?.put(stateKeyFor(userId), JSON.stringify(state));
-      return json(request, env, { ok: true, state, userId, syncedAt: Date.now(), persisted: Boolean(env.BROONO_STATE) });
+        const name = typeof payload.name === 'string' ? payload.name.slice(0, 80) : 'Player';
+        const avatar = typeof payload.picture === 'string' ? payload.picture : null;
+        await env.DB.prepare(
+          `INSERT INTO players (id, email, display_name, avatar_url, updated_at)
+           VALUES (?, ?, ?, ?, unixepoch())
+           ON CONFLICT(id) DO UPDATE SET email = excluded.email, display_name = excluded.display_name,
+             avatar_url = excluded.avatar_url, updated_at = excluded.updated_at`,
+        ).bind(payload.sub, payload.email, name, avatar).run();
+
+        const token = await new SignJWT({ name })
+          .setProtectedHeader({ alg: 'HS256' })
+          .setSubject(payload.sub)
+          .setIssuer('broono.app')
+          .setAudience('broono-game')
+          .setIssuedAt()
+          .setExpirationTime('30d')
+          .sign(signingKey(env));
+
+        return json({ ok: true, token, player: { id: payload.sub, name, avatar } }, 200, responseCors);
+      } catch {
+        return json({ ok: false, error: 'Google credential rejected' }, 401, responseCors);
+      }
     }
 
-    if (url.pathname === '/sync' && request.method === 'GET') {
-      const userId = validateUserId(url.searchParams.get('userId'));
-      if (!userId) return json(request, env, { ok: false, error: 'Invalid user id' }, { status: 400 });
-
-      const raw = await env.BROONO_STATE?.get(stateKeyFor(userId));
-      const state = raw ? await readStoredState(raw) : null;
-      return json(request, env, { ok: true, userId, state, persisted: Boolean(env.BROONO_STATE) });
+    if (url.pathname === '/save' && request.method === 'POST') {
+      const id = await playerId(request, env);
+      if (!id) return json({ ok: false, error: 'Authentication required' }, 401, responseCors);
+      const body = await readBody(request);
+      if (!body) return json({ ok: false, error: 'Valid save required' }, 400, responseCors);
+      const night = Math.max(1, Math.min(99, Number(body.night ?? 1)));
+      await env.DB.prepare(
+        `INSERT INTO saves (player_id, state_json, highest_night, updated_at)
+         VALUES (?, ?, ?, unixepoch())
+         ON CONFLICT(player_id) DO UPDATE SET state_json = excluded.state_json,
+           highest_night = max(saves.highest_night, excluded.highest_night), updated_at = excluded.updated_at`,
+      ).bind(id, JSON.stringify(body), night).run();
+      return json({ ok: true }, 200, responseCors);
     }
 
-    if (url.pathname.startsWith('/leaderboard/')) {
-      return json(request, env, { ok: true, scope: url.pathname.split('/').pop(), rows: [] });
+    if (url.pathname === '/save' && request.method === 'GET') {
+      const id = await playerId(request, env);
+      if (!id) return json({ ok: false, error: 'Authentication required' }, 401, responseCors);
+      const row = await env.DB.prepare('SELECT state_json, updated_at FROM saves WHERE player_id = ?').bind(id).first();
+      return json({ ok: true, save: row ? JSON.parse(String(row.state_json)) : null, updatedAt: row?.updated_at ?? null }, 200, responseCors);
     }
 
-    return json(request, env, { ok: false, error: 'Not found' }, { status: 404 });
+    if (url.pathname === '/leaderboard' && request.method === 'GET') {
+      const rows = await env.DB.prepare(
+        `SELECT p.display_name AS name, p.avatar_url AS avatar, s.highest_night AS night
+         FROM saves s JOIN players p ON p.id = s.player_id
+         ORDER BY s.highest_night DESC, s.updated_at ASC LIMIT 50`,
+      ).all();
+      return json({ ok: true, rows: rows.results }, 200, responseCors);
+    }
+
+    return json({ ok: false, error: 'Not found' }, 404, responseCors);
   },
-};
-
-const readStoredState = async (raw: string) => {
-  try {
-    return JSON.parse(raw) as JsonRecord;
-  } catch {
-    return null;
-  }
 };

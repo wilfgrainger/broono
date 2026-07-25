@@ -1,6 +1,6 @@
-name = "broono"
+name = "broono-api"
 main = "worker/index.ts"
-compatibility_date = "2026-07-04"
+compatibility_date = "2026-07-25"
 workers_dev = true
 preview_urls = true
 
@@ -8,28 +8,19 @@ preview_urls = true
 pattern = "api.broono.app"
 custom_domain = true
 
+[[d1_databases]]
+binding = "DB"
+database_name = "broono"
+database_id = "REPLACE_WITH_CLOUDFLARE_D1_DATABASE_ID"
+migrations_dir = "db"
+
 [observability]
 enabled = true
 
 [vars]
 ENVIRONMENT = "production"
+ALLOWED_ORIGINS = "https://broono.app,https://www.broono.app"
 
-# BROONO_STATE is optional so first-time `wrangler deploy` can create the
-# Worker before account-specific storage exists. After creating a KV namespace
-# with `npx wrangler kv namespace create BROONO_STATE`, add this binding:
-# [[kv_namespaces]]
-# binding = "BROONO_STATE"
-# id = "<production namespace id>"
-
-[env.preview]
-name = "broono-api-preview"
-workers_dev = true
-preview_urls = true
-
-[env.preview.vars]
-ENVIRONMENT = "preview"
-
-# For preview persistence, create a separate namespace and add:
-# [[env.preview.kv_namespaces]]
-# binding = "BROONO_STATE"
-# id = "<preview namespace id>"
+# Set encrypted production values with:
+# npx wrangler secret put GOOGLE_CLIENT_ID
+# npx wrangler secret put SESSION_SECRET
