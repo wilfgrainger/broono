@@ -1,15 +1,8 @@
 {
-  "appId": "app.broono.mobile",
-  "appName": "Broono Mobile Prototype",
+  "appId": "app.broono.game",
+  "appName": "Broono",
   "webDir": "dist",
-  "bundledWebRuntime": false,
   "server": {
     "androidScheme": "https"
-  },
-  "plugins": {
-    "SplashScreen": {
-      "launchAutoHide": true,
-      "backgroundColor": "#101526"
-    }
   }
 }
