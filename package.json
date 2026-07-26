@@ -26,6 +26,6 @@
     "@types/react-dom": "latest",
     "jsdom": "latest",
     "vitest": "latest",
-    "wrangler": "^4.107.0"
+    "wrangler": "^4.114.0"
   }
 }
