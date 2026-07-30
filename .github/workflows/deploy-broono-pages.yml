@@ -20,6 +20,8 @@ jobs:
     name: Build restored GLP app
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      VITE_API_URL: https://api.broono.app
 
     steps:
       - name: Checkout
@@ -53,6 +55,11 @@ jobs:
 
       - name: Verify GLP build marker
         run: grep -q 'glp-restored-2026-07-30-v3' dist/index.html
+
+      - name: Verify custom domain and retired worker
+        run: |
+          test "$(cat dist/CNAME)" = "broono.app"
+          grep -q 'One-release service-worker kill switch' dist/sw.js
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
