@@ -53,10 +53,10 @@ export default function Waitlist() {
   const totalSignups = result?.totalSignups ?? status?.totalSignups ?? 0
   const headline = useMemo(() => {
     if (spotsRemaining > 0) {
-      return `First ${WAITLIST_CAP} waitlist members get free lifetime access.`
+      return `First ${WAITLIST_CAP} early-access members get free lifetime access.`
     }
 
-    return 'Waitlist is open — new signups join in order and get launch updates.'
+    return 'Early access is open — new signups join in order and get launch updates.'
   }, [spotsRemaining])
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -99,10 +99,10 @@ export default function Waitlist() {
   return (
     <div className="waitlist-shell page-enter">
       <section className="waitlist-hero">
-        <div className="waitlist-badge">Android first • iPhone next • one shared product</div>
-        <h1>Launch-ready GLP-1 support, built for mobile from day one.</h1>
+        <div className="waitlist-badge">Phone-first web app • Android companion • one shared product</div>
+        <h1>A calmer GLP-1 companion, designed for your phone.</h1>
         <p>
-          Join the Broono waitlist to get launch updates, early access, and — for the first 100 people —
+          Join Broono early access for launch updates, first access to the mobile web experience and — for the first 100 people —
           <strong> free lifetime Pro access.</strong>
         </p>
 
@@ -130,14 +130,14 @@ export default function Waitlist() {
           </div>
           <div className="waitlist-benefit">
             <Smartphone size={18} />
-            <span>Android launch first, then iPhone with the same shared core app.</span>
+            <span>Built for phone browsers, with the Android app using the same shared core.</span>
           </div>
         </div>
       </section>
 
       <section className="waitlist-form-card card">
         <div className="waitlist-copy-block">
-          <p className="waitlist-eyebrow">Waitlist offer</p>
+          <p className="waitlist-eyebrow">Early-access offer</p>
           <h2>{headline}</h2>
           <p>
             If you land in the first 100, we will tag your account for lifetime access when Broono Pro opens.
@@ -178,7 +178,7 @@ export default function Waitlist() {
           </label>
 
           <button type="submit" className="btn-primary waitlist-submit" disabled={loading}>
-            {loading ? 'Saving your spot...' : 'Join the waitlist'}
+            {loading ? 'Saving your spot...' : 'Join early access'}
           </button>
         </form>
 
