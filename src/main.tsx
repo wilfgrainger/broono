@@ -4,13 +4,12 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App.tsx'
 import './index.css'
 
-const RESTORE_CACHE_KEY = 'broono:glp-restore:2026-07-30'
+const RESTORE_SESSION_KEY = 'broono:glp-runtime-reset:v3'
 
-async function removeLegacyGameCache() {
+async function removeLegacyGameRuntime(): Promise<boolean> {
+  const wasControlled = 'serviceWorker' in navigator && Boolean(navigator.serviceWorker.controller)
+
   try {
-    if (window.localStorage.getItem(RESTORE_CACHE_KEY)) return
-    window.localStorage.setItem(RESTORE_CACHE_KEY, 'complete')
-
     if ('serviceWorker' in navigator) {
       const registrations = await navigator.serviceWorker.getRegistrations()
       await Promise.all(registrations.map((registration) => registration.unregister()))
@@ -21,16 +20,35 @@ async function removeLegacyGameCache() {
       await Promise.all(cacheNames.map((cacheName) => window.caches.delete(cacheName)))
     }
   } catch {
-    // Cache cleanup is best-effort. The application must still start normally.
+    // Cleanup is deliberately best-effort. Rendering the health app takes priority.
   }
+
+  return wasControlled
 }
 
-void removeLegacyGameCache()
+function renderApplication() {
+  ReactDOM.createRoot(document.getElementById('root')!).render(
+    <React.StrictMode>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </React.StrictMode>,
+  )
+}
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
-  </React.StrictMode>,
-)
+async function bootstrap() {
+  const wasControlled = await removeLegacyGameRuntime()
+
+  // When this bundle was reached through an obsolete service worker, reload once
+  // after unregistering it so the next navigation is guaranteed to come from the
+  // network rather than the retired styling-game cache.
+  if (wasControlled && !window.sessionStorage.getItem(RESTORE_SESSION_KEY)) {
+    window.sessionStorage.setItem(RESTORE_SESSION_KEY, 'complete')
+    window.location.reload()
+    return
+  }
+
+  renderApplication()
+}
+
+void bootstrap()
