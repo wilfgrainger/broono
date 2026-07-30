@@ -3,9 +3,11 @@ import {
     ArrowRight,
     BookOpen,
     Check,
+    Clock3,
     Droplets,
     LockKeyhole,
     ShieldCheck,
+    Smartphone,
     Sparkles,
     Syringe,
     TrendingDown,
@@ -102,88 +104,100 @@ export default function Login() {
     }
 
     const primaryHref = isAndroid ? '#get-started' : '/waitlist'
+    const primaryLabel = isAndroid ? 'Start with Broono' : 'Get early access'
 
     return (
         <div className="landing-page">
-            <header className="landing-shell landing-nav">
-                <a className="landing-brand" href="/" aria-label="Broono home">
-                    <span className="landing-brand-mark" aria-hidden="true"><span>b</span></span>
-                    <span className="landing-brand-name">broono<b>.</b></span>
-                </a>
-                <nav className="landing-nav-links" aria-label="Legal and access links">
-                    <a href="/privacy">Privacy</a>
-                    <a href="/terms">Terms</a>
-                    <a href={primaryHref}>{isAndroid ? 'Sign in' : 'Early access'}</a>
-                </nav>
+            <header className="landing-header">
+                <div className="landing-shell landing-nav">
+                    <a className="landing-brand" href="/" aria-label="Broono home">
+                        <span className="landing-brand-mark" aria-hidden="true"><span>b</span></span>
+                        <span className="landing-brand-name">broono<b>.</b></span>
+                    </a>
+                    <nav className="landing-nav-links" aria-label="Legal and access links">
+                        <a className="landing-nav-quiet" href="/privacy">Privacy</a>
+                        <a className="landing-nav-quiet" href="/terms">Terms</a>
+                        <a className="landing-nav-cta" href={primaryHref}>{isAndroid ? 'Sign in' : 'Early access'}</a>
+                    </nav>
+                </div>
             </header>
 
             <main>
                 <section className="landing-shell landing-hero">
                     <div className="landing-copy">
                         <div className="landing-eyebrow">
-                            <Sparkles size={14} aria-hidden="true" />
-                            Calm, private GLP-1 tracking
+                            <Smartphone size={14} aria-hidden="true" />
+                            Made for your phone
                         </div>
                         <h1 className="landing-title">
-                            Your progress,<br />made <em>visible.</em>
+                            A calmer way to follow your <em>GLP-1 week.</em>
                         </h1>
                         <p className="landing-lede">
-                            Broono brings your weight, dose schedule, hydration, protein goals and private journal into one focused companion — without turning your health journey into another noisy dashboard.
+                            Weight, dose timing, hydration, protein and private notes — organised into one quick check-in that feels natural on a phone.
                         </p>
                         <div className="landing-actions">
                             <a className="landing-cta" href={primaryHref}>
-                                {isAndroid ? 'Start with Broono' : 'Join the Android launch'}
+                                {primaryLabel}
                                 <ArrowRight size={18} aria-hidden="true" />
                             </a>
                             <a className="landing-secondary" href="#app-preview">
-                                See the app
+                                Preview the app
                             </a>
                         </div>
+                        <p className="landing-action-note">
+                            Mobile-first web experience. Sensitive health logs stay on your device.
+                        </p>
                         <div className="landing-proof" aria-label="Product principles">
-                            <span><Check size={15} /> Health logs stay on your device</span>
-                            <span><Check size={15} /> Built for weekly check-ins</span>
-                            <span><Check size={15} /> No clutter</span>
+                            <span><Check size={15} aria-hidden="true" /> One-thumb friendly</span>
+                            <span><Check size={15} aria-hidden="true" /> Private by design</span>
+                            <span><Check size={15} aria-hidden="true" /> Useful in under a minute</span>
                         </div>
                     </div>
 
                     <div className="landing-visual" id="app-preview">
                         <div className="landing-glow" aria-hidden="true" />
                         <div className="landing-orbit" aria-hidden="true" />
-                        <div className="phone-preview" role="img" aria-label="Preview of the Broono GLP-1 dashboard">
+                        <div className="phone-preview" role="img" aria-label="Preview of the Broono mobile GLP-1 dashboard">
                             <div className="phone-screen">
                                 <div className="preview-header">
                                     <div className="preview-brand">
                                         <span className="preview-brand-mark">b</span>
-                                        <span>broono<span style={{ color: '#6366f1' }}>.</span></span>
+                                        <span>broono<span className="preview-brand-dot">.</span></span>
                                     </div>
                                     <span className="preview-avatar"><UserRound size={16} /></span>
                                 </div>
-                                <div className="preview-body">
-                                    <p className="preview-date">Thursday, July 30</p>
-                                    <p className="preview-greeting">Good morning.</p>
 
-                                    <div className="preview-card">
-                                        <p className="preview-label">Current Weight</p>
-                                        <p className="preview-weight">13 st 13 lbs</p>
-                                        <div className="preview-chip"><TrendingDown size={12} /> 2 st 4 lbs total</div>
+                                <div className="preview-body">
+                                    <p className="preview-date">Your week</p>
+                                    <p className="preview-greeting">You are on track.</p>
+
+                                    <div className="preview-card preview-weight-card">
+                                        <div>
+                                            <p className="preview-label">Current weight</p>
+                                            <p className="preview-weight">13 st 13 lbs</p>
+                                        </div>
+                                        <div className="preview-chip"><TrendingDown size={12} /> 2 st 4 lbs down</div>
                                     </div>
 
                                     <div className="preview-card preview-medication">
                                         <div className="preview-med-row">
                                             <div>
-                                                <p className="preview-label">Active Medication</p>
+                                                <p className="preview-label">Medication level</p>
                                                 <p className="preview-percent">68%</p>
                                             </div>
                                             <div className="preview-dose">
-                                                <span>Next Dose</span>
+                                                <span>Next dose</span>
                                                 <strong>4 days</strong>
                                             </div>
                                         </div>
                                         <div className="preview-progress"><i /></div>
                                     </div>
 
-                                    <div className="preview-card">
-                                        <p className="preview-targets-title">Daily Targets</p>
+                                    <div className="preview-card preview-targets-card">
+                                        <div className="preview-targets-head">
+                                            <p className="preview-targets-title">Today</p>
+                                            <span>2 goals</span>
+                                        </div>
                                         <div className="preview-target-row">
                                             <span className="preview-target-name">
                                                 <span className="preview-target-icon"><Weight size={14} /></span>
@@ -194,7 +208,7 @@ export default function Login() {
                                         <div className="preview-target-bar protein"><i /></div>
                                         <div className="preview-target-row">
                                             <span className="preview-target-name">
-                                                <span className="preview-target-icon"><Droplets size={14} /></span>
+                                                <span className="preview-target-icon water"><Droplets size={14} /></span>
                                                 Water
                                             </span>
                                             <span className="preview-target-value">5 / 8 glasses</span>
@@ -202,54 +216,74 @@ export default function Login() {
                                         <div className="preview-target-bar water"><i /></div>
                                     </div>
                                 </div>
+
+                                <div className="preview-tab-bar" aria-hidden="true">
+                                    <span className="active"><Sparkles size={15} /> Home</span>
+                                    <span><TrendingDown size={15} /> Progress</span>
+                                    <span><BookOpen size={15} /> Journal</span>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </section>
 
-                <section className="landing-shell landing-feature-strip" aria-label="Broono features">
-                    <article className="landing-feature">
-                        <span className="landing-feature-icon"><Syringe size={20} /></span>
-                        <h2>Know where you are in the week</h2>
-                        <p>See your dose timing and estimated medication level at a glance, without digging through dates and notes.</p>
-                    </article>
-                    <article className="landing-feature">
-                        <span className="landing-feature-icon"><TrendingDown size={20} /></span>
-                        <h2>See progress without obsessing</h2>
-                        <p>Simple weekly logging turns individual weigh-ins into a clearer trend you can actually understand.</p>
-                    </article>
-                    <article className="landing-feature">
-                        <span className="landing-feature-icon"><BookOpen size={20} /></span>
-                        <h2>Keep the context that numbers miss</h2>
-                        <p>Record symptoms, wins and difficult weeks in a private journal that stays alongside your progress.</p>
-                    </article>
+                <section className="landing-shell landing-benefits" aria-labelledby="benefits-title">
+                    <div className="landing-section-intro">
+                        <p>Built for real life</p>
+                        <h2 id="benefits-title">The important parts, without the spreadsheet feeling.</h2>
+                    </div>
+                    <div className="landing-feature-strip">
+                        <article className="landing-feature">
+                            <span className="landing-feature-icon"><Syringe size={20} aria-hidden="true" /></span>
+                            <div>
+                                <h3>Know where you are in the week</h3>
+                                <p>See dose timing and estimated medication level without digging through dates and notes.</p>
+                            </div>
+                        </article>
+                        <article className="landing-feature">
+                            <span className="landing-feature-icon"><TrendingDown size={20} aria-hidden="true" /></span>
+                            <div>
+                                <h3>See the trend, not every wobble</h3>
+                                <p>Simple weekly logging turns individual weigh-ins into progress that is easier to understand.</p>
+                            </div>
+                        </article>
+                        <article className="landing-feature">
+                            <span className="landing-feature-icon"><BookOpen size={20} aria-hidden="true" /></span>
+                            <div>
+                                <h3>Keep the context numbers miss</h3>
+                                <p>Record symptoms, wins and difficult weeks in a private journal beside your progress.</p>
+                            </div>
+                        </article>
+                    </div>
                 </section>
 
                 <section className="landing-signin-section" id="get-started">
                     <div className="landing-shell landing-signin-grid">
                         <div className="landing-signin-copy">
-                            <h2>A health companion should feel trustworthy from the first tap.</h2>
+                            <div className="landing-dark-eyebrow"><Clock3 size={14} aria-hidden="true" /> Short, deliberate check-ins</div>
+                            <h2>Designed for a phone, not a desktop dashboard.</h2>
                             <p>
-                                Broono is designed around restraint: clear information, deliberate check-ins and local storage for the sensitive health details you enter.
+                                Broono keeps the interface focused and the taps obvious, so checking your week does not become another task to manage.
                             </p>
                             <div className="landing-privacy-points">
-                                <span><ShieldCheck size={18} /> Health logs are stored locally on your device</span>
-                                <span><LockKeyhole size={18} /> Secure Google account access in the Android app</span>
-                                <span><Check size={18} /> Clear privacy and consent before onboarding</span>
+                                <span><ShieldCheck size={18} aria-hidden="true" /> Health logs stay locally on your device</span>
+                                <span><Smartphone size={18} aria-hidden="true" /> Comfortable one-handed layout</span>
+                                <span><Check size={18} aria-hidden="true" /> Clear privacy and consent before onboarding</span>
                             </div>
                         </div>
 
                         <div className="signin-card">
                             <div className="signin-card-head">
-                                <span className="signin-card-icon"><LockKeyhole size={20} /></span>
+                                <span className="signin-card-icon"><LockKeyhole size={20} aria-hidden="true" /></span>
                                 <div>
-                                    <h3>{isAndroid ? 'Create your private space' : 'Broono is launching on Android'}</h3>
+                                    <p className="signin-card-kicker">{isAndroid ? 'Secure access' : 'Mobile early access'}</p>
+                                    <h3>{isAndroid ? 'Create your private space' : 'Be first to open Broono on your phone'}</h3>
                                 </div>
                             </div>
                             <p className="signin-card-intro">
                                 {isAndroid
                                     ? 'Agree to the essentials below, then continue securely with Google. Your weight, dose and journal data remain on this device.'
-                                    : 'The full sign-in and tracking experience is available in the Android app. Join the early-access list for launch availability and product updates.'}
+                                    : 'Join the early-access list for the phone-first web experience and launch updates. The Android app will use the same core product.'}
                             </p>
 
                             {isAndroid ? (
@@ -292,8 +326,8 @@ export default function Login() {
                                 </>
                             ) : (
                                 <div className="web-waitlist-card">
-                                    <p>Get early access and know when the Android build is ready for download.</p>
-                                    <a href="/waitlist">Join the early-access list <ArrowRight size={16} /></a>
+                                    <p>Get launch access and know when the mobile web experience is ready to open.</p>
+                                    <a href="/waitlist">Join early access <ArrowRight size={16} aria-hidden="true" /></a>
                                 </div>
                             )}
                         </div>
@@ -310,6 +344,13 @@ export default function Login() {
                     </div>
                 </div>
             </footer>
+
+            <div className="landing-mobile-dock">
+                <a href={primaryHref}>
+                    <span>{primaryLabel}</span>
+                    <ArrowRight size={18} aria-hidden="true" />
+                </a>
+            </div>
         </div>
     )
 }
