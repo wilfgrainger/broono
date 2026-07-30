@@ -1,4 +1,4 @@
-name: Deploy Broono GLP app
+name: Deploy Broono to GitHub Pages
 
 on:
   push:
@@ -8,17 +8,18 @@ on:
 
 permissions:
   contents: read
+  pages: write
+  id-token: write
 
 concurrency:
-  group: broono-production-pages
+  group: github-pages
   cancel-in-progress: true
 
 jobs:
-  deploy:
-    name: Build and deploy to Cloudflare Pages
+  build:
+    name: Build restored GLP app
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    environment: production
 
     steps:
       - name: Checkout
@@ -35,15 +36,38 @@ jobs:
           node-version: 22
           cache: pnpm
 
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build restored GLP app
+      - name: Run frontend regression tests
+        run: pnpm run test:frontend
+
+      - name: Build static site
         run: pnpm run build
 
-      - name: Deploy production site
-        uses: cloudflare/wrangler-action@v3
+      - name: Add SPA fallback
+        run: cp dist/index.html dist/404.html
+
+      - name: Verify GLP build marker
+        run: grep -q 'glp-restored-2026-07-30-v3' dist/index.html
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name broono --branch main
+          path: ./dist
+
+  deploy:
+    name: Publish broono.app
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
