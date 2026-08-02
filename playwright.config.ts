@@ -12,21 +12,10 @@ export default defineConfig({
     trace: 'retain-on-failure',
     video: 'retain-on-failure',
   },
-  webServer: [
-    {
-      command: 'pnpm --dir backend exec tsc -p tsconfig.tests.json && node --experimental-strip-types tests/e2e/backend-server.ts',
-      url: 'http://127.0.0.1:8787',
-      reuseExistingServer: true,
-      timeout: 120_000,
-    },
-    {
-      command: 'pnpm dev --host 127.0.0.1 --port 4173 --strictPort',
-      url: 'http://127.0.0.1:4173',
-      reuseExistingServer: true,
-      timeout: 120_000,
-      env: {
-        VITE_API_URL: 'http://127.0.0.1:8787',
-      },
-    },
-  ],
+  webServer: {
+    command: 'pnpm dev --host 127.0.0.1 --port 4173 --strictPort',
+    url: 'http://127.0.0.1:4173',
+    reuseExistingServer: true,
+    timeout: 120_000,
+  },
 })
