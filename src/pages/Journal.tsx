@@ -1,35 +1,23 @@
 import { useState } from 'react'
 import { ChevronRight, Trash2 } from 'lucide-react'
 import { useStore } from '../store'
-import PaywallModal from '../components/PaywallModal'
 
-interface JournalProps {
-  onRequestUpgrade: () => void
-}
-
-export default function Journal({ onRequestUpgrade }: JournalProps) {
-  const journalEntries = useStore((s) => s.journalEntries)
-  const addJournalEntry = useStore((s) => s.addJournalEntry)
-  const removeJournalEntry = useStore((s) => s.removeJournalEntry)
-  const subscriptionStatus = useStore((s) => s.subscriptionStatus)
-
+export default function Journal() {
+  const journalEntries = useStore((state) => state.journalEntries)
+  const addJournalEntry = useStore((state) => state.addJournalEntry)
+  const removeJournalEntry = useStore((state) => state.removeJournalEntry)
   const [newEntry, setNewEntry] = useState('')
-  const [showPaywall, setShowPaywall] = useState(false)
 
   const handleAdd = () => {
-    if (!newEntry.trim()) return
+    const text = newEntry.trim()
+    if (!text) return
 
-    if (subscriptionStatus !== 'pro' && journalEntries.length >= 3) {
-      setShowPaywall(true)
-      return
-    }
-
-    addJournalEntry(newEntry.trim())
+    addJournalEntry(text)
     setNewEntry('')
   }
 
-  const handleKey = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+  const handleKey = (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
       handleAdd()
     }
   }
@@ -38,7 +26,7 @@ export default function Journal({ onRequestUpgrade }: JournalProps) {
     <div className="page-enter space-y-6" style={{ paddingTop: 8 }}>
       <div>
         <h2 className="page-title">Journal</h2>
-        <p className="page-subtitle">Track non-scale victories and how you feel.</p>
+        <p className="page-subtitle">Unlimited private notes stored only on this device.</p>
       </div>
 
       <div className="card" style={{ padding: '8px 8px 8px 20px' }}>
@@ -46,20 +34,11 @@ export default function Journal({ onRequestUpgrade }: JournalProps) {
           id="journal-textarea"
           className="journal-textarea"
           value={newEntry}
-          onChange={(e) => setNewEntry(e.target.value)}
+          onChange={(event) => setNewEntry(event.target.value)}
           onKeyDown={handleKey}
           placeholder="Noticed your clothes fitting looser? Less food noise today? Energy levels improving?"
         />
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            borderTop: '1px solid #f1f5f9',
-            paddingTop: 10,
-            paddingRight: 4,
-          }}
-        >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: 10, paddingRight: 4 }}>
           <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>
             {newEntry.length > 0 ? `${newEntry.length} characters | Ctrl/Cmd + Enter to save` : 'Your private space'}
           </span>
@@ -67,6 +46,7 @@ export default function Journal({ onRequestUpgrade }: JournalProps) {
             id="save-journal-btn"
             onClick={handleAdd}
             disabled={!newEntry.trim()}
+            aria-label="Save journal entry"
             style={{
               background: newEntry.trim() ? '#0f172a' : '#e2e8f0',
               color: 'white',
@@ -78,11 +58,8 @@ export default function Journal({ onRequestUpgrade }: JournalProps) {
               alignItems: 'center',
               justifyContent: 'center',
               cursor: newEntry.trim() ? 'pointer' : 'default',
-              transition: 'background .15s, transform .1s',
               boxShadow: newEntry.trim() ? '0 4px 12px rgba(15,23,42,0.2)' : 'none',
             }}
-            onMouseDown={(e) => { if (newEntry.trim()) e.currentTarget.style.transform = 'scale(0.93)' }}
-            onMouseUp={(e) => { e.currentTarget.style.transform = 'scale(1)' }}
           >
             <ChevronRight size={18} color={newEntry.trim() ? 'white' : '#94a3b8'} strokeWidth={2.5} />
           </button>
@@ -118,11 +95,8 @@ export default function Journal({ onRequestUpgrade }: JournalProps) {
                   padding: 6,
                   borderRadius: 8,
                   display: 'flex',
-                  opacity: 0.35,
-                  transition: 'opacity .15s',
+                  opacity: 0.5,
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.opacity = '1' }}
-                onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.35' }}
               >
                 <Trash2 size={14} color="#e11d48" strokeWidth={2} />
               </button>
@@ -130,16 +104,6 @@ export default function Journal({ onRequestUpgrade }: JournalProps) {
           ))}
         </div>
       </div>
-
-      <PaywallModal
-        isOpen={showPaywall}
-        onClose={() => setShowPaywall(false)}
-        onUpgrade={() => {
-          setShowPaywall(false)
-          onRequestUpgrade()
-        }}
-        featureName="Unlimited journaling"
-      />
     </div>
   )
 }
