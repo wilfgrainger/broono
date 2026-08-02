@@ -1,78 +1,88 @@
-# Broono Data Architecture & Compliance
+# Broono local data architecture
 
-This document outlines how Broono handles user data for UK GDPR and Google Play Data Safety review.
+## Decision
 
-## Architecture Diagram
+Broono is a static, local-only application. The architecture deliberately contains no application backend, remote database, user account, analytics service or payment system.
 
-```mermaid
-flowchart TD
-    classDef device fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#0f172a
-    classDef cloud fill:#f8fafc,stroke:#94a3b8,stroke-width:2px,color:#0f172a
-    classDef thirdparty fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0f172a
+## Data flow
 
-    subgraph Device ["User Device (PWA / Android App)"]
-        UI["React + Zustand UI"]
-        LocalData[("Local Storage\nHealth Data,\nLogs,\nJournal,\nVitals")]
-    end
-
-    subgraph Backend ["Cloudflare Workers & D1"]
-        API["Hono API Gateway"]
-        AuthDB[("D1 Database\nEmail,\nSubscription Status,\nGoogle Play Token")]
-    end
-
-    subgraph Services ["Third-Party Services"]
-        GoogleAuth["Google Sign-In\nAccount Authentication"]
-        Play["Google Play Billing\nSubscription Purchase + RTDN"]
-    end
-
-    UI <-->|Reads and Writes| LocalData
-    UI -->|Google ID Token| API
-    API -->|Verify Sign-In| GoogleAuth
-
-    API <-->|Auth Records| AuthDB
-
-    UI -->|Verify Android Purchase| API
-    API -->|Verify Subscription| Play
-    Play -->|RTDN Webhook| API
-    API -->|Update Status| AuthDB
-
-    class Device device
-    class Backend cloud
-    class Services thirdparty
+```text
+user input
+  -> React UI validation
+  -> Zustand state
+  -> browser / Capacitor local storage
+  -> on-screen views or user-requested JSON export
 ```
 
-## Compliance Breakdown
+There is no normal path from local tracking state to a Broono-controlled server.
 
-### UK GDPR
+## Local records
 
-1. **Data minimization**
-   Health logs, weight entries, injection schedules, water tracking, and journal entries remain on-device in local storage. Broono servers do not store that health data.
+The persisted state may contain:
 
-2. **Explicit consent**
-   During login, users must agree to the Terms, Privacy Policy, and the local health-data processing disclosure before continuing.
+- setup status;
+- medication and schedule preferences;
+- starting weight and weight unit;
+- check-in dates, weight, symptoms, injection site and notes;
+- journal entries;
+- hydration state and goals.
 
-3. **Data portability**
-   Pro users can export their local profile, logs, and journal history from Settings for clinical or personal use.
+The state must not contain access tokens, email addresses, subscription status, purchase tokens or remote identifiers.
 
-4. **Right to erasure**
-   The in-app Delete Account action removes the server-side account record and clears local persisted app data on success.
+## Trust boundaries
 
-### Google Play Data Safety
+### Device and browser profile
 
-- **Health and fitness data**
-  Entered by the user and stored locally on-device. It is not transmitted to Broono servers.
+Local storage is readable by code running in the same application origin or WebView. The primary controls are:
 
-- **Personal info**
-  Email address is used for authentication. Subscription status and Google Play purchase references are used for billing verification.
+- no remote application scripts;
+- a restrictive Content Security Policy;
+- no runtime network connection permission;
+- careful treatment of stored text as data rather than HTML;
+- local erasure and export controls;
+- Android backup disabled.
 
-- **Data deletion**
-  Users can delete their account in-app. Local app data is cleared during successful account deletion and can also be removed by clearing app storage or uninstalling.
+### Static hosting
 
-- **Encryption in transit**
-  All traffic between the app and backend for authentication and subscription verification uses HTTPS/TLS.
+GitHub Pages delivers public application assets. Hosting and network providers may process ordinary connection metadata, but no Broono endpoint receives user-entered tracker records.
 
-### Billing Model
+### User export
 
-- Broono Pro is sold only through Google Play in the Android app.
-- There is no web checkout path.
-- Billing management and cancellation happen in Google Play subscriptions.
+Export creates a local JSON download. After creation, the user controls where that file is stored or shared. The export must include no hidden account or platform identifiers.
+
+## Privacy consequences
+
+Local-only architecture materially reduces collection and breach exposure, but it does not make data invulnerable. Risks remain from:
+
+- an unlocked or compromised device;
+- malicious browser extensions or other software;
+- screenshots and copied text;
+- OS or device backup behaviour;
+- exported files;
+- loss of data when storage is cleared.
+
+Product copy and documentation must state these limits honestly.
+
+## Change control
+
+The following changes require a new architecture and privacy decision before implementation:
+
+- account creation or authentication;
+- remote backup or sync;
+- server-side storage of any record;
+- analytics, crash telemetry containing user context, or advertising;
+- email collection or waitlists;
+- subscription or purchase handling;
+- AI or external API processing of user-entered data.
+
+## Automated enforcement
+
+`src/local-only.node-test.ts` and the GitHub Pages workflow check that:
+
+- backend and paywall-era paths are absent;
+- runtime source contains no API/auth/billing markers;
+- production CSP blocks outbound application connections;
+- Android internet and billing permissions are absent;
+- the static production marker is present.
+
+A green dashboard alone is insufficient if these controls have been bypassed or weakened.
