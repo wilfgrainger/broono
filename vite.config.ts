@@ -1,11 +1,9 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// The GLP frontend is a static React application. Keeping the Cloudflare Worker
-// and PWA plugins in this build made the production output ambiguous and allowed
-// an obsolete service worker to keep serving the retired game. The API remains
-// a separate deployment; this build always emits a conventional dist/index.html
-// for GitHub Pages.
+// Broono is a conventional static application. It has no Worker, server function,
+// runtime API, service-worker application cache, authentication, or billing layer.
+// GitHub Pages serves the generated dist/ directory; user state remains local.
 export default defineConfig({
   plugins: [react()],
   build: {
