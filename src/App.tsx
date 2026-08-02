@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { Home, Plus, TrendingDown, Newspaper, BookOpen, User } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { BookOpen, Home, Newspaper, Plus, TrendingDown, User } from 'lucide-react'
 import { useStore } from './store'
 import Dashboard from './pages/Dashboard'
 import CheckIn from './pages/CheckIn'
@@ -11,59 +11,49 @@ import Onboarding from './pages/Onboarding'
 import Login from './pages/Login'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import Terms from './pages/Terms'
-import Waitlist from './pages/Waitlist'
-import Paywall from './components/Paywall'
-import { initBilling } from './services/billing'
 
 type Tab = 'dashboard' | 'checkin' | 'progress' | 'news' | 'journal' | 'profile'
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard')
-  const resetWaterIfNewDay = useStore((s) => s.resetWaterIfNewDay)
-  const hasCompletedOnboarding = useStore((s) => s.hasCompletedOnboarding)
-  const authToken = useStore((s) => s.authToken)
-  const subscriptionStatus = useStore((s) => s.subscriptionStatus)
+  const resetWaterIfNewDay = useStore((state) => state.resetWaterIfNewDay)
+  const hasStarted = useStore((state) => state.hasStarted)
+  const hasCompletedOnboarding = useStore((state) => state.hasCompletedOnboarding)
 
   useEffect(() => {
     resetWaterIfNewDay()
-    initBilling().catch(() => { /* billing init is best-effort */ })
   }, [resetWaterIfNewDay])
 
   const renderPage = () => {
     switch (activeTab) {
       case 'dashboard': return <Dashboard onNavigate={setActiveTab} />
       case 'checkin': return <CheckIn onDone={() => setActiveTab('dashboard')} />
-      case 'progress': return subscriptionStatus === 'pro' ? <Progress /> : <Paywall />
+      case 'progress': return <Progress />
       case 'news': return <NewsPage />
-      case 'journal': return <Journal onRequestUpgrade={() => setActiveTab('progress')} />
-      case 'profile': return <ProfilePage onRequestUpgrade={() => setActiveTab('progress')} />
+      case 'journal': return <Journal />
+      case 'profile': return <ProfilePage />
     }
   }
 
-  // Public pages (accessible without login)
   if (window.location.pathname === '/privacy') {
     return <PrivacyPolicy />
   }
+
   if (window.location.pathname === '/terms') {
     return <Terms />
   }
-  if (window.location.pathname === '/waitlist') {
-    return <Waitlist />
-  }
 
-  // Not logged in -> Show Login
-  if (!authToken) {
+  // Old waitlist links now resolve to the local-first product landing page.
+  if (!hasStarted || window.location.pathname === '/waitlist') {
     return <Login />
   }
 
-  // Logged in but new user -> Show Onboarding
   if (!hasCompletedOnboarding) {
     return <Onboarding />
   }
 
   return (
     <div className="app-shell">
-      {/* Header */}
       <header className="app-header">
         <div className="logo-wrap">
           <div className="logo-icon">
@@ -76,19 +66,17 @@ export default function App() {
         <button
           className="header-profile-btn"
           onClick={() => setActiveTab('profile')}
-          aria-label="Open profile"
+          aria-label="Open settings"
         >
           <User size={19} color="#64748b" strokeWidth={1.5} />
         </button>
       </header>
 
-      {/* Main scroll area */}
       <main className="app-main hide-scroll">
         {renderPage()}
       </main>
 
-      {/* Bottom navigation */}
-      <nav className="bottom-nav">
+      <nav className="bottom-nav" aria-label="Primary navigation">
         <NavBtn icon={Home} label="Home" tab="dashboard" active={activeTab} onNav={setActiveTab} />
         <NavBtn icon={Plus} label="Log" tab="checkin" active={activeTab} onNav={setActiveTab} />
         <NavBtn icon={TrendingDown} label="Progress" tab="progress" active={activeTab} onNav={setActiveTab} />
@@ -104,16 +92,18 @@ interface NavBtnProps {
   label: string
   tab: Tab
   active: Tab
-  onNav: (t: Tab) => void
+  onNav: (tab: Tab) => void
 }
 
 function NavBtn({ icon: Icon, label, tab, active, onNav }: NavBtnProps) {
   const isActive = tab === active
+
   return (
     <button
       className={`nav-btn ${isActive ? 'active' : ''}`}
       onClick={() => onNav(tab)}
       aria-label={label}
+      aria-current={isActive ? 'page' : undefined}
     >
       <div className="nav-icon-wrap">
         <Icon
