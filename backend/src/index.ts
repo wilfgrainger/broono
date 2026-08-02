@@ -67,8 +67,8 @@ app.get('/', (c) => c.text('Broono API Gateway - Active'))
 const WAITLIST_LIFETIME_CAP = 100
 const WAITLIST_MAX_BODY_BYTES = 16 * 1024
 
-const getWaitlistTotal = async (c: Context<{ Bindings: Bindings }>): Promise<number> => {
-  const total = await c.env.DB.prepare(
+const getWaitlistTotal = async (db: D1Database): Promise<number> => {
+  const total = await db.prepare(
     'SELECT COUNT(*) as total FROM waitlist_entries'
   ).first<{ total: number | string }>()
 
@@ -86,7 +86,7 @@ const waitlistPayload = (entry: WaitlistEntryRecord, totalSignups: number, alrea
 })
 
 app.get('/api/waitlist/status', async (c) => {
-  const totalSignups = await getWaitlistTotal(c)
+  const totalSignups = await getWaitlistTotal(c.env.DB)
   const spotsRemaining = Math.max(WAITLIST_LIFETIME_CAP - totalSignups, 0)
 
   return c.json({
@@ -132,7 +132,7 @@ app.post('/api/waitlist', async (c) => {
   ).bind(email).first<WaitlistEntryRecord>()
 
   if (existingEntry) {
-    return c.json(waitlistPayload(existingEntry, await getWaitlistTotal(c), true))
+    return c.json(waitlistPayload(existingEntry, await getWaitlistTotal(c.env.DB), true))
   }
 
   const createdAt = Math.floor(Date.now() / 1000)
@@ -141,7 +141,7 @@ app.post('/api/waitlist', async (c) => {
   // Position is unique. Retry a small number of times if simultaneous signups
   // both observe the same count before one insert wins the write race.
   for (let attempt = 0; attempt < 3 && !createdEntry; attempt += 1) {
-    const position = (await getWaitlistTotal(c)) + 1
+    const position = (await getWaitlistTotal(c.env.DB)) + 1
     const offerTier = position <= WAITLIST_LIFETIME_CAP ? 'lifetime' : 'standard'
     const candidate: WaitlistEntryRecord = {
       id: crypto.randomUUID(),
@@ -174,7 +174,7 @@ app.post('/api/waitlist', async (c) => {
       ).bind(email).first<WaitlistEntryRecord>()
 
       if (duplicateEntry) {
-        return c.json(waitlistPayload(duplicateEntry, await getWaitlistTotal(c), true))
+        return c.json(waitlistPayload(duplicateEntry, await getWaitlistTotal(c.env.DB), true))
       }
 
       if (attempt === 2) throw error
@@ -185,7 +185,7 @@ app.post('/api/waitlist', async (c) => {
     return c.json({ error: 'Unable to allocate a waitlist position right now.' }, 503)
   }
 
-  return c.json(waitlistPayload(createdEntry, await getWaitlistTotal(c), false), 201)
+  return c.json(waitlistPayload(createdEntry, await getWaitlistTotal(c.env.DB), false), 201)
 })
 
 // === AUTHENTICATION ===
@@ -392,7 +392,7 @@ app.post('/api/play/verify-subscription', authMiddleware, async (c) => {
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `grant_type=urn:ietf:params:oauth-type:jwt-bearer&assertion=${googleJwt}`,
+      body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${googleJwt}`,
     })
     const tokenData = await tokenRes.json() as { access_token: string }
 
