@@ -1,54 +1,8 @@
-import { test, expect, type APIRequestContext, type Page } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 
-type AuthResponse = {
-  success: boolean
-  token: string
-  user: {
-    email: string
-    subscription_status: 'free' | 'pro' | 'canceled'
-  }
-}
-
-async function authenticateWithGoogleSession(page: Page, request: APIRequestContext, email: string) {
-  const authResponse = await request.post('http://127.0.0.1:8787/_test/google-auth', {
-    data: { email },
-  })
-  expect(authResponse.ok()).toBeTruthy()
-
-  const auth = await authResponse.json() as AuthResponse
-  const today = new Date().toISOString().split('T')[0]
-
-  await page.goto('/privacy')
-  await page.evaluate(({ token, email: userEmail, status, todayDate }) => {
-    window.localStorage.setItem('broono-store', JSON.stringify({
-      state: {
-        hasCompletedOnboarding: false,
-        profile: {
-          medicationName: 'Zepbound',
-          dose: '5mg',
-          injectionDayOfWeek: 1,
-          startWeight: 0,
-          weightUnit: 'lbs',
-          proteinGoalG: 100,
-          waterGoalGlasses: 8,
-        },
-        logs: [],
-        journalEntries: [],
-        dailyWater: { date: todayDate, glasses: 0 },
-        authToken: token,
-        userEmail,
-        subscriptionStatus: status,
-      },
-      version: 2,
-    }))
-  }, {
-    token: auth.token,
-    email: auth.user.email,
-    status: auth.user.subscription_status,
-    todayDate: today,
-  })
-
+async function startLocally(page: Page) {
   await page.goto('/')
+  await page.getByRole('button', { name: 'Start using Broono' }).click()
   await expect(page.getByText('Welcome to')).toBeVisible()
 }
 
@@ -61,114 +15,72 @@ async function completeOnboarding(page: Page) {
   await expect(page.getByText('Current Weight')).toBeVisible()
 }
 
-test('public legal pages and login messaging render', async ({ page }) => {
+test('local-only landing and legal pages render', async ({ page }) => {
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: 'broono.' })).toBeVisible()
-  await expect(page.getByText('Google sign-in only')).toBeVisible()
-  await expect(page.getByText('Sign-in is available in the Android app build only.')).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Join the waitlist for launch updates' })).toBeVisible()
+  await expect(page.getByText('Local-only on your phone')).toBeVisible()
+  await expect(page.getByText('No sign-in. No tracking account.')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Start using Broono' })).toBeVisible()
 
   await page.goto('/privacy')
   await expect(page.getByRole('heading', { name: 'Privacy Policy' })).toBeVisible()
-  await page.screenshot({ path: 'test-results/privacy-page.png', fullPage: true })
+  await expect(page.getByText('No Broono account or server record')).toBeVisible()
 
   await page.goto('/terms')
-  await expect(page.getByRole('heading', { name: 'Terms of Service' })).toBeVisible()
-  await page.screenshot({ path: 'test-results/terms-page.png', fullPage: true })
+  await expect(page.getByRole('heading', { name: 'Terms of Use' })).toBeVisible()
+  await expect(page.getByText('Local software')).toBeVisible()
 })
 
-test('waitlist page captures the first-100 lifetime access offer', async ({ page, request }) => {
-  await page.goto('/waitlist')
-
-  await expect(page.getByText('First 100 waitlist members get free lifetime access.')).toBeVisible()
-  await page.getByLabel('First name').fill('Jordan')
-  await page.getByLabel('Email').fill('jordan-waitlist@broono.test')
-  await page.getByLabel('What would make Broono a must-have for you?').fill('Progress charts and accountability.')
-  await page.getByRole('button', { name: 'Join the waitlist' }).click()
-
-  await expect(page.getByText('You qualified for free lifetime Pro access.')).toBeVisible()
-
-  const entryResponse = await request.get('http://127.0.0.1:8787/_test/waitlist?email=jordan-waitlist@broono.test')
-  expect(entryResponse.ok()).toBeTruthy()
-
-  const entry = await entryResponse.json() as { position: number; offer_tier: string }
-  expect(entry.position).toBe(1)
-  expect(entry.offer_tier).toBe('lifetime')
-})
-
-test('google-authenticated users land on onboarding before the paywall', async ({ page, request }) => {
-  await authenticateWithGoogleSession(page, request, 'broono-test-login@gmail.com')
-
-  const persistedStore = await page.evaluate(() => {
-    const raw = window.localStorage.getItem('broono-store')
-    return raw ? JSON.parse(raw) : null
-  })
-
-  expect(persistedStore?.state?.userEmail).toBe('broono-test-login@gmail.com')
-  expect(persistedStore?.state?.authToken).toBeTruthy()
-  expect(persistedStore?.state?.hasCompletedOnboarding).toBe(false)
-
-  await page.screenshot({ path: 'test-results/onboarding-after-google-login.png', fullPage: true })
-})
-
-test('free users complete onboarding and only see the paywall at gated features', async ({ page, request }) => {
-  await authenticateWithGoogleSession(page, request, 'free-user@broono.test')
+test('local users complete onboarding and can use every feature', async ({ page }) => {
+  await startLocally(page)
   await completeOnboarding(page)
 
-  await expect(page.getByText('Unlock Broono Pro')).toHaveCount(0)
   await page.getByRole('button', { name: 'Progress', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Unlock Broono Pro' })).toBeVisible()
-  await expect(page.getByText('Google Play billing only')).toBeVisible()
-  await expect(page.getByText('Start your 2-day free trial in the Android app through Google Play')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Progress' })).toBeVisible()
+  await expect(page.getByText('Unlock Broono Pro')).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Journal', exact: true }).click()
+  for (let entry = 1; entry <= 4; entry += 1) {
+    await page.getByPlaceholder(/Noticed your clothes/).fill(`Local journal entry ${entry}`)
+    await page.getByRole('button', { name: 'Save journal entry' }).click()
+  }
+  await expect(page.getByText('Local journal entry 4')).toBeVisible()
 
   const persistedStore = await page.evaluate(() => {
     const raw = window.localStorage.getItem('broono-store')
     return raw ? JSON.parse(raw) : null
   })
 
+  expect(persistedStore?.state?.hasStarted).toBe(true)
   expect(persistedStore?.state?.hasCompletedOnboarding).toBe(true)
-  expect(persistedStore?.state?.subscriptionStatus).toBe('free')
-
-  await page.screenshot({ path: 'test-results/progress-paywall.png', fullPage: true })
+  expect(persistedStore?.state?.journalEntries).toHaveLength(4)
+  expect(persistedStore?.state?.authToken).toBeUndefined()
+  expect(persistedStore?.state?.subscriptionStatus).toBeUndefined()
 })
 
-test('free users can access settings and sign out', async ({ page, request }) => {
-  await authenticateWithGoogleSession(page, request, 'settings-user@broono.test')
+test('settings export and erase only local data', async ({ page }) => {
+  await startLocally(page)
   await completeOnboarding(page)
 
-  await page.getByRole('button', { name: 'Open profile' }).click()
+  await page.getByRole('button', { name: 'Open settings' }).click()
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Sign Out' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Delete Account' })).toBeVisible()
-  await page.screenshot({ path: 'test-results/free-settings.png', fullPage: true })
+  await expect(page.getByText('Local data only')).toBeVisible()
 
-  await page.getByRole('button', { name: 'Sign Out' }).click()
-  await expect(page.getByRole('heading', { name: 'broono.' })).toBeVisible()
-})
+  const downloadPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Export my local data' }).click()
+  const download = await downloadPromise
+  expect(download.suggestedFilename()).toMatch(/^broono-export-\d{4}-\d{2}-\d{2}\.json$/)
 
-test('delete account resets local state and removes the backend user', async ({ page, request }) => {
-  const email = 'delete-user@broono.test'
-  await authenticateWithGoogleSession(page, request, email)
-  await completeOnboarding(page)
-
-  await page.getByRole('button', { name: 'Open profile' }).click()
   page.once('dialog', (dialog) => dialog.accept())
-  await page.getByRole('button', { name: 'Delete Account' }).click()
-  await expect(page.getByRole('heading', { name: 'broono.', exact: true })).toBeVisible({ timeout: 10000 })
+  await page.getByRole('button', { name: 'Erase data from this device' }).click()
+  await expect(page.getByText('Local-only on your phone')).toBeVisible()
 
   const persistedStore = await page.evaluate(() => {
     const raw = window.localStorage.getItem('broono-store')
     return raw ? JSON.parse(raw) : null
   })
 
-  expect(persistedStore?.state?.authToken).toBe(null)
-  expect(persistedStore?.state?.userEmail).toBe(null)
+  expect(persistedStore?.state?.hasStarted).toBe(false)
+  expect(persistedStore?.state?.hasCompletedOnboarding).toBe(false)
   expect(persistedStore?.state?.logs).toEqual([])
   expect(persistedStore?.state?.journalEntries).toEqual([])
-  expect(persistedStore?.state?.hasCompletedOnboarding).toBe(false)
-
-  const userResponse = await request.get(`http://127.0.0.1:8787/_test/user?email=${encodeURIComponent(email)}`)
-  expect(userResponse.status()).toBe(404)
-
-  await page.screenshot({ path: 'test-results/delete-account-login.png', fullPage: true })
 })
