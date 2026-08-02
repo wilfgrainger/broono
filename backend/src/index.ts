@@ -98,22 +98,26 @@ app.get('/api/waitlist/status', async (c) => {
 })
 
 app.post('/api/waitlist', async (c) => {
-  const contentLength = Number(c.req.header('Content-Length') ?? 0)
-  if (Number.isFinite(contentLength) && contentLength > WAITLIST_MAX_BODY_BYTES) {
+  const rawBody = await c.req.text()
+  if (new TextEncoder().encode(rawBody).byteLength > WAITLIST_MAX_BODY_BYTES) {
     return c.json({ error: 'Request body is too large.' }, 413)
   }
 
-  const body = await c.req.json().catch(() => null) as {
-    email?: unknown
-    firstName?: unknown
-    source?: unknown
-    notes?: unknown
-  } | null
+  const body = (() => {
+    try {
+      return JSON.parse(rawBody) as {
+        email?: unknown
+        firstName?: unknown
+        source?: unknown
+      }
+    } catch {
+      return null
+    }
+  })()
 
   const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : ''
   const firstName = typeof body?.firstName === 'string' ? body.firstName.trim() : ''
   const source = typeof body?.source === 'string' ? body.source.trim().slice(0, 80) : 'waitlist-web'
-  const notes = typeof body?.notes === 'string' ? body.notes.trim().slice(0, 280) : ''
 
   if (!email || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return c.json({ error: 'A valid email address is required.' }, 400)
@@ -149,7 +153,7 @@ app.post('/api/waitlist', async (c) => {
       first_name: firstName,
       created_at: createdAt,
       source: source || 'waitlist-web',
-      notes: notes || null,
+      notes: null,
       offer_tier: offerTier,
       position,
     }
