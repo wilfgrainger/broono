@@ -34,8 +34,6 @@ async function readJson<T>(response: Response): Promise<T> {
 export default function Waitlist() {
   const [firstName, setFirstName] = useState('')
   const [email, setEmail] = useState('')
-  const [notes, setNotes] = useState('')
-  const [acceptedPrivacy, setAcceptedPrivacy] = useState(false)
   const [loading, setLoading] = useState(false)
   const [status, setStatus] = useState<WaitlistStatusResponse | null>(null)
   const [statusUnavailable, setStatusUnavailable] = useState(false)
@@ -84,8 +82,6 @@ export default function Waitlist() {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!acceptedPrivacy) return
-
     setLoading(true)
     setError(null)
     setResult(null)
@@ -100,7 +96,6 @@ export default function Waitlist() {
         body: JSON.stringify({
           firstName,
           email,
-          notes,
           source: 'broono-waitlist-page',
         }),
       })
@@ -225,36 +220,16 @@ export default function Waitlist() {
                 required
               />
             </label>
-            <label htmlFor="waitlist-notes">
-              What would make Broono a must-have for you?
-              <textarea
-                id="waitlist-notes"
-                name="notes"
-                value={notes}
-                onChange={(event) => setNotes(event.target.value)}
-                rows={4}
-                maxLength={280}
-                placeholder="Ex: progress insights, side-effect tracking, journaling, or accountability."
-              />
-            </label>
 
-            <label className="waitlist-consent">
-              <input
-                type="checkbox"
-                checked={acceptedPrivacy}
-                onChange={(event) => setAcceptedPrivacy(event.target.checked)}
-                required
-              />
-              <span>
-                I agree that Broono may store my name, email and optional feedback to manage early access, as described in the{' '}
-                <a href="/privacy">Privacy Policy</a>.
-              </span>
-            </label>
+            <p className="waitlist-privacy-note">
+              Broono stores your name and email to manage early access and launch updates. Do not submit medical or health information. Read the{' '}
+              <a href="/privacy">Privacy Policy</a>.
+            </p>
 
             <button
               type="submit"
               className="btn-primary waitlist-submit"
-              disabled={loading || !acceptedPrivacy}
+              disabled={loading}
             >
               {loading ? 'Saving your spot…' : 'Join early access'}
             </button>
