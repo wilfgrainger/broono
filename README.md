@@ -85,7 +85,7 @@ See `docs/PRODUCTION_HOSTING.md`, `docs/mobile_launch_strategy.md` and `GOOGLE_P
 
 ## Privacy model
 
-The application keeps weight entries, medication settings, symptoms, hydration, goals and journal entries in local device storage. The backend stores the Google account email, subscription status and Google Play billing reference required to operate authenticated paid access. Early-access submissions store the supplied name, email and optional product feedback.
+The application keeps weight entries, medication settings, symptoms, hydration, goals and journal entries in local device storage. The backend stores the Google account email, subscription status and Google Play billing reference required to operate authenticated paid access. New early-access submissions are limited to first name, email address, source and assigned waitlist position; the API does not accept free-text health or product notes.
 
 Do not introduce server-side health-data persistence without a separate privacy, security, migration and consent design review.
 
