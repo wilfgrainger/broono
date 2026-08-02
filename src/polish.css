@@ -157,25 +157,17 @@
   animation: waitlist-pulse 1.5s ease-in-out infinite;
 }
 
-.waitlist-consent {
-  display: grid;
-  grid-template-columns: 20px 1fr;
-  gap: 10px;
-  align-items: start;
+.waitlist-privacy-note {
+  padding: 13px 14px;
+  border-radius: 14px;
   color: #64748b;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
   font-size: 12px;
   line-height: 1.55;
-  cursor: pointer;
 }
 
-.waitlist-consent input {
-  width: 18px;
-  height: 18px;
-  margin-top: 1px;
-  accent-color: #4f46e5;
-}
-
-.waitlist-consent a {
+.waitlist-privacy-note a {
   color: #4338ca;
   font-weight: 750;
 }
