@@ -67,7 +67,7 @@ A push to `main` runs `.github/workflows/deploy-broono-pages.yml`, which:
 5. checks that backend and native network/billing surfaces are absent;
 6. deploys the static artifact to GitHub Pages.
 
-See `docs/PRODUCTION_HOSTING.md` for the exact release and retirement checks.
+See `docs/PRODUCTION_HOSTING.md` for the exact release and Cloudflare-retirement checks. The old Worker, D1 database, API subdomain and Cloudflare Git deployment are not part of Broono local edition and should be deleted after any required data-retention check.
 
 ## Android
 
