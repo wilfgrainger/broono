@@ -1,4 +1,4 @@
-name: Deploy Broono to GitHub Pages
+name: Validate and deploy Broono
 
 on:
   pull_request:
@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   build:
-    name: Build restored GLP app
+    name: Test and build GLP app
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -40,15 +40,24 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            backend/pnpm-lock.yaml
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Install dependencies
+      - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Install backend dependencies
+        run: pnpm --dir backend install --frozen-lockfile
 
       - name: Run frontend regression tests
         run: pnpm run test:frontend
+
+      - name: Run backend regression tests
+        run: pnpm run test:backend
 
       - name: Build static site
         run: pnpm run build
