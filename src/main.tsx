@@ -5,7 +5,7 @@ import App from './App.tsx'
 import './index.css'
 import './polish.css'
 
-const RESTORE_SESSION_KEY = 'broono:glp-runtime-reset:v3'
+const RESTORE_SESSION_KEY = 'broono:local-runtime-reset:v1'
 
 async function removeLegacyGameRuntime(): Promise<boolean> {
   const wasControlled = 'serviceWorker' in navigator && Boolean(navigator.serviceWorker.controller)
@@ -21,7 +21,7 @@ async function removeLegacyGameRuntime(): Promise<boolean> {
       await Promise.all(cacheNames.map((cacheName) => window.caches.delete(cacheName)))
     }
   } catch {
-    // Cleanup is deliberately best-effort. Rendering the health app takes priority.
+    // Cleanup is best-effort. Rendering the local tracker takes priority.
   }
 
   return wasControlled
@@ -40,9 +40,8 @@ function renderApplication() {
 async function bootstrap() {
   const wasControlled = await removeLegacyGameRuntime()
 
-  // When this bundle was reached through an obsolete service worker, reload once
-  // after unregistering it so the next navigation is guaranteed to come from the
-  // network rather than the retired styling-game cache.
+  // Reload once after retiring an obsolete root service worker so the local
+  // edition is loaded directly from the current static GitHub Pages release.
   if (wasControlled && !window.sessionStorage.getItem(RESTORE_SESSION_KEY)) {
     window.sessionStorage.setItem(RESTORE_SESSION_KEY, 'complete')
     window.location.reload()
