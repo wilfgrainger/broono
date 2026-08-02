@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { SignJWT, importPKCS8, jwtVerify } from 'jose'
+import type { Context, Next } from 'hono'
 import { mapRtdnNotificationTypeToStatus } from './play-rtdn.js'
 import { buildVerifySubscriptionResponse, getSubscriptionStatusFromPlayState } from './playVerification.js'
 
@@ -37,7 +38,7 @@ type WaitlistEntryRecord = {
 
 const app = new Hono<{ Bindings: Bindings, Variables: Variables }>()
 
-// Enforce strict CORS for the Cloudflare Pages domain (and local dev)
+// Enforce strict CORS for the configured GitHub Pages origin (and local development).
 app.use('*', async (c, next) => {
   const corsMiddleware = cors({
     origin: c.env.FRONTEND_URL,
@@ -50,16 +51,42 @@ app.use('*', async (c, next) => {
   return await corsMiddleware(c, next)
 })
 
+// API responses should not be embedded, sniffed as another type, or cached with user data.
+app.use('*', async (c, next) => {
+  await next()
+  c.header('X-Content-Type-Options', 'nosniff')
+  c.header('Referrer-Policy', 'no-referrer')
+  c.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+  if (c.req.path.startsWith('/api/')) {
+    c.header('Cache-Control', 'no-store')
+  }
+})
+
 app.get('/', (c) => c.text('Broono API Gateway - Active'))
 
 const WAITLIST_LIFETIME_CAP = 100
+const WAITLIST_MAX_BODY_BYTES = 16 * 1024
 
-app.get('/api/waitlist/status', async (c) => {
+const getWaitlistTotal = async (c: Context<{ Bindings: Bindings }>): Promise<number> => {
   const total = await c.env.DB.prepare(
     'SELECT COUNT(*) as total FROM waitlist_entries'
   ).first<{ total: number | string }>()
 
-  const totalSignups = Number(total?.total ?? 0)
+  return Number(total?.total ?? 0)
+}
+
+const waitlistPayload = (entry: WaitlistEntryRecord, totalSignups: number, alreadyJoined: boolean) => ({
+  success: true,
+  alreadyJoined,
+  position: entry.position,
+  offerTier: entry.offer_tier,
+  awardedLifetimeAccess: entry.offer_tier === 'lifetime',
+  spotsRemaining: Math.max(WAITLIST_LIFETIME_CAP - totalSignups, 0),
+  totalSignups,
+})
+
+app.get('/api/waitlist/status', async (c) => {
+  const totalSignups = await getWaitlistTotal(c)
   const spotsRemaining = Math.max(WAITLIST_LIFETIME_CAP - totalSignups, 0)
 
   return c.json({
@@ -71,6 +98,11 @@ app.get('/api/waitlist/status', async (c) => {
 })
 
 app.post('/api/waitlist', async (c) => {
+  const contentLength = Number(c.req.header('Content-Length') ?? 0)
+  if (Number.isFinite(contentLength) && contentLength > WAITLIST_MAX_BODY_BYTES) {
+    return c.json({ error: 'Request body is too large.' }, 413)
+  }
+
   const body = await c.req.json().catch(() => null) as {
     email?: unknown
     firstName?: unknown
@@ -83,7 +115,7 @@ app.post('/api/waitlist', async (c) => {
   const source = typeof body?.source === 'string' ? body.source.trim().slice(0, 80) : 'waitlist-web'
   const notes = typeof body?.notes === 'string' ? body.notes.trim().slice(0, 280) : ''
 
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  if (!email || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return c.json({ error: 'A valid email address is required.' }, 400)
   }
 
@@ -91,8 +123,8 @@ app.post('/api/waitlist', async (c) => {
     return c.json({ error: 'Please share your first name.' }, 400)
   }
 
-  if (firstName.length > 80) {
-    return c.json({ error: 'First name must be 80 characters or fewer.' }, 400)
+  if (firstName.length > 80 || /[\u0000-\u001F\u007F]/.test(firstName)) {
+    return c.json({ error: 'First name must be 80 characters or fewer and contain normal text.' }, 400)
   }
 
   const existingEntry = await c.env.DB.prepare(
@@ -100,53 +132,60 @@ app.post('/api/waitlist', async (c) => {
   ).bind(email).first<WaitlistEntryRecord>()
 
   if (existingEntry) {
-    const total = await c.env.DB.prepare(
-      'SELECT COUNT(*) as total FROM waitlist_entries'
-    ).first<{ total: number | string }>()
-
-    const totalSignups = Number(total?.total ?? existingEntry.position)
-    return c.json({
-      success: true,
-      alreadyJoined: true,
-      position: existingEntry.position,
-      offerTier: existingEntry.offer_tier,
-      awardedLifetimeAccess: existingEntry.offer_tier === 'lifetime',
-      spotsRemaining: Math.max(WAITLIST_LIFETIME_CAP - totalSignups, 0),
-      totalSignups,
-    })
+    return c.json(waitlistPayload(existingEntry, await getWaitlistTotal(c), true))
   }
 
-  const total = await c.env.DB.prepare(
-    'SELECT COUNT(*) as total FROM waitlist_entries'
-  ).first<{ total: number | string }>()
-
-  const totalSignups = Number(total?.total ?? 0)
-  const position = totalSignups + 1
-  const offerTier = position <= WAITLIST_LIFETIME_CAP ? 'lifetime' : 'standard'
   const createdAt = Math.floor(Date.now() / 1000)
+  let createdEntry: WaitlistEntryRecord | null = null
 
-  await c.env.DB.prepare(
-    'INSERT INTO waitlist_entries (id, email, first_name, created_at, source, notes, offer_tier, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-  ).bind(
-    crypto.randomUUID(),
-    email,
-    firstName,
-    createdAt,
-    source || 'waitlist-web',
-    notes || null,
-    offerTier,
-    position,
-  ).run()
+  // Position is unique. Retry a small number of times if simultaneous signups
+  // both observe the same count before one insert wins the write race.
+  for (let attempt = 0; attempt < 3 && !createdEntry; attempt += 1) {
+    const position = (await getWaitlistTotal(c)) + 1
+    const offerTier = position <= WAITLIST_LIFETIME_CAP ? 'lifetime' : 'standard'
+    const candidate: WaitlistEntryRecord = {
+      id: crypto.randomUUID(),
+      email,
+      first_name: firstName,
+      created_at: createdAt,
+      source: source || 'waitlist-web',
+      notes: notes || null,
+      offer_tier: offerTier,
+      position,
+    }
 
-  return c.json({
-    success: true,
-    alreadyJoined: false,
-    position,
-    offerTier,
-    awardedLifetimeAccess: offerTier === 'lifetime',
-    spotsRemaining: Math.max(WAITLIST_LIFETIME_CAP - position, 0),
-    totalSignups: position,
-  }, 201)
+    try {
+      await c.env.DB.prepare(
+        'INSERT INTO waitlist_entries (id, email, first_name, created_at, source, notes, offer_tier, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+      ).bind(
+        candidate.id,
+        candidate.email,
+        candidate.first_name,
+        candidate.created_at,
+        candidate.source,
+        candidate.notes,
+        candidate.offer_tier,
+        candidate.position,
+      ).run()
+      createdEntry = candidate
+    } catch (error) {
+      const duplicateEntry = await c.env.DB.prepare(
+        'SELECT * FROM waitlist_entries WHERE email = ?'
+      ).bind(email).first<WaitlistEntryRecord>()
+
+      if (duplicateEntry) {
+        return c.json(waitlistPayload(duplicateEntry, await getWaitlistTotal(c), true))
+      }
+
+      if (attempt === 2) throw error
+    }
+  }
+
+  if (!createdEntry) {
+    return c.json({ error: 'Unable to allocate a waitlist position right now.' }, 503)
+  }
+
+  return c.json(waitlistPayload(createdEntry, await getWaitlistTotal(c), false), 201)
 })
 
 // === AUTHENTICATION ===
@@ -236,7 +275,6 @@ app.post('/api/auth/google', async (c) => {
 })
 
 // Middleware for JWT Verification
-import type { Context, Next } from 'hono'
 const authMiddleware = async (c: Context, next: Next) => {
   const authHeader = c.req.header('Authorization')
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -288,7 +326,6 @@ app.post('/api/stripe/webhook', async (c) => {
 
 // Allowed product IDs for subscription verification
 const ALLOWED_PRODUCT_IDS = ['broono_pro_monthly']
-
 
 /**
  * Verify a Google Play subscription purchase.
@@ -355,7 +392,7 @@ app.post('/api/play/verify-subscription', authMiddleware, async (c) => {
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${googleJwt}`,
+      body: `grant_type=urn:ietf:params:oauth-type:jwt-bearer&assertion=${googleJwt}`,
     })
     const tokenData = await tokenRes.json() as { access_token: string }
 
