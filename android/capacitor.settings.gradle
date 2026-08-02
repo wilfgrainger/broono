@@ -13,9 +13,3 @@ project(':capacitor-keyboard').projectDir = new File('../node_modules/.pnpm/@cap
 
 include ':capacitor-status-bar'
 project(':capacitor-status-bar').projectDir = new File('../node_modules/.pnpm/@capacitor+status-bar@8.0.1_@capacitor+core@8.2.0/node_modules/@capacitor/status-bar/android')
-
-include ':capgo-native-purchases'
-project(':capgo-native-purchases').projectDir = new File('../node_modules/.pnpm/@capgo+native-purchases@8.2.2_@capacitor+core@8.2.0/node_modules/@capgo/native-purchases/android')
-
-include ':codetrix-studio-capacitor-google-auth'
-project(':codetrix-studio-capacitor-google-auth').projectDir = new File('../node_modules/.pnpm/@codetrix-studio+capacitor-google-auth@3.4.0-rc.4_@capacitor+core@8.2.0/node_modules/@codetrix-studio/capacitor-google-auth/android')
