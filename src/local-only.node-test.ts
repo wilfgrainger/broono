@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 
 const read = (path: string) => readFileSync(path, 'utf8')
 
@@ -33,8 +33,14 @@ test('application runtime has no account, billing, or backend dependency', () =>
 })
 
 test('removed cloud application files do not return', () => {
+  if (existsSync('backend')) {
+    const remainingPaths = readdirSync('backend', { recursive: true })
+      .map((entry) => `backend/${String(entry)}`)
+      .sort()
+    assert.fail(`Cloud-era backend paths remain: ${remainingPaths.join(', ')}`)
+  }
+
   const removedPaths = [
-    'backend',
     'src/pages/Waitlist.tsx',
     'src/services/billing.ts',
     'src/services/subscriptionVerification.ts',
