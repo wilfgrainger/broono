@@ -1,114 +1,77 @@
 export default function PrivacyPolicy() {
     return (
-        <div className="page-enter" style={{ padding: 24, maxWidth: 640, margin: '0 auto' }}>
+        <div className="page-enter" style={{ padding: 24, maxWidth: 680, margin: '0 auto', overflowY: 'auto' }}>
+            <a href="/" style={{ display: 'inline-block', marginBottom: 20, color: '#4f46e5', fontWeight: 700 }}>← Back to Broono</a>
             <h1 style={{ fontSize: 28, fontWeight: 900, color: '#0f172a', marginBottom: 8 }}>Privacy Policy</h1>
             <p style={{ fontSize: 13, color: '#94a3b8', marginBottom: 24 }}>Last updated: August 2026</p>
 
             <div style={{ fontSize: 14, color: '#334155', lineHeight: 1.8, display: 'flex', flexDirection: 'column', gap: 20 }}>
                 <section>
-                    <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>1. Overview</h2>
+                    <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>1. Local-only design</h2>
                     <p>
-                        Broono (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;) is a GLP-1 companion application that helps users track
-                        their medication progress, weight, symptoms, and wellness journey. We are committed to protecting
-                        your privacy and being transparent about how we handle your data.
+                        Broono is designed to work without an account, application backend, remote database or health-data sync service.
+                        The profile and tracking information you enter is stored in local browser or app storage on the device you are using.
                     </p>
                 </section>
 
                 <section>
-                    <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>2. Data We Collect</h2>
-                    <p><strong>Early-access data:</strong> First name and email address when you join the waitlist.</p>
-                    <p><strong>Account data:</strong> Google account email address for authentication.</p>
-                    <p><strong>Health &amp; wellness data (stored locally on your device only):</strong></p>
+                    <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>2. Information stored on your device</h2>
+                    <p>Depending on the features you use, local data may include:</p>
                     <ul style={{ paddingLeft: 20, margin: '8px 0' }}>
+                        <li>Medication name, dose and injection schedule</li>
                         <li>Weight entries and progress</li>
-                        <li>Medication name, dose, and injection schedule</li>
-                        <li>Symptom logs</li>
+                        <li>Symptoms, injection site and check-in notes</li>
                         <li>Journal entries</li>
-                        <li>Water intake tracking</li>
-                        <li>Protein goals</li>
-                    </ul>
-                    <p><strong>Subscription data:</strong> Subscription status and Google Play purchase tokens.</p>
-                </section>
-
-                <section>
-                    <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>3. How We Use and Store Your Data</h2>
-                    <p>
-                        Early-access names and email addresses are used to manage waitlist positions, onboarding invitations and launch updates.
-                        Please do not submit medical or health information through the early-access form.
-                    </p>
-                    <p>
-                        <strong>Your in-app health data never leaves your device.</strong> Weight logs, symptoms, journal entries,
-                        and medication data are stored in your device&apos;s local storage. We do not transmit or store this data on our servers.
-                    </p>
-                    <p>
-                        Your early-access record, email address, account record, subscription status, and Google Play billing reference may be
-                        stored in our Cloudflare-hosted API and database for waitlist, authentication and subscription-management purposes.
-                    </p>
-                </section>
-
-                <section>
-                    <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>4. Subscriptions &amp; Payments</h2>
-                    <p>
-                        Broono offers a subscription service (Broono Pro) with a 2-day free trial period, followed by a
-                        monthly subscription of $2.99/month.
-                    </p>
-                    <ul style={{ paddingLeft: 20, margin: '8px 0' }}>
-                        <li>Payment is processed only through Google Play in the Android app.</li>
-                        <li>Your subscription automatically renews unless cancelled at least 24 hours before the end of the current period.</li>
-                        <li>You can manage or cancel your subscription through Google Play Store settings.</li>
-                        <li>We do not store your credit card or payment details.</li>
+                        <li>Water intake and personal goals</li>
+                        <li>A local flag recording that setup is complete</li>
                     </ul>
                 </section>
 
                 <section>
-                    <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>5. Third-Party Services</h2>
-                    <p>We use the following third-party services:</p>
-                    <ul style={{ paddingLeft: 20, margin: '8px 0' }}>
-                        <li><strong>GitHub Pages</strong> - For hosting the public web application</li>
-                        <li><strong>Cloudflare</strong> - For API and database infrastructure</li>
-                        <li><strong>Google Sign-In</strong> - For account authentication in the Android app</li>
-                        <li><strong>Google Play Billing</strong> - For processing Broono Pro subscriptions</li>
-                    </ul>
-                </section>
-
-                <section>
-                    <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>6. Your Rights (UK GDPR)</h2>
-                    <p>You may have the right to:</p>
-                    <ul style={{ paddingLeft: 20, margin: '8px 0' }}>
-                        <li>Access your personal data</li>
-                        <li>Correct inaccurate personal data</li>
-                        <li>Request deletion of your account, waitlist record and associated server-side data</li>
-                        <li>Restrict or object to certain processing</li>
-                        <li>Export data where the right to portability applies</li>
-                        <li>Withdraw consent where processing relies on consent</li>
-                    </ul>
+                    <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>3. No Broono account or server record</h2>
                     <p>
-                        Since your in-app health data is stored locally, you control it on your device. Deleting the app or
-                        clearing app data will remove local health data. You can delete your server-side account from the Settings page.
+                        Broono does not require your name, email address, Google account, payment information or a Broono user account.
+                        The application does not send your tracking entries to a Broono API or database.
                     </p>
                 </section>
 
                 <section>
-                    <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>7. Data Security</h2>
+                    <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>4. Hosting and ordinary web requests</h2>
                     <p>
-                        We use encrypted connections (HTTPS), Google-based account authentication, JWT-based session management,
-                        restricted browser origins and server-side purchase verification. No internet service can guarantee absolute security.
+                        The public web files are delivered through GitHub Pages. As with normal website hosting, the hosting and network providers
+                        involved in loading the site may process routine connection information such as IP address, request time, browser details and requested files.
+                        Broono does not add analytics, advertising trackers or a health-data collection endpoint.
                     </p>
                 </section>
 
                 <section>
-                    <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>8. Children&apos;s Privacy</h2>
+                    <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>5. Exporting and deleting your data</h2>
                     <p>
-                        Broono is not intended for use by children under 13. We do not knowingly collect
-                        personal data from children under 13.
+                        You can export a JSON copy from Settings. You can erase Broono data using “Erase data from this device”, by clearing the site&apos;s
+                        storage in your browser, or by clearing/uninstalling the app. Local data is not automatically recoverable after deletion.
                     </p>
                 </section>
 
                 <section>
-                    <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>9. Contact</h2>
+                    <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>6. Device security and backups</h2>
                     <p>
-                        For privacy-related questions or data requests, please contact us at{' '}
-                        <a href="mailto:privacy@broono.app" style={{ color: '#005b7f', fontWeight: 600 }}>privacy@broono.app</a>.
+                        Because the information remains on your device, access depends on the security of that device and browser profile.
+                        Use a device lock and export your data before clearing storage, reinstalling, or moving to another device.
+                    </p>
+                </section>
+
+                <section>
+                    <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>7. Medical information</h2>
+                    <p>
+                        Broono is a personal tracking tool, not a medical device or clinical record system. Do not rely on it as the only copy of
+                        information needed for treatment or emergencies.
+                    </p>
+                </section>
+
+                <section>
+                    <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>8. Contact</h2>
+                    <p>
+                        Questions about this policy can be raised through the project&apos;s public GitHub repository. Do not include personal health information in a public issue.
                     </p>
                 </section>
             </div>
