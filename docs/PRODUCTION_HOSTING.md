@@ -1,6 +1,6 @@
 # Broono production hosting
 
-## Frontend
+## Supported production path
 
 - Source branch: `main`
 - Build: Vite static output in `dist/`
@@ -8,40 +8,57 @@
 - Canonical domain: `https://broono.app`
 - Deployment workflow: `.github/workflows/deploy-broono-pages.yml`
 
-The frontend must not be deployed with Wrangler or Cloudflare Pages. The root `deploy` script is intentionally informational so a local command cannot silently replace the GitHub Pages production site.
+Broono has no production application backend. Do not deploy a Worker, Pages Function, API service, server database, authentication service or billing webhook for the current product.
 
-Pull requests run the same frontend and backend regression tests used by the release workflow, then build and inspect the static artifact. Pushes to `main` upload that verified artifact to GitHub Pages.
+GitHub Pages serves the static HTML, JavaScript, CSS and public assets. User-entered tracking data remains in browser or Capacitor local storage and is not sent to Broono infrastructure.
 
-## Backend
+## Local-only controls
 
-- Host: Cloudflare Workers
-- Worker: `broono-api`
-- Domain: `https://api.broono.app`
-- Configuration: `backend/wrangler.toml`
-- Data store: Cloudflare D1
+The release is blocked unless:
 
-The Pages build injects `VITE_API_URL=https://api.broono.app`. The API must set `FRONTEND_URL=https://broono.app` so credentialed CORS requests are accepted only from the canonical frontend.
+- the `backend/` directory is absent;
+- the build contains `broono-local-only-2026-08-02-v1`;
+- the Content Security Policy contains `connect-src 'none'`;
+- source and output contain no Broono API URL, API build variable, Google Auth runtime, native purchase runtime or D1 binding;
+- the Android manifest contains neither internet nor billing permission;
+- the Android Gradle files do not link Google Auth or native-purchases modules;
+- frontend and local-only regression tests pass.
 
-The backend is deployed separately and is not automatically published by the Pages workflow. A backend release must run its tests, use the reviewed `backend/wrangler.toml`, preserve D1 data, and have an explicit rollback or forward-fix plan.
+These checks make local-only operation an executable invariant rather than a documentation claim.
 
-## Legacy game retirement
+## Legacy Cloudflare retirement
 
-An obsolete game release installed a root-scoped service worker. The static file `public/sw.js` is a temporary kill switch that clears caches, unregisters that worker and reloads open tabs. Keep it in place until the old game is no longer observed in normal or installed-browser sessions.
+Previous versions used a Cloudflare Worker, D1 database and a repository-connected Cloudflare deployment project. They are no longer part of the product.
 
-Removing the kill switch is a separate release decision. Validate fresh browsers, previously controlled browsers and installed/PWA sessions before deleting it.
+After this release is merged:
+
+1. confirm there is no information in D1 that must be retained for a legal or user-request reason;
+2. export any record that must be preserved outside the product, without retaining unnecessary personal data;
+3. delete the `broono-api` Worker and its routes/custom domain;
+4. delete the Broono D1 database;
+5. disconnect the Cloudflare Git integration for this repository;
+6. remove obsolete DNS records for `api.broono.app` or Worker/Pages targets;
+7. confirm `broono.app` still resolves to GitHub Pages and the static app works;
+8. confirm no Cloudflare deployment comment or check appears on a later repository commit.
+
+Cloudflare may still proxy DNS for the website if deliberately desired, but it must not run Broono application code or store Broono application data.
+
+## Legacy service-worker retirement
+
+An obsolete game release installed a root-scoped service worker. `public/sw.js` remains a temporary kill switch that clears old caches and unregisters the worker.
+
+Keep it until fresh browsers, previously controlled browsers and installed/PWA sessions consistently show the local GLP application. Removing it is a separate reviewed release.
 
 ## Release verification
 
-The Pages workflow fails unless all of the following are true:
+The GitHub Pages workflow performs the automated checks. After deployment, manually verify:
 
-- frontend dependencies install from the committed lockfile;
-- backend dependencies install from the committed backend lockfile;
-- frontend regression tests pass;
-- backend regression tests pass;
-- the production Vite build succeeds;
-- the GLP build marker `glp-restored-2026-07-30-v3` is present;
-- `CNAME` contains `broono.app`;
-- the self-destructing `/sw.js` remains present;
-- the SPA fallback `404.html` is generated.
-
-After deployment, verify the canonical domain, `/waitlist`, `/privacy`, `/terms`, API health, waitlist status and a safe test submission against the intended environment. Do not use real health data for release checks.
+- `/` presents the local-only landing page;
+- setup works without a sign-in or network API;
+- Progress and Journal are available without a paywall;
+- Settings exports a JSON file;
+- local erasure returns the app to its initial state;
+- `/privacy` and `/terms` describe local-only operation;
+- `/waitlist` no longer presents or submits a server form;
+- browser developer tools show no Broono API request;
+- `broono.app` is served by the intended GitHub Pages release.
