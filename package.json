@@ -1,23 +1,23 @@
 {
   "name": "broono",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0-local",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "test": "npm run test:frontend && npm run test:backend",
+    "test": "pnpm run test:frontend && pnpm run test:local-only",
     "test:all": "pnpm test && pnpm test:e2e",
-    "test:frontend": "node --experimental-strip-types --test src/utils/medication.node-test.ts src/services/subscriptionVerification.node-test.ts",
-    "test:backend": "pnpm --dir backend test",
+    "test:frontend": "node --experimental-strip-types --test src/utils/medication.node-test.ts",
+    "test:local-only": "node --experimental-strip-types --test src/local-only.node-test.ts",
     "test:e2e": "playwright test",
     "preview": "pnpm run build && vite preview",
-    "deploy": "echo 'Frontend deployment is handled by GitHub Pages on pushes to main.'",
+    "deploy": "echo 'Static deployment is handled by GitHub Pages on pushes to main.'",
     "android:sync": "npx cap sync android",
     "android:open": "npx cap open android",
-    "android:build": "npm run build && npx cap sync android",
-    "android:run": "npm run build && npx cap sync android && npx cap run android"
+    "android:build": "pnpm run build && npx cap sync android",
+    "android:run": "pnpm run build && npx cap sync android && npx cap run android"
   },
   "dependencies": {
     "@capacitor/app": "^8.0.1",
