@@ -1,83 +1,98 @@
 # Broono
 
-Broono is a GLP-1 companion app designed to track your journey with medications like Zepbound, Mounjaro, Wegovy, or Ozempic. The product is being packaged as a mobile-first app with a shared React + Capacitor codebase.
+Broono is a mobile-first GLP-1 tracking companion for weight progress, dose timing, hydration, protein goals, symptoms and private notes.
 
-## Architecture
+The product uses one React codebase for the phone-focused web experience and the Capacitor Android application. Health and journal data are stored locally on the user's device; the backend stores only the account and subscription records needed for authentication and Google Play billing.
 
-- **Frontend**: React + Vite (TypeScript) - Deployed on Cloudflare Pages.
-- **Backend**: Hono + Cloudflare Workers - Serverless API.
-- **Database**: Cloudflare D1.
-- **Auth**: Google Sign-In with backend audience validation for web and Android clients.
-- **Payments**: Google Play Billing today, with the repo structured to add Apple App Store billing next.
+> Broono is a personal tracking companion, not a medical device and not a substitute for professional medical advice.
 
-For the Android-first / iOS-next rollout plan, see `docs/mobile_launch_strategy.md`. For launch collateral, use `.github/launch_materials/`.
+## Current architecture
 
-## Getting Started
+| Area | Technology | Production path |
+| --- | --- | --- |
+| Web and shared app UI | React 19, TypeScript, Vite | GitHub Pages at `broono.app` |
+| Android wrapper | Capacitor 8 | Android package `app.broono.android` |
+| API | Hono on Cloudflare Workers | `api.broono.app` |
+| Account and waitlist data | Cloudflare D1 | Bound to the API Worker |
+| Authentication | Google Sign-In | ID-token audience validation in the Worker |
+| Billing | Google Play Billing | Server-side purchase verification and RTDN handling |
+
+The frontend and API are deliberately separate deployments. The root build creates a static `dist/` directory for GitHub Pages; Wrangler is used only inside `backend/`.
+
+## Local development
 
 ### Prerequisites
 
-- [pnpm](https://pnpm.io/)
-- [Wrangler](https://developers.cloudflare.com/workers/wrangler/install-and-update/) (Cloudflare CLI)
+- Node.js 22
+- pnpm 10
+- Wrangler, installed through the backend package
 
-### Installation
+### Install
 
-1. Clone the repository.
-2. Install dependencies in the root and backend:
-   ```bash
-   pnpm install
-   cd backend && npm install
-   ```
+```bash
+pnpm install --frozen-lockfile
+pnpm --dir backend install --frozen-lockfile
+```
 
-### Development
+### Run the frontend
 
-#### Frontend
 ```bash
 pnpm dev
 ```
 
-Public waitlist route:
+The public early-access page is available at `http://localhost:5173/waitlist`.
+
+### Run the API
+
 ```bash
-http://localhost:5173/waitlist
+pnpm --dir backend dev
 ```
 
-#### Backend
+By default the frontend expects the local API at `http://localhost:8787`. Override this with `VITE_API_URL` when needed.
+
+## Quality checks
+
 ```bash
-cd backend
-npm run dev
+pnpm run test:frontend
+pnpm run test:backend
+pnpm run build
 ```
 
-### Deployment
+The pull-request workflow installs both lockfiles, runs frontend and backend regression tests, builds the static site, and validates the custom-domain and legacy-service-worker retirement files. A push to `main` deploys the verified frontend artifact to GitHub Pages.
 
-#### Frontend (Cloudflare Pages)
-Connect your GitHub/GitLab repository to Cloudflare Pages and select the Vite preset. Set `VITE_API_URL` to your worker URL.
+## Configuration
 
-#### Backend (Cloudflare Workers)
-```bash
-cd backend
-npm run deploy
-```
+### Frontend build variables
 
+- `VITE_API_URL`
+- `VITE_GOOGLE_CLIENT_ID`
+- `VITE_GOOGLE_ANDROID_CLIENT_ID`
+- `VITE_REVIEW_GOOGLE_EMAIL` for an optional store-review hint
 
-## Google Auth Environment (Android Play release)
+### Worker bindings and secrets
 
-For reliable Google Play sign-in, configure **both frontend and backend** Google OAuth audiences:
+- `DB`
+- `FRONTEND_URL`
+- `JWT_SECRET`
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_ANDROID_CLIENT_ID`
+- `GOOGLE_AUTH_ALLOWED_EMAILS` when access must be restricted
+- `GOOGLE_PLAY_PACKAGE_NAME`
+- `GOOGLE_PLAY_SERVICE_ACCOUNT_KEY`
+- `GOOGLE_PLAY_WEBHOOK_TOKEN`
 
-- Frontend (`.env` / Cloudflare Pages):
-  - `VITE_GOOGLE_CLIENT_ID` (Web OAuth client ID)
-  - `VITE_GOOGLE_ANDROID_CLIENT_ID` (Android OAuth client ID for `app.broono.android`)
-- Backend (Cloudflare Worker secrets):
-  - `GOOGLE_CLIENT_ID`
-  - `GOOGLE_ANDROID_CLIENT_ID`
+See `docs/PRODUCTION_HOSTING.md`, `docs/mobile_launch_strategy.md` and `GOOGLE_PLAY_SETUP.md` for release-specific detail.
 
-These values must align with backend audience validation in `backend/src/index.ts` (`allowedAudiences` check in `/api/auth/google`).
+## Privacy model
 
-## Security
+The application keeps weight entries, medication settings, symptoms, hydration, goals and journal entries in local device storage. The backend stores the Google account email, subscription status and Google Play billing reference required to operate authenticated paid access. Early-access submissions store the supplied name, email and optional product feedback.
 
-- CORS is enforced for the primary frontend domain.
-- Secrets are managed via Cloudflare environment variables.
-- Input validation is handled on the backend via Hono.
+Do not introduce server-side health-data persistence without a separate privacy, security, migration and consent design review.
 
-## Domain & Routing
+## Contributing and security
 
-- Canonical Domain: `broono.app`
-- `www.broono.app` automatically redirects to the canonical domain to ensure session consistency and avoid duplicate content issues.
+Read `CONTRIBUTING.md` before proposing a change. Please report security vulnerabilities through GitHub's private vulnerability reporting rather than a public issue; see `SECURITY.md`.
+
+## Licence status
+
+No software licence has been selected yet. Public repository visibility alone does not grant permission to copy, modify or redistribute the code. Selecting an open-source licence is an explicit owner decision still required before the project can accurately be described as open source.
