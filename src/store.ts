@@ -69,10 +69,6 @@ type PersistedAppState = Pick<
   'dailyWater'
 >
 
-type LegacyPersistedState = Partial<PersistedAppState> & {
-  authToken?: string | null
-}
-
 function today(): string {
   return new Date().toISOString().split('T')[0]
 }
@@ -178,11 +174,10 @@ export const useStore = create<AppState>()(
           return baseState
         }
 
-        const data = persistedState as LegacyPersistedState
+        const data = persistedState as Partial<PersistedAppState>
         const hasExistingUse = Boolean(
           data.hasStarted ||
           data.hasCompletedOnboarding ||
-          data.authToken ||
           (Array.isArray(data.logs) && data.logs.length > 0) ||
           (Array.isArray(data.journalEntries) && data.journalEntries.length > 0) ||
           (data.profile?.startWeight && data.profile.startWeight > 0),
