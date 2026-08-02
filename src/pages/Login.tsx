@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react'
 import {
     ArrowRight,
     BookOpen,
     Check,
     Clock3,
     Droplets,
+    HardDrive,
     LockKeyhole,
     ShieldCheck,
     Smartphone,
@@ -14,97 +14,11 @@ import {
     UserRound,
     Weight,
 } from 'lucide-react'
-import { Capacitor } from '@capacitor/core'
 import { useStore } from '../store'
 import '../landing.css'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787'
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim() || ''
-const GOOGLE_ANDROID_CLIENT_ID = import.meta.env.VITE_GOOGLE_ANDROID_CLIENT_ID?.trim() || ''
-const REVIEW_GOOGLE_EMAIL = import.meta.env.VITE_REVIEW_GOOGLE_EMAIL?.trim() || ''
-
 export default function Login() {
-    const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle')
-    const [errorMessage, setErrorMessage] = useState('Google sign-in failed. Please try again.')
-    const [agreedToTerms, setAgreedToTerms] = useState(false)
-    const [agreedToHealthData, setAgreedToHealthData] = useState(false)
-    const [googleAuthReady, setGoogleAuthReady] = useState(false)
-    const [googleAuthInitError, setGoogleAuthInitError] = useState<string | null>(null)
-    const setAuth = useStore((state) => state.setAuth)
-    const isAndroid = Capacitor.getPlatform() === 'android'
-    const googleInitClientId = (isAndroid && GOOGLE_ANDROID_CLIENT_ID) ? GOOGLE_ANDROID_CLIENT_ID : GOOGLE_CLIENT_ID
-
-    useEffect(() => {
-        if (!isAndroid) return
-
-        const missingKeys: string[] = []
-        if (!GOOGLE_CLIENT_ID) missingKeys.push('VITE_GOOGLE_CLIENT_ID')
-        if (!googleInitClientId) missingKeys.push('VITE_GOOGLE_ANDROID_CLIENT_ID or VITE_GOOGLE_CLIENT_ID')
-
-        if (missingKeys.length > 0) {
-            const message = `Google auth misconfigured. Missing: ${missingKeys.join(', ')}`
-            console.error(message)
-            setGoogleAuthInitError(message)
-            setGoogleAuthReady(false)
-            return
-        }
-
-        const initializeGoogleAuth = async () => {
-            try {
-                const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth')
-                await GoogleAuth.initialize({ clientId: googleInitClientId })
-                setGoogleAuthReady(true)
-                setGoogleAuthInitError(null)
-            } catch (err) {
-                const message = 'Google auth failed to initialize. Check OAuth client IDs and signing fingerprints.'
-                console.error(message, err)
-                setGoogleAuthInitError(message)
-                setGoogleAuthReady(false)
-            }
-        }
-
-        void initializeGoogleAuth()
-    }, [googleInitClientId, isAndroid])
-
-    const handleGoogleLogin = async () => {
-        if (!agreedToTerms || !agreedToHealthData) return
-
-        setStatus('loading')
-        setErrorMessage('Google sign-in failed. Please try again.')
-
-        try {
-            if (!isAndroid) throw new Error('Google sign-in is available only in the Android app build.')
-            if (!googleAuthReady) throw new Error(googleAuthInitError || 'Google auth is not initialized yet. Check app configuration.')
-
-            const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth')
-            const result = await GoogleAuth.signIn()
-            const idToken = result.authentication?.idToken
-
-            if (!idToken) throw new Error('Google login failed: missing ID token')
-
-            const res = await fetch(`${API_URL}/api/auth/google`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ idToken }),
-            })
-            const data = await res.json()
-
-            if (data.success && data.token && data.user?.email) {
-                setAuth(data.token, data.user.email, data.user.subscription_status)
-                return
-            }
-
-            throw new Error(data.error || 'Google login failed')
-        } catch (err) {
-            const message = err instanceof Error ? err.message : 'Google sign-in failed. Please try again.'
-            console.error(message, err)
-            setErrorMessage(message)
-            setStatus('error')
-        }
-    }
-
-    const primaryHref = isAndroid ? '#get-started' : '/waitlist'
-    const primaryLabel = isAndroid ? 'Start with Broono' : 'Get early access'
+    const startLocally = useStore((state) => state.startLocally)
 
     return (
         <div className="landing-page">
@@ -117,7 +31,7 @@ export default function Login() {
                     <nav className="landing-nav-links" aria-label="Legal and access links">
                         <a className="landing-nav-quiet" href="/privacy">Privacy</a>
                         <a className="landing-nav-quiet" href="/terms">Terms</a>
-                        <a className="landing-nav-cta" href={primaryHref}>{isAndroid ? 'Sign in' : 'Early access'}</a>
+                        <a className="landing-nav-cta" href="#get-started">Start locally</a>
                     </nav>
                 </div>
             </header>
@@ -127,17 +41,17 @@ export default function Login() {
                     <div className="landing-copy">
                         <div className="landing-eyebrow">
                             <Smartphone size={14} aria-hidden="true" />
-                            Made for your phone
+                            Local-only on your phone
                         </div>
                         <h1 className="landing-title">
                             A calmer way to follow your <em>GLP-1 week.</em>
                         </h1>
                         <p className="landing-lede">
-                            Weight, dose timing, hydration, protein and private notes — organised into one quick check-in that feels natural on a phone.
+                            Weight, dose timing, hydration, protein and private notes — organised into one quick check-in without an account, cloud database or health-data upload.
                         </p>
                         <div className="landing-actions">
-                            <a className="landing-cta" href={primaryHref}>
-                                {primaryLabel}
+                            <a className="landing-cta" href="#get-started">
+                                Start on this device
                                 <ArrowRight size={18} aria-hidden="true" />
                             </a>
                             <a className="landing-secondary" href="#app-preview">
@@ -145,12 +59,12 @@ export default function Login() {
                             </a>
                         </div>
                         <p className="landing-action-note">
-                            Mobile-first web experience. Sensitive health logs stay on your device.
+                            No sign-in. No tracking account. Your entries stay in this browser or app installation.
                         </p>
                         <div className="landing-proof" aria-label="Product principles">
-                            <span><Check size={15} aria-hidden="true" /> One-thumb friendly</span>
-                            <span><Check size={15} aria-hidden="true" /> Private by design</span>
-                            <span><Check size={15} aria-hidden="true" /> Useful in under a minute</span>
+                            <span><Check size={15} aria-hidden="true" /> No account</span>
+                            <span><Check size={15} aria-hidden="true" /> No health-data server</span>
+                            <span><Check size={15} aria-hidden="true" /> Free local features</span>
                         </div>
                     </div>
 
@@ -237,7 +151,7 @@ export default function Login() {
                             <span className="landing-feature-icon"><Syringe size={20} aria-hidden="true" /></span>
                             <div>
                                 <h3>Know where you are in the week</h3>
-                                <p>See dose timing and estimated medication level without digging through dates and notes.</p>
+                                <p>See dose timing and an estimated medication curve without digging through dates and notes.</p>
                             </div>
                         </article>
                         <article className="landing-feature">
@@ -261,14 +175,14 @@ export default function Login() {
                     <div className="landing-shell landing-signin-grid">
                         <div className="landing-signin-copy">
                             <div className="landing-dark-eyebrow"><Clock3 size={14} aria-hidden="true" /> Short, deliberate check-ins</div>
-                            <h2>Designed for a phone, not a desktop dashboard.</h2>
+                            <h2>Designed for a phone, not a cloud account.</h2>
                             <p>
-                                Broono keeps the interface focused and the taps obvious, so checking your week does not become another task to manage.
+                                Broono stores your profile, logs and journal in local device storage. The application does not need a backend to work.
                             </p>
                             <div className="landing-privacy-points">
-                                <span><ShieldCheck size={18} aria-hidden="true" /> Health logs stay locally on your device</span>
+                                <span><ShieldCheck size={18} aria-hidden="true" /> Health logs stay on this device</span>
+                                <span><HardDrive size={18} aria-hidden="true" /> Export your own data whenever you choose</span>
                                 <span><Smartphone size={18} aria-hidden="true" /> Comfortable one-handed layout</span>
-                                <span><Check size={18} aria-hidden="true" /> Clear privacy and consent before onboarding</span>
                             </div>
                         </div>
 
@@ -276,60 +190,24 @@ export default function Login() {
                             <div className="signin-card-head">
                                 <span className="signin-card-icon"><LockKeyhole size={20} aria-hidden="true" /></span>
                                 <div>
-                                    <p className="signin-card-kicker">{isAndroid ? 'Secure access' : 'Mobile early access'}</p>
-                                    <h3>{isAndroid ? 'Create your private space' : 'Be first to open Broono on your phone'}</h3>
+                                    <p className="signin-card-kicker">Private local setup</p>
+                                    <h3>Create your space on this device</h3>
                                 </div>
                             </div>
                             <p className="signin-card-intro">
-                                {isAndroid
-                                    ? 'Agree to the essentials below, then continue securely with Google. Your weight, dose and journal data remain on this device.'
-                                    : 'Join the early-access list for the phone-first web experience and launch updates. The Android app will use the same core product.'}
+                                There is no account to create. Starting Broono writes only to this browser or installed app. Clearing site/app data erases the information.
                             </p>
-
-                            {isAndroid ? (
-                                <>
-                                    <div className="consent-list">
-                                        <label className="consent-row">
-                                            <input
-                                                type="checkbox"
-                                                checked={agreedToTerms}
-                                                onChange={(event) => setAgreedToTerms(event.target.checked)}
-                                            />
-                                            <span>I agree to the <a href="/terms">Terms of Service</a> and <a href="/privacy">Privacy Policy</a>.</span>
-                                        </label>
-                                        <label className="consent-row">
-                                            <input
-                                                type="checkbox"
-                                                checked={agreedToHealthData}
-                                                onChange={(event) => setAgreedToHealthData(event.target.checked)}
-                                            />
-                                            <span>I understand that the health information I enter is processed and stored locally on this device so Broono can provide its tracking features.</span>
-                                        </label>
-                                    </div>
-
-                                    {googleAuthInitError && <p className="signin-error">{googleAuthInitError}</p>}
-                                    {status === 'error' && <p className="signin-error">{errorMessage}</p>}
-
-                                    <button
-                                        type="button"
-                                        onClick={handleGoogleLogin}
-                                        className="google-signin-btn"
-                                        disabled={!agreedToTerms || !agreedToHealthData || status === 'loading' || !googleAuthReady}
-                                    >
-                                        <span className="google-glyph" aria-hidden="true">G</span>
-                                        {status === 'loading' ? 'Connecting securely…' : googleAuthReady ? 'Continue with Google' : 'Preparing secure sign-in…'}
-                                    </button>
-
-                                    {REVIEW_GOOGLE_EMAIL && (
-                                        <p className="signin-review-note">Review account: {REVIEW_GOOGLE_EMAIL}</p>
-                                    )}
-                                </>
-                            ) : (
-                                <div className="web-waitlist-card">
-                                    <p>Get launch access and know when the mobile web experience is ready to open.</p>
-                                    <a href="/waitlist">Join early access <ArrowRight size={16} aria-hidden="true" /></a>
-                                </div>
-                            )}
+                            <button
+                                type="button"
+                                onClick={startLocally}
+                                className="google-signin-btn"
+                            >
+                                Start using Broono
+                                <ArrowRight size={18} aria-hidden="true" />
+                            </button>
+                            <p className="signin-review-note">
+                                By continuing, you acknowledge that Broono is a personal tracker and not medical advice.
+                            </p>
                         </div>
                     </div>
                 </section>
@@ -337,7 +215,7 @@ export default function Login() {
 
             <footer className="landing-footer">
                 <div className="landing-shell landing-footer-inner">
-                    <p>© {new Date().getFullYear()} Broono. A tracking companion, not medical advice.</p>
+                    <p>© {new Date().getFullYear()} Broono. Local-only tracking, not medical advice.</p>
                     <div className="landing-footer-links">
                         <a href="/privacy">Privacy</a>
                         <a href="/terms">Terms</a>
@@ -346,8 +224,8 @@ export default function Login() {
             </footer>
 
             <div className="landing-mobile-dock">
-                <a href={primaryHref}>
-                    <span>{primaryLabel}</span>
+                <a href="#get-started">
+                    <span>Start on this device</span>
                     <ArrowRight size={18} aria-hidden="true" />
                 </a>
             </div>
