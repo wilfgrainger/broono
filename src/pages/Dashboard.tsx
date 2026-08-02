@@ -1,5 +1,5 @@
-import { Beef, Droplets, TrendingDown, Plus } from 'lucide-react'
-import { useStore, getMedicationLevel, getDaysUntilNextDose } from '../store'
+import { Beef, Droplets, Plus, TrendingDown } from 'lucide-react'
+import { getDaysUntilNextDose, getMedicationLevel, useStore } from '../store'
 import { formatWeight, getWeightUnitLabel } from '../utils/weight'
 
 interface DashboardProps {
@@ -7,11 +7,10 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ onNavigate }: DashboardProps) {
-  const profile = useStore((s) => s.profile)
-  const logs = useStore((s) => s.logs)
-  const dailyWater = useStore((s) => s.dailyWater)
-  const addWaterGlass = useStore((s) => s.addWaterGlass)
-  const subscriptionStatus = useStore((s) => s.subscriptionStatus)
+  const profile = useStore((state) => state.profile)
+  const logs = useStore((state) => state.logs)
+  const dailyWater = useStore((state) => state.dailyWater)
+  const addWaterGlass = useStore((state) => state.addWaterGlass)
 
   const today = new Date()
   const greeting = today.getHours() < 12 ? 'Good morning.' : today.getHours() < 18 ? 'Good afternoon.' : 'Good evening.'
@@ -25,7 +24,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
   const medLevel = getMedicationLevel(logs[0]?.date, profile.medicationName)
   const daysUntilDose = getDaysUntilNextDose(profile.injectionDayOfWeek)
-
   const waterGlasses = dailyWater.glasses
   const waterPct = Math.round((waterGlasses / profile.waterGoalGlasses) * 100)
 
@@ -36,25 +34,8 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           {todayDate}
         </p>
         <h1 className="page-title">{greeting}</h1>
+        <p className="page-subtitle">Everything here is stored on this device.</p>
       </div>
-
-      {subscriptionStatus !== 'pro' && (
-        <button
-          type="button"
-          onClick={() => onNavigate('progress')}
-          className="card"
-          style={{
-            width: '100%',
-            textAlign: 'left',
-            border: '1px solid #bfdbfe',
-            background: 'linear-gradient(135deg, #eff6ff, #f8fafc)',
-          }}
-        >
-          <p style={{ fontSize: 13, fontWeight: 800, color: '#1d4ed8', marginBottom: 6 }}>Free plan</p>
-          <p style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 4 }}>Unlock detailed progress and export tools</p>
-          <p style={{ fontSize: 13, color: '#475569' }}>Core tracking stays available. Upgrade only when you want deeper insights.</p>
-        </button>
-      )}
 
       <div className="card">
         <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>Current Weight</p>
@@ -72,21 +53,13 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
               <p style={{ fontSize: 12, fontWeight: 600, color: 'rgba(204,235,245,0.7)', marginBottom: 4, letterSpacing: '.5px' }}>
-                Active Medication
+                Estimated Medication Level
               </p>
               <p style={{ fontSize: 52, fontWeight: 900, letterSpacing: '-2px', lineHeight: 1 }}>
                 {medLevel}%
               </p>
             </div>
-            <div
-              style={{
-                background: 'rgba(0,0,0,0.2)',
-                backdropFilter: 'blur(8px)',
-                borderRadius: 14,
-                padding: '10px 16px',
-                textAlign: 'right',
-              }}
-            >
+            <div style={{ background: 'rgba(0,0,0,0.2)', backdropFilter: 'blur(8px)', borderRadius: 14, padding: '10px 16px', textAlign: 'right' }}>
               <p style={{ fontSize: 11, fontWeight: 600, color: 'rgba(204,235,245,0.7)', marginBottom: 2 }}>Next Dose</p>
               <p style={{ fontSize: 14, fontWeight: 700 }}>{daysUntilDose} days</p>
             </div>
@@ -95,7 +68,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             <div className="med-progress-fill" style={{ width: `${medLevel}%` }} />
           </div>
           <p style={{ fontSize: 11, color: 'rgba(204,235,245,0.6)', marginTop: 14, letterSpacing: '.3px', fontWeight: 500 }}>
-            {profile.medicationName} {profile.dose} levels naturally decline before your next shot.
+            This is a simple estimate for personal tracking, not a clinical measurement or dosing recommendation.
           </p>
         </div>
       </div>
@@ -117,7 +90,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             <div className="progress-fill" style={{ width: '0%', background: '#fb7185' }} />
           </div>
           <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6, fontWeight: 500 }}>
-            Meal tracking is coming next. Use notes for now.
+            Meal tracking is not yet included. Use your private notes for context.
           </p>
         </div>
 
@@ -147,11 +120,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         </div>
       </div>
 
-      <button
-        onClick={() => onNavigate('checkin')}
-        id="quick-log-btn"
-        className="quick-log-btn"
-      >
+      <button onClick={() => onNavigate('checkin')} id="quick-log-btn" className="quick-log-btn">
         <div style={{ textAlign: 'left' }}>
           <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>Log this week</p>
           <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2, fontWeight: 500 }}>Weight + injection site</p>

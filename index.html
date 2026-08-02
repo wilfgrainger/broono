@@ -6,14 +6,16 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#0f172a" />
-  <meta name="broono-build" content="glp-restored-2026-07-30-v3" />
+  <meta name="broono-build" content="broono-local-only-2026-08-02-v1" />
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; connect-src 'none'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="Broono" />
   <meta name="description"
-    content="Broono is a calm, private companion for tracking GLP-1 weight progress, dose timing, hydration, protein goals and personal notes." />
+    content="Broono is a local-only GLP-1 companion for tracking weight progress, dose timing, hydration, goals and private notes on your device." />
   <meta name="keywords"
-    content="GLP-1 companion, weight loss tracker, Zepbound tracker, Mounjaro tracker, Wegovy tracker, Ozempic tracker, dose tracker, weight tracking app" />
+    content="local GLP-1 tracker, private weight tracker, Mounjaro tracker, Wegovy tracker, Ozempic tracker, dose tracker" />
   <meta name="author" content="Broono" />
   <link rel="canonical" href="https://broono.app" />
   <script>
@@ -24,25 +26,19 @@
 
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://broono.app/" />
-  <meta property="og:title" content="Broono — Your private GLP-1 companion" />
+  <meta property="og:title" content="Broono — Local-only GLP-1 tracking" />
   <meta property="og:description"
-    content="Track weight, dose timing and daily goals in one calm, focused companion." />
+    content="Track weight, dose timing, hydration and private notes without an account or health-data server." />
   <meta property="og:image" content="https://broono.app/favicon.svg" />
 
-  <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:card" content="summary" />
   <meta property="twitter:url" content="https://broono.app/" />
-  <meta property="twitter:title" content="Broono — Your private GLP-1 companion" />
+  <meta property="twitter:title" content="Broono — Local-only GLP-1 tracking" />
   <meta property="twitter:description"
-    content="Track weight, dose timing and daily goals in one calm, focused companion." />
+    content="Track weight, dose timing, hydration and private notes without an account or health-data server." />
   <meta property="twitter:image" content="https://broono.app/favicon.svg" />
 
-  <title>Broono — Private GLP-1 Progress Tracking</title>
-
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@400;500;600;700;800;900&display=swap"
-    rel="stylesheet" />
+  <title>Broono — Local-only GLP-1 Progress Tracking</title>
 </head>
 
 <body>
@@ -52,12 +48,12 @@
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "MobileApplication",
+      "@type": "SoftwareApplication",
       "name": "Broono",
       "url": "https://broono.app",
-      "description": "A calm, private companion for tracking GLP-1 weight progress, dose timing, hydration, protein goals and personal notes.",
+      "description": "A local-only companion for tracking GLP-1 weight progress, dose timing, hydration, goals and private notes.",
       "applicationCategory": "HealthApplication",
-      "operatingSystem": "Android",
+      "operatingSystem": "Web, Android",
       "offers": {
         "@type": "Offer",
         "price": "0",

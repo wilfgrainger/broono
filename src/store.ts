@@ -41,14 +41,13 @@ interface DailyWater {
 }
 
 interface AppState {
+  hasStarted: boolean
   hasCompletedOnboarding: boolean
   profile: UserProfile
   logs: WeeklyLog[]
   journalEntries: JournalEntry[]
   dailyWater: DailyWater
-  authToken: string | null
-  userEmail: string | null
-  subscriptionStatus: 'free' | 'pro' | 'canceled'
+  startLocally: () => void
   updateProfile: (updates: Partial<UserProfile>) => void
   completeOnboarding: () => void
   addLog: (log: Omit<WeeklyLog, 'id'>) => void
@@ -57,21 +56,17 @@ interface AppState {
   removeJournalEntry: (id: string) => void
   addWaterGlass: () => void
   resetWaterIfNewDay: () => void
-  setAuth: (token: string, email: string, status?: 'free' | 'pro' | 'canceled') => void
-  logout: () => void
   resetApp: () => void
 }
 
 type PersistedAppState = Pick<
   AppState,
+  'hasStarted' |
   'hasCompletedOnboarding' |
   'profile' |
   'logs' |
   'journalEntries' |
-  'dailyWater' |
-  'authToken' |
-  'userEmail' |
-  'subscriptionStatus'
+  'dailyWater'
 >
 
 function today(): string {
@@ -98,14 +93,12 @@ const defaultProfile: UserProfile = {
 }
 
 const createPersistedState = (): PersistedAppState => ({
+  hasStarted: false,
   hasCompletedOnboarding: false,
   profile: { ...defaultProfile },
   logs: [],
   journalEntries: [],
   dailyWater: { date: today(), glasses: 0 },
-  authToken: null,
-  userEmail: null,
-  subscriptionStatus: 'free',
 })
 
 export const useStore = create<AppState>()(
@@ -113,28 +106,25 @@ export const useStore = create<AppState>()(
     (set) => ({
       ...createPersistedState(),
 
+      startLocally: () => set({ hasStarted: true }),
+
       updateProfile: (updates) =>
-        set((s) => ({ profile: { ...s.profile, ...updates } })),
+        set((state) => ({ profile: { ...state.profile, ...updates } })),
 
       completeOnboarding: () => set({ hasCompletedOnboarding: true }),
-
-      setAuth: (token, email, status = 'free') =>
-        set({ authToken: token, userEmail: email, subscriptionStatus: status }),
-
-      logout: () => set({ authToken: null, userEmail: null, subscriptionStatus: 'free' }),
 
       resetApp: () => set(createPersistedState()),
 
       addLog: (log) =>
-        set((s) => ({
-          logs: [{ ...log, id: uid() }, ...s.logs],
+        set((state) => ({
+          logs: [{ ...log, id: uid() }, ...state.logs],
         })),
 
       removeLog: (id) =>
-        set((s) => ({ logs: s.logs.filter((l) => l.id !== id) })),
+        set((state) => ({ logs: state.logs.filter((log) => log.id !== id) })),
 
       addJournalEntry: (text) =>
-        set((s) => ({
+        set((state) => ({
           journalEntries: [
             {
               id: uid(),
@@ -142,32 +132,32 @@ export const useStore = create<AppState>()(
               displayDate: formatDisplayDate(today()),
               text,
             },
-            ...s.journalEntries,
+            ...state.journalEntries,
           ],
         })),
 
       removeJournalEntry: (id) =>
-        set((s) => ({
-          journalEntries: s.journalEntries.filter((e) => e.id !== id),
+        set((state) => ({
+          journalEntries: state.journalEntries.filter((entry) => entry.id !== id),
         })),
 
       addWaterGlass: () =>
-        set((s) => {
+        set((state) => {
           const date = today()
-          const current = s.dailyWater.date === date ? s.dailyWater.glasses : 0
+          const current = state.dailyWater.date === date ? state.dailyWater.glasses : 0
 
           return {
             dailyWater: {
               date,
-              glasses: Math.min(current + 1, s.profile.waterGoalGlasses),
+              glasses: Math.min(current + 1, state.profile.waterGoalGlasses),
             },
           }
         }),
 
       resetWaterIfNewDay: () =>
-        set((s) => {
+        set((state) => {
           const date = today()
-          if (s.dailyWater.date !== date) {
+          if (state.dailyWater.date !== date) {
             return { dailyWater: { date, glasses: 0 } }
           }
 
@@ -176,8 +166,8 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'broono-store',
-      version: 2,
-      migrate: (persistedState, version) => {
+      version: 3,
+      migrate: (persistedState) => {
         const baseState = createPersistedState()
 
         if (!persistedState || typeof persistedState !== 'object') {
@@ -185,35 +175,26 @@ export const useStore = create<AppState>()(
         }
 
         const data = persistedState as Partial<PersistedAppState>
-
-        if (version < 2) {
-          return {
-            ...baseState,
-            authToken: data.authToken ?? null,
-            userEmail: data.userEmail ?? null,
-            subscriptionStatus: data.subscriptionStatus ?? 'free',
-            hasCompletedOnboarding: false,
-            profile: {
-              ...baseState.profile,
-              ...data.profile,
-              startWeight: data.profile?.startWeight && data.profile.startWeight > 0
-                ? data.profile.startWeight
-                : 0,
-            },
-          }
-        }
+        const hasExistingUse = Boolean(
+          data.hasStarted ||
+          data.hasCompletedOnboarding ||
+          (Array.isArray(data.logs) && data.logs.length > 0) ||
+          (Array.isArray(data.journalEntries) && data.journalEntries.length > 0) ||
+          (data.profile?.startWeight && data.profile.startWeight > 0),
+        )
 
         return {
           ...baseState,
-          ...data,
+          hasStarted: data.hasStarted ?? hasExistingUse,
+          hasCompletedOnboarding: data.hasCompletedOnboarding ?? false,
           profile: { ...baseState.profile, ...data.profile },
           logs: Array.isArray(data.logs) ? data.logs : [],
           journalEntries: Array.isArray(data.journalEntries) ? data.journalEntries : [],
           dailyWater: data.dailyWater ?? baseState.dailyWater,
         }
       },
-    }
-  )
+    },
+  ),
 )
 
 export const getMedicationLevel = getMedicationLevelUtil

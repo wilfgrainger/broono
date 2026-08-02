@@ -1,0 +1,126 @@
+/* Final product polish layered after the core app styles. */
+
+.landing-page {
+  --landing-shadow-soft: 0 24px 70px rgba(15, 23, 42, 0.10);
+}
+
+.landing-page::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.22;
+  background-image:
+    linear-gradient(rgba(99, 102, 241, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(99, 102, 241, 0.035) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: linear-gradient(to bottom, black, transparent 72%);
+}
+
+.landing-header,
+.landing-page main,
+.landing-footer,
+.landing-mobile-dock {
+  position: relative;
+  z-index: 1;
+}
+
+.landing-feature,
+.signin-card,
+.phone-preview {
+  box-shadow: var(--landing-shadow-soft);
+}
+
+.landing-feature {
+  position: relative;
+  overflow: hidden;
+}
+
+.landing-feature::after {
+  content: '';
+  position: absolute;
+  inset: auto -24px -34px auto;
+  width: 92px;
+  aspect-ratio: 1;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.13), transparent 68%);
+}
+
+.landing-action-note {
+  max-width: 52ch;
+}
+
+.landing-nav-cta,
+.landing-cta,
+.google-signin-btn,
+.landing-mobile-dock a {
+  min-height: 48px;
+}
+
+.google-signin-btn {
+  margin-top: 20px;
+}
+
+@media (min-width: 901px) {
+  .landing-copy {
+    text-align: left;
+    margin-inline: 0;
+  }
+
+  .landing-title,
+  .landing-lede {
+    margin-left: 0;
+  }
+
+  .landing-actions {
+    grid-template-columns: auto auto;
+    justify-content: start;
+  }
+
+  .landing-cta,
+  .landing-secondary {
+    width: auto;
+  }
+
+  .landing-proof {
+    grid-template-columns: repeat(3, auto);
+    justify-content: start;
+  }
+
+  .landing-proof span {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 600px) {
+  .landing-page::before {
+    background-size: 24px 24px;
+  }
+
+  .landing-hero {
+    padding-top: 24px;
+  }
+
+  .landing-title {
+    max-width: 10ch;
+  }
+
+  .landing-lede {
+    max-width: 36ch;
+  }
+
+  .landing-proof {
+    width: max-content;
+    max-width: 100%;
+    margin-inline: auto;
+    text-align: left;
+  }
+
+  .landing-proof span {
+    justify-content: flex-start;
+  }
+
+  .phone-preview {
+    width: min(322px, calc(100vw - 34px));
+  }
+}

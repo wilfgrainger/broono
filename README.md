@@ -1,83 +1,86 @@
 # Broono
 
-Broono is a GLP-1 companion app designed to track your journey with medications like Zepbound, Mounjaro, Wegovy, or Ozempic. The product is being packaged as a mobile-first app with a shared React + Capacitor codebase.
+Broono is a mobile-first, local-only GLP-1 tracking companion for weight progress, dose timing, hydration, goals, symptoms and private notes.
+
+There is no Broono account, authentication service, application API, remote database, analytics tracker or paid feature gate. The web and Android editions run from the same React codebase and store user-entered data on the device.
+
+> Broono is a personal tracking companion, not a medical device and not a substitute for professional medical advice.
 
 ## Architecture
 
-- **Frontend**: React + Vite (TypeScript) - Deployed on Cloudflare Pages.
-- **Backend**: Hono + Cloudflare Workers - Serverless API.
-- **Database**: Cloudflare D1.
-- **Auth**: Google Sign-In with backend audience validation for web and Android clients.
-- **Payments**: Google Play Billing today, with the repo structured to add Apple App Store billing next.
+| Area | Technology | Boundary |
+| --- | --- | --- |
+| User interface | React 19, TypeScript, Vite | Runs in the browser or Capacitor WebView |
+| Local state | Zustand persistence | Browser/app local storage only |
+| Web hosting | GitHub Pages | Delivers static application files at `broono.app` |
+| Android wrapper | Capacitor 8 | No internet or billing permission |
+| Backend | None | No Worker, API or server-side application data |
+| Database | None | No D1 or other remote application database |
+| Accounts and payments | None | All current features are available locally |
 
-For the Android-first / iOS-next rollout plan, see `docs/mobile_launch_strategy.md`. For launch collateral, use `.github/launch_materials/`.
+The production document includes a Content Security Policy with `connect-src 'none'`, preventing the application from opening runtime API connections. The release workflow also fails if backend, API, Google Auth, billing or D1 markers return.
 
-## Getting Started
+## Local development
 
 ### Prerequisites
 
-- [pnpm](https://pnpm.io/)
-- [Wrangler](https://developers.cloudflare.com/workers/wrangler/install-and-update/) (Cloudflare CLI)
+- Node.js 22
+- pnpm 10
 
-### Installation
+### Install and run
 
-1. Clone the repository.
-2. Install dependencies in the root and backend:
-   ```bash
-   pnpm install
-   cd backend && npm install
-   ```
-
-### Development
-
-#### Frontend
 ```bash
+pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Public waitlist route:
+### Test and build
+
 ```bash
-http://localhost:5173/waitlist
+pnpm test
+pnpm run build
+pnpm run test:e2e
 ```
 
-#### Backend
-```bash
-cd backend
-npm run dev
-```
+The end-to-end tests exercise local onboarding, unrestricted Progress and Journal features, data export and local erasure without starting a backend server.
 
-### Deployment
+## Data model
 
-#### Frontend (Cloudflare Pages)
-Connect your GitHub/GitLab repository to Cloudflare Pages and select the Vite preset. Set `VITE_API_URL` to your worker URL.
+The following information is kept in local browser or app storage:
 
-#### Backend (Cloudflare Workers)
-```bash
-cd backend
-npm run deploy
-```
+- setup status and tracker preferences;
+- medication name, dose and injection day;
+- weight, symptom and injection-site check-ins;
+- journal entries;
+- hydration state and personal goals.
 
+Settings provides a JSON export and a control to erase all Broono data from the current device. There is no automatic cloud backup or cross-device sync.
 
-## Google Auth Environment (Android Play release)
+## Deployment
 
-For reliable Google Play sign-in, configure **both frontend and backend** Google OAuth audiences:
+A push to `main` runs `.github/workflows/deploy-broono-pages.yml`, which:
 
-- Frontend (`.env` / Cloudflare Pages):
-  - `VITE_GOOGLE_CLIENT_ID` (Web OAuth client ID)
-  - `VITE_GOOGLE_ANDROID_CLIENT_ID` (Android OAuth client ID for `app.broono.android`)
-- Backend (Cloudflare Worker secrets):
-  - `GOOGLE_CLIENT_ID`
-  - `GOOGLE_ANDROID_CLIENT_ID`
+1. installs the committed dependency graph;
+2. runs the frontend and local-only architecture tests;
+3. builds the static application;
+4. verifies the local-only CSP and build marker;
+5. checks that backend and native network/billing surfaces are absent;
+6. deploys the static artifact to GitHub Pages.
 
-These values must align with backend audience validation in `backend/src/index.ts` (`allowedAudiences` check in `/api/auth/google`).
+See `docs/PRODUCTION_HOSTING.md` for the exact release and Cloudflare-retirement checks. The old Worker, D1 database, API subdomain and Cloudflare Git deployment are not part of Broono local edition and should be deleted after any required data-retention check.
 
-## Security
+## Android
 
-- CORS is enforced for the primary frontend domain.
-- Secrets are managed via Cloudflare environment variables.
-- Input validation is handled on the backend via Hono.
+The checked-in Android project does not request `android.permission.INTERNET` or `com.android.vending.BILLING`, and it does not link the former Google Auth or native-purchases modules.
 
-## Domain & Routing
+Run `pnpm android:sync` after dependency or Capacitor configuration changes, then review the generated manifest and Gradle files before committing them.
 
-- Canonical Domain: `broono.app`
-- `www.broono.app` automatically redirects to the canonical domain to ensure session consistency and avoid duplicate content issues.
+## Contributing and security
+
+Read `CONTRIBUTING.md` before proposing a change. Security concerns should use GitHub private vulnerability reporting; see `SECURITY.md`.
+
+Do not add accounts, remote application storage, telemetry, billing or network APIs without an explicit product-direction decision and a new privacy/security design. Local-only operation is a tested product invariant.
+
+## Licence status
+
+No software licence has been selected yet. Public repository visibility alone does not grant permission to copy, modify or redistribute the code. Selecting an open-source licence remains an owner decision before the project can accurately be described as open source.

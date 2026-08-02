@@ -1,23 +1,23 @@
 {
   "name": "broono",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0-local",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "test": "npm run test:frontend && npm run test:backend",
-    "test:all": "pnpm test && pnpm test:e2e",
-    "test:frontend": "node --experimental-strip-types --test src/utils/medication.node-test.ts src/services/subscriptionVerification.node-test.ts",
-    "test:backend": "pnpm --dir backend test",
+    "test": "pnpm run test:frontend && pnpm run test:local-only",
+    "test:all": "pnpm test && pnpm run test:e2e",
+    "test:frontend": "node --experimental-strip-types --test src/utils/medication.node-test.ts",
+    "test:local-only": "node --experimental-strip-types --test src/local-only.node-test.ts",
     "test:e2e": "playwright test",
     "preview": "pnpm run build && vite preview",
-    "deploy": "echo 'Frontend deployment is handled by GitHub Pages on pushes to main.'",
+    "deploy": "echo 'Static deployment is handled by GitHub Pages on pushes to main.'",
     "android:sync": "npx cap sync android",
     "android:open": "npx cap open android",
-    "android:build": "npm run build && npx cap sync android",
-    "android:run": "npm run build && npx cap sync android && npx cap run android"
+    "android:build": "pnpm run build && npx cap sync android",
+    "android:run": "pnpm run build && npx cap sync android && npx cap run android"
   },
   "dependencies": {
     "@capacitor/app": "^8.0.1",
@@ -25,8 +25,6 @@
     "@capacitor/haptics": "^8.0.1",
     "@capacitor/keyboard": "^8.0.1",
     "@capacitor/status-bar": "^8.0.1",
-    "@capgo/native-purchases": "^8.2.2",
-    "@codetrix-studio/capacitor-google-auth": "3.4.0-rc.4",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.576.0",
@@ -38,7 +36,6 @@
   "devDependencies": {
     "@capacitor/android": "^8.2.0",
     "@capacitor/cli": "^8.2.0",
-    "@cloudflare/vite-plugin": "^1.26.0",
     "@eslint/js": "^9.39.1",
     "@playwright/test": "^1.58.2",
     "@types/node": "^24.10.1",
@@ -51,8 +48,6 @@
     "globals": "^16.5.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.48.0",
-    "vite": "^7.3.1",
-    "vite-plugin-pwa": "^1.2.0",
-    "wrangler": "^4.70.0"
+    "vite": "^7.3.1"
   }
 }
