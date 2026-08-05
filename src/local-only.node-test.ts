@@ -96,3 +96,10 @@ test('Android build has no network, billing, auth, or purchase capability', () =
     assert.equal(nativeConfig.includes(marker), false, `Unexpected Android capability: ${marker}`)
   }
 })
+
+test('Android file sharing does not expose the external storage root', () => {
+  const paths = read('android/app/src/main/res/xml/file_paths.xml')
+
+  assert.equal(paths.includes('<external-path'), false)
+  assert.match(paths, /<files-path name="shared_files" path="shared\/" \/>/)
+})
