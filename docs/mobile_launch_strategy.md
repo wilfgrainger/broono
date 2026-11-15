@@ -18,7 +18,7 @@ The Android package must:
 - request no billing permission;
 - include no Google Auth or purchase plugin;
 - keep Android backups disabled unless an explicit encrypted-backup design is approved;
-- preserve local export and local erasure;
+- preserve local export and local erasure (export uses the system share sheet via `@capacitor/filesystem` and `@capacitor/share`, which declare no permissions);
 - describe medication-level displays as estimates, not clinical measurements.
 
 Run `pnpm android:sync` after any dependency change. Then inspect:

@@ -49,6 +49,13 @@ jobs:
       - name: Run regression tests
         run: pnpm test
 
+      - name: Install browser for end-to-end tests
+        run: pnpm exec playwright install --with-deps chromium
+
+      # Builds and serves the production bundle, so the strict CSP is exercised.
+      - name: Run end-to-end tests
+        run: pnpm run test:e2e
+
       - name: Build static site
         run: pnpm run build
 
@@ -68,6 +75,7 @@ jobs:
           grep -q "script-src 'self';" dist/index.html
           test "$(cat dist/CNAME)" = "broono.app"
           grep -q 'One-release service-worker kill switch' dist/sw.js
+          test -f dist/manifest.webmanifest && test -f dist/icons/icon-512.png
           test ! -d backend
           ! grep -R -E 'api\.broono\.app|VITE_API_URL|GoogleAuth|NativePurchases|D1Database' src dist package.json
           ! grep -q 'android.permission.INTERNET' android/app/src/main/AndroidManifest.xml

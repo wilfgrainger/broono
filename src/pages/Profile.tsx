@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import ConfirmDialog, { type ConfirmDialogHandle } from '../components/ConfirmDialog'
 import { LIMITS, MEDICATIONS, STORE_VERSION, sanitizePersistedState, useStore, type PersistedAppState } from '../store'
+import { saveBackupFile } from '../utils/backupFile'
 import { toLocalISODate } from '../utils/date'
 import { WEIGHT_UNIT_OPTIONS } from '../utils/weight'
 
@@ -63,7 +64,7 @@ export default function ProfilePage() {
   const [pendingImport, setPendingImport] = useState<PersistedAppState | null>(null)
   const [dataMessage, setDataMessage] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null)
 
-  const handleExport = () => {
+  const handleExport = async () => {
     // Read the latest state at click time rather than subscribing this page to every change.
     const { profile: currentProfile, logs, journalEntries, dailyWater, dailyProtein } = useStore.getState()
     const dataStr = JSON.stringify({
@@ -76,17 +77,15 @@ export default function ProfilePage() {
       dailyWater,
       dailyProtein,
     }, null, 2)
-    const blob = new Blob([dataStr], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const anchor = document.createElement('a')
-    anchor.href = url
-    anchor.download = `broono-export-${toLocalISODate()}.json`
-    document.body.appendChild(anchor)
-    anchor.click()
-    document.body.removeChild(anchor)
-    // Revoking straight away can cancel the download in some browsers.
-    window.setTimeout(() => URL.revokeObjectURL(url), 10_000)
-    setDataMessage({ tone: 'ok', text: 'Backup file created. Check your downloads.' })
+
+    try {
+      const result = await saveBackupFile(dataStr, `broono-export-${toLocalISODate()}.json`)
+      setDataMessage(result === 'cancelled'
+        ? null
+        : { tone: 'ok', text: result === 'shared' ? 'Backup file created.' : 'Backup file created. Check your downloads.' })
+    } catch {
+      setDataMessage({ tone: 'error', text: 'The backup file could not be created. Please try again.' })
+    }
   }
 
   const handleImportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -239,7 +238,7 @@ export default function ProfilePage() {
           Broono has no account or cloud database. Your profile, logs and journal stay in this browser or app installation. Export a backup before clearing browser or app data or changing devices, and import it to restore.
         </p>
         <div style={{ display: 'grid', gap: 10 }}>
-          <button type="button" id="export-btn" onClick={handleExport} className="btn-primary">
+          <button type="button" id="export-btn" onClick={() => void handleExport()} className="btn-primary">
             Export my local data
           </button>
           <button type="button" id="import-btn" onClick={() => fileInputRef.current?.click()} className="btn-secondary">

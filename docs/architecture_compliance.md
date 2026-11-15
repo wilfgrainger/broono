@@ -48,7 +48,7 @@ GitHub Pages delivers public application assets. Hosting and network providers m
 
 ### User export
 
-Export creates a local JSON download. After creation, the user controls where that file is stored or shared. The export must include no hidden account or platform identifiers.
+Export creates a local JSON download in a browser, or, in the Android app, a file in the app's private cache handed to the system share sheet. After creation, the user controls where that file is stored or shared. The export must include no hidden account or platform identifiers.
 
 ## Privacy consequences
 

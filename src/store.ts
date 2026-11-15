@@ -1,8 +1,9 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { createJSONStorage, persist } from 'zustand/middleware'
 import { getMedicationLevel as getMedicationLevelUtil, getDaysUntilNextDose as getDaysUntilNextDoseUtil } from './utils/medication'
 import type { MedicationName } from './utils/medication'
 import { formatShortDate, toLocalISODate } from './utils/date'
+import { safeLocalStorage } from './utils/storageHealth'
 import { convertWeight, guessWeightUnit, validateWeight, type WeightUnit } from './utils/weight'
 
 export type { MedicationName, WeightUnit }
@@ -326,6 +327,7 @@ export const useStore = create<AppState>()(
     {
       name: 'broono-store',
       version: STORE_VERSION,
+      storage: createJSONStorage(() => safeLocalStorage),
       partialize: (state): PersistedAppState => ({
         hasStarted: state.hasStarted,
         hasCompletedOnboarding: state.hasCompletedOnboarding,

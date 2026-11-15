@@ -284,3 +284,59 @@ test('data saved by the previous store version is migrated, not lost', async ({ 
   expect(stored.state.journalEntries[0].text).toBe('Kept')
   expect(stored.state.dailyProtein.grams).toBe(0)
 })
+
+test('tabs are in browser history, so Back returns to the previous tab', async ({ page }) => {
+  await startLocally(page)
+  await completeOnboarding(page)
+
+  await page.getByRole('button', { name: 'Progress', exact: true }).click()
+  await expect(page).toHaveURL(/#progress$/)
+  await page.getByRole('button', { name: 'Journal', exact: true }).click()
+  await expect(page).toHaveURL(/#journal$/)
+
+  await page.goBack()
+  await expect(page.getByRole('heading', { name: 'Progress' })).toBeVisible()
+  await page.goBack()
+  await expect(page.getByText('Current Weight')).toBeVisible()
+
+  // A reload keeps the current tab.
+  await page.goForward()
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Progress' })).toBeVisible()
+
+  // Saving a log replaces the form's history entry, so Back skips the finished form.
+  await page.getByRole('button', { name: 'Home', exact: true }).click()
+  await saveLog(page, '14', '0')
+  await page.goBack()
+  await expect(page.getByRole('heading', { name: 'Weekly Log' })).toHaveCount(0)
+})
+
+test('a failed save to device storage is reported instead of ignored', async ({ page }) => {
+  await startLocally(page)
+  await completeOnboarding(page)
+
+  // Simulate a full or blocked storage area.
+  await page.evaluate(() => {
+    Storage.prototype.setItem = () => {
+      throw new DOMException('Quota exceeded', 'QuotaExceededError')
+    }
+  })
+  await page.getByRole('button', { name: '+ Add glass' }).click()
+  await expect(page.getByRole('alert')).toContainText('Changes could not be saved on this device')
+  // The in-memory change still shows, so nothing typed is lost before exporting.
+  await expect(page.getByText('1 / 8 glasses')).toBeVisible()
+})
+
+test('the site is installable: manifest and icons are served', async ({ page, request }) => {
+  await page.goto('/')
+  const href = await page.locator('link[rel="manifest"]').getAttribute('href')
+  const manifest = await (await request.get(href!)).json()
+  expect(manifest.id).toBe('/')
+  expect(manifest.display).toBe('standalone')
+  for (const icon of manifest.icons) {
+    const response = await request.get(icon.src)
+    expect(response.ok(), icon.src).toBe(true)
+    expect(response.headers()['content-type']).toContain('image/png')
+  }
+  expect((await request.get('/og-image.png')).ok()).toBe(true)
+})

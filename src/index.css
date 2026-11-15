@@ -169,6 +169,17 @@ body {
 .header-profile-btn:hover { background: #f8fafc; }
 .header-profile-btn:active { transform: scale(0.94); }
 
+/* ── Storage warning ── */
+.storage-warning {
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: #881337;
+  background: #fff1f2;
+  border-bottom: 1px solid #fecdd3;
+}
+
 /* ── Main scroll area ── */
 .app-main {
   flex: 1;

@@ -54,7 +54,7 @@ The following information is kept in local browser or app storage:
 - journal entries;
 - hydration and protein totals for the day, and personal goals.
 
-Settings provides a JSON export, an import that restores a previous export after validating it, and a control to erase all Broono data from the current device. There is no automatic cloud backup or cross-device sync.
+The web edition is installable (web app manifest and icons in `public/`). Settings provides a JSON export, an import that restores a previous export after validating it, and a control to erase all Broono data from the current device. There is no automatic cloud backup or cross-device sync.
 
 ## Deployment
 
@@ -72,6 +72,8 @@ See `docs/PRODUCTION_HOSTING.md` for the exact release and Cloudflare-retirement
 ## Android
 
 The checked-in Android project does not request `android.permission.INTERNET` or `com.android.vending.BILLING`, and it does not link the former Google Auth or native-purchases modules.
+
+The Android WebView cannot download files, so Export writes the backup to the app's private cache with `@capacitor/filesystem` and opens the system share sheet with `@capacitor/share`. Neither plugin declares a permission, and nothing leaves the device unless the user picks a destination. Import uses the standard file picker.
 
 Run `pnpm android:sync` after dependency or Capacitor configuration changes, then review the generated manifest and Gradle files before committing them.
 

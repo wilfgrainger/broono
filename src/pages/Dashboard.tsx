@@ -1,6 +1,6 @@
 import { Beef, Droplets, Minus, Plus, TrendingDown, TrendingUp } from 'lucide-react'
 import { getDaysUntilNextDose, getMedicationLevel, useStore } from '../store'
-import { toLocalISODate } from '../utils/date'
+import { formatShortDate, toLocalISODate } from '../utils/date'
 import { formatWeight } from '../utils/weight'
 
 interface DashboardProps {
@@ -28,10 +28,14 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const totalLost = hasLogs && baseline !== null && currentWeight !== null ? baseline - currentWeight : null
   const currentWeightStr = currentWeight !== null ? formatWeight(currentWeight, profile.weightUnit) : '--'
 
-  const medLevel = getMedicationLevel(logs[0]?.date, profile.medicationName)
+  // A log with an injection site records an injection; older logs without one
+  // are still used when nothing better exists.
+  const lastInjection = logs.find((log) => log.site) ?? logs[0]
+  const medLevel = getMedicationLevel(lastInjection?.date, profile.medicationName)
   const daysUntilDose = getDaysUntilNextDose(profile.injectionDayOfWeek)
   // `getDaysUntilNextDose` reports a full week on the injection day itself.
-  const doseLabel = daysUntilDose === 7 ? 'Today' : daysUntilDose === 1 ? 'Tomorrow' : `${daysUntilDose} days`
+  const injectedToday = lastInjection?.site !== '' && lastInjection?.date === toLocalISODate(today)
+  const doseLabel = daysUntilDose === 7 ? (injectedToday ? 'Done today' : 'Today') : daysUntilDose === 1 ? 'Tomorrow' : `${daysUntilDose} days`
   const medicationLabel = [profile.medicationName, profile.dose.trim()].filter(Boolean).join(' · ')
   const todayISO = toLocalISODate(today)
   const waterGlasses = dailyWater.date === todayISO ? dailyWater.glasses : 0
@@ -90,9 +94,9 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           </div>
           <progress className="progress-bar on-gradient" max={100} value={medLevel} aria-labelledby="med-level-label" />
           <p style={{ fontSize: 11, color: 'rgba(224,242,254,0.9)', marginTop: 14, letterSpacing: '.3px', fontWeight: 500 }}>
-            {hasLogs
-              ? 'A simple estimate counted from your last weekly log. Not a clinical measurement or dosing recommendation.'
-              : 'Save a weekly log on the day you inject to start this estimate. Not a clinical measurement or dosing recommendation.'}
+            {lastInjection
+              ? `A simple estimate counted from your injection logged on ${formatShortDate(lastInjection.date)}. Not a clinical measurement or dosing recommendation.`
+              : 'Save a weekly log with the injection site on the day you inject to start this estimate. Not a clinical measurement or dosing recommendation.'}
           </p>
         </div>
       </div>
