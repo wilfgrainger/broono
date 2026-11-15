@@ -22,8 +22,8 @@ The persisted state may contain:
 
 - setup status;
 - medication and schedule preferences;
-- starting weight and weight unit;
-- check-in dates, weight, symptoms, injection site and notes;
+- starting weight, goal weight, optional height and weight unit;
+- log dates, weight, injection site and dose, side effects and notes;
 - journal entries;
 - hydration and protein totals for the day, and goals.
 

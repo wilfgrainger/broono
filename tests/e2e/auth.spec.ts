@@ -24,8 +24,9 @@ async function completeOnboarding(page: Page) {
       // The starting weight is required before the flow can continue.
       await page.getByRole('button', { name: /Continue/ }).click()
       await expect(page.getByRole('alert')).toContainText('Enter your starting weight')
-      await page.getByRole('spinbutton', { name: 'Stones' }).fill('14')
-      await page.getByRole('spinbutton', { name: 'Pounds' }).fill('4')
+      const start = page.getByRole('group', { name: 'Starting Weight' })
+      await start.getByRole('spinbutton', { name: 'Stones' }).fill('14')
+      await start.getByRole('spinbutton', { name: 'Pounds' }).fill('4')
     }
     await page.getByRole('button', { name: /Continue/ }).click()
   }
@@ -40,6 +41,8 @@ const readStore = (page: Page) =>
 
 async function saveLog(page: Page, stones: string, pounds: string) {
   await page.getByRole('button', { name: 'Log', exact: true }).click()
+  // Make the entry a weigh-in only, whatever weekday the test runs on.
+  await page.getByRole('radio', { name: 'No injection this time' }).check()
   await page.getByRole('spinbutton', { name: 'Stones' }).fill(stones)
   await page.getByRole('spinbutton', { name: 'Pounds' }).fill(pounds)
   await page.getByRole('button', { name: /Save Log/ }).click()
@@ -155,7 +158,7 @@ test('settings export, import and erase only local data', async ({ page }) => {
   await page.getByRole('button', { name: 'Open settings' }).click()
   await page.locator('#import-file-input').setInputFiles(backupPath)
   const importDialog = page.getByRole('dialog', { name: 'Replace your data with this backup?' })
-  await expect(importDialog).toContainText('1 weekly log')
+  await expect(importDialog).toContainText('The backup has 1 log')
   await importDialog.getByRole('button', { name: 'Replace my data' }).click()
   await expect(page.getByText('Backup imported.')).toBeVisible()
 
@@ -172,31 +175,34 @@ test('weekly log validates, saves and feeds the dashboard and progress', async (
   await expect(page.getByText('14 st 4 lbs')).toBeVisible()
 
   await page.getByRole('button', { name: 'Log', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Weekly Log' })).toBeVisible()
-  await expect(page).toHaveTitle(/Weekly log/)
+  await expect(page.getByRole('heading', { name: 'Add a log' })).toBeVisible()
+  await expect(page).toHaveTitle(/Add a log/)
 
+  // Neither a weight nor an injection: nothing to save.
+  await page.getByRole('radio', { name: 'No injection this time' }).check()
   await page.getByRole('button', { name: /Save Log/ }).click()
-  await expect(page.getByRole('alert')).toContainText('Enter your weight')
+  await expect(page.getByRole('alert')).toContainText('an injection, or both')
   await expect(page.getByRole('spinbutton', { name: 'Stones' })).toBeFocused()
 
   await page.getByRole('spinbutton', { name: 'Stones' }).fill('13')
   await page.getByRole('spinbutton', { name: 'Pounds' }).fill('13')
-  await page.getByRole('button', { name: 'Left Thigh' }).click()
+  await page.getByRole('radio', { name: /^Left Thigh/ }).check()
+  await page.getByRole('button', { name: '7.5 milligrams' }).click()
   // Side effects are multi-select, and choosing one clears "None".
-  await page.getByRole('button', { name: 'Nausea' }).click()
-  await page.getByRole('button', { name: 'Fatigue' }).click()
-  await expect(page.getByRole('button', { name: 'None' })).toHaveAttribute('aria-pressed', 'false')
+  await page.getByRole('checkbox', { name: 'Nausea' }).check()
+  await page.getByRole('checkbox', { name: 'Fatigue' }).check()
+  await expect(page.getByRole('checkbox', { name: 'None' })).not.toBeChecked()
   await page.getByRole('button', { name: /Save Log/ }).click()
   await expect(page.getByRole('status')).toContainText('Log Saved')
 
   // Returns to the dashboard with the new weight and the amount lost, unit included.
   await expect(page.getByText('13 st 13 lbs')).toBeVisible()
-  await expect(page.getByText('5 lbs down')).toBeVisible()
+  await expect(page.getByText(/5 lbs down/)).toBeVisible()
 
   await page.getByRole('button', { name: 'Progress', exact: true }).click()
-  await expect(page.getByRole('img', { name: /Weight for the last 1 log/ })).toBeVisible()
-  await expect(page.getByText('Left Thigh')).toBeVisible()
-  await expect(page.getByText('Fatigue')).toBeVisible()
+  await expect(page.getByRole('img', { name: /One weigh-in: 13 st 13 lbs/ })).toBeVisible()
+  await expect(page.getByText('Left Thigh · 7.5 mg')).toBeVisible()
+  await expect(page.locator('.chip-danger', { hasText: 'Fatigue' })).toBeVisible()
 
   const stored = await readStore(page)
   const localToday = await page.evaluate(() => {
@@ -206,6 +212,9 @@ test('weekly log validates, saves and feeds the dashboard and progress', async (
   expect(stored.state.logs[0].date).toBe(localToday)
   expect(stored.state.logs[0].weight).toBe(195)
   expect(stored.state.logs[0].symptoms).toEqual(['Nausea', 'Fatigue'])
+  expect(stored.state.logs[0].doseMg).toBe(7.5)
+  // Logging a new dose updates the current dose (titration).
+  expect(stored.state.profile.doseMg).toBe(7.5)
 
   // A mistaken log can be removed, after confirmation.
   await page.getByRole('button', { name: /Delete log/ }).click()
@@ -219,7 +228,7 @@ test('changing the weight unit converts saved weights instead of relabelling the
   await saveLog(page, '13', '13')
 
   await page.getByRole('button', { name: 'Open settings' }).click()
-  await page.getByRole('button', { name: 'Kilograms' }).click()
+  await page.getByRole('radio', { name: 'Kilograms' }).check()
   let stored = await readStore(page)
   expect(stored.state.profile.startWeight).toBe(90.7)
   expect(stored.state.logs[0].weight).toBe(88.5)
@@ -229,7 +238,7 @@ test('changing the weight unit converts saved weights instead of relabelling the
 
   // Plain pounds are shown as pounds, not forced into stones.
   await page.getByRole('button', { name: 'Open settings' }).click()
-  await page.getByRole('button', { name: 'Pounds', exact: true }).click()
+  await page.getByRole('radio', { name: /^Pounds$/ }).check()
   await page.getByRole('button', { name: 'Home', exact: true }).click()
   await expect(page.getByText('195.1 lbs')).toBeVisible()
 
@@ -275,10 +284,12 @@ test('data saved by the previous store version is migrated, not lost', async ({ 
 
   await expect(page.getByText('Current Weight')).toBeVisible()
   await expect(page.getByText('14 st', { exact: true })).toBeVisible()
-  await expect(page.getByText('4 lbs down')).toBeVisible()
+  await expect(page.getByText(/4 lbs down/)).toBeVisible()
 
   const stored = await readStore(page)
-  expect(stored.version).toBe(5)
+  expect(stored.version).toBe(6)
+  expect(stored.state.profile.doseMg).toBe(1)
+  expect(stored.state.logs[0].doseMg).toBe(0)
   expect(stored.state.profile.weightUnit).toBe('st')
   expect(stored.state.profile.medicationName).toBe('Wegovy')
   expect(stored.state.journalEntries[0].text).toBe('Kept')
@@ -339,4 +350,90 @@ test('the site is installable: manifest and icons are served', async ({ page, re
     expect(response.headers()['content-type']).toContain('image/png')
   }
   expect((await request.get('/og-image.png')).ok()).toBe(true)
+})
+
+test('logging injections builds the level estimate, rotates sites and tracks the next dose', async ({ page }) => {
+  await startLocally(page)
+  await completeOnboarding(page)
+  await expect(page.getByText(/Add your dose in Settings/)).toBeVisible()
+
+  await page.getByRole('button', { name: 'Log', exact: true }).click()
+  await page.getByRole('radio', { name: /^Left Stomach/ }).check()
+  await page.getByRole('button', { name: '2.5 milligrams', exact: true }).click()
+  // An injection can be logged without a weigh-in.
+  await page.getByRole('button', { name: /Save Log/ }).click()
+  await expect(page.getByRole('status')).toContainText('Log Saved')
+
+  await expect(page.getByText('Est. level')).toBeVisible()
+  await expect(page.getByRole('img', { name: /Estimated level over the last 4 weeks/ })).toBeVisible()
+  await expect(page.getByText('Suggested site:')).toContainText('Right Stomach')
+  await expect(page.getByText('Zepbound · 2.5 mg').or(page.getByText(/^Next: /))).toBeVisible()
+
+  await page.getByRole('button', { name: 'Progress', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Dose History' })).toBeVisible()
+  await expect(page.getByText('Injection', { exact: true })).toBeVisible()
+})
+
+test('appearance can follow the system or be pinned, and the choice survives a reload', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'light' })
+  await startLocally(page)
+  await completeOnboarding(page)
+  const background = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor)
+  const light = await background()
+
+  await page.getByRole('button', { name: 'Open settings' }).click()
+  await page.getByRole('radio', { name: 'Dark' }).check()
+  await expect(page.locator('meta[name="color-scheme"]')).toHaveAttribute('content', 'dark')
+  expect(await background()).not.toBe(light)
+
+  await page.reload()
+  await expect(page.locator('meta[name="color-scheme"]')).toHaveAttribute('content', 'dark')
+
+  await page.getByRole('radio', { name: 'System' }).check()
+  expect(await background()).toBe(light)
+  expect(await page.evaluate(() => localStorage.getItem('color-scheme'))).toBeNull()
+
+  // With no override, the system preference applies.
+  await page.emulateMedia({ colorScheme: 'dark' })
+  expect(await background()).not.toBe(light)
+})
+
+test('calendar reminder and spreadsheet exports contain the right data', async ({ page }) => {
+  await startLocally(page)
+  await completeOnboarding(page)
+  await saveLog(page, '14', '0')
+  await page.getByRole('button', { name: 'Open settings' }).click()
+
+  const reminder = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Add a weekly reminder to my calendar' }).click()
+  const ics = await (await reminder).createReadStream().then(async (stream) => {
+    const chunks: Buffer[] = []
+    for await (const chunk of stream) chunks.push(chunk as Buffer)
+    return Buffer.concat(chunks).toString('utf8')
+  })
+  expect(ics).toContain('RRULE:FREQ=WEEKLY;BYDAY=MO')
+  expect(ics).toContain('T090000')
+
+  const csvDownload = page.waitForEvent('download')
+  await page.getByRole('button', { name: /Export logs as a spreadsheet/ }).click()
+  const csv = await (await csvDownload).createReadStream().then(async (stream) => {
+    const chunks: Buffer[] = []
+    for await (const chunk of stream) chunks.push(chunk as Buffer)
+    return Buffer.concat(chunks).toString('utf8')
+  })
+  expect(csv.split('\r\n')[0]).toBe('Date,Weight (lbs),Injection site,Dose (mg),Side effects,Notes')
+  expect(csv).toContain(',196,,,None,')
+})
+
+test('the guide gives the missed-dose window for the chosen medicine', async ({ page }) => {
+  await startLocally(page)
+  await completeOnboarding(page)
+  await page.getByRole('button', { name: 'Guide', exact: true }).click()
+  await expect(page.getByText(/4 days \(96 hours\) or less/)).toBeVisible()
+
+  await page.getByRole('button', { name: 'Open settings' }).click()
+  await page.getByRole('radio', { name: 'Wegovy' }).check()
+  await page.getByRole('button', { name: 'Guide', exact: true }).click()
+  await expect(page.getByText(/5 days \(120 hours\) or less/)).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Get medical help straight away/ })).toBeVisible()
 })

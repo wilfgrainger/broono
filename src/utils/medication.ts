@@ -1,24 +1,30 @@
-import { parseLocalISODate } from './date.ts'
+import { addDays, parseLocalISODate, toLocalISODate } from './date.ts'
 
-export type MedicationName = 'Zepbound' | 'Mounjaro' | 'Wegovy' | 'Ozempic'
+export type { MedicationName } from './medications.ts'
 
-export function getMedicationLevel(
-  lastLogDate: string | undefined,
-  medicationName: MedicationName
-): number {
-  if (!lastLogDate) return 0
-  const halfLifeDays = medicationName === 'Ozempic' || medicationName === 'Wegovy' ? 7 : 5
-  const daysSince =
-    (Date.now() - parseLocalISODate(lastLogDate).getTime()) /
-    (1000 * 60 * 60 * 24)
-  const level = Math.round(Math.pow(0.5, Math.max(daysSince, 0) / halfLifeDays) * 100)
-  return Math.min(Math.max(level, 0), 100)
-}
-
+/** Days until the next scheduled injection day; 7 on the injection day itself. */
 export function getDaysUntilNextDose(injectionDayOfWeek: number): number {
-  const now = new Date()
-  const currentDay = now.getDay()
+  const currentDay = new Date().getDay()
   let daysUntil = injectionDayOfWeek - currentDay
   if (daysUntil <= 0) daysUntil += 7
   return daysUntil
+}
+
+export interface DoseStatus {
+  /** Date of the next scheduled injection (today when today is the day and it is not yet logged). */
+  nextDate: string
+  /** Days from today to `nextDate`. */
+  daysUntil: number
+  /** True when an injection is already logged today. */
+  takenToday: boolean
+}
+
+/** Works out the next scheduled dose from the weekly injection day and the last logged injection. */
+export function getDoseStatus(injectionDayOfWeek: number, lastInjectionDate: string | undefined, today = toLocalISODate()): DoseStatus {
+  const weekday = parseLocalISODate(today).getDay()
+  const daysToDay = (injectionDayOfWeek - weekday + 7) % 7
+  const takenToday = lastInjectionDate === today
+  // On the injection day, the dose is due today until it has been logged.
+  const daysUntil = daysToDay === 0 && takenToday ? 7 : daysToDay
+  return { nextDate: addDays(today, daysUntil), daysUntil, takenToday }
 }

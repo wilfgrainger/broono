@@ -9,10 +9,10 @@ export default function Terms() {
         <main className="page-enter" style={{ padding: 24, width: '100%', height: '100%', overflowY: 'auto' }}>
             <div style={{ maxWidth: 680, margin: '0 auto' }}>
             <a href="/" className="legal-back-link">← Back to Broono</a>
-            <h1 style={{ fontSize: 28, fontWeight: 900, color: '#0f172a', marginBottom: 8 }}>Terms of Use</h1>
-            <p style={{ fontSize: 13, color: '#64748b', marginBottom: 24 }}>Last updated: August 2026</p>
+            <h1 style={{ fontSize: 28, fontWeight: 900, color: 'var(--text-primary)', marginBottom: 8 }}>Terms of Use</h1>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 24 }}>Last updated: August 2026</p>
 
-            <div style={{ fontSize: 14, color: '#334155', lineHeight: 1.8, display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div style={{ fontSize: 14, color: 'var(--text-body)', lineHeight: 1.8, display: 'flex', flexDirection: 'column', gap: 20 }}>
                 <section>
                     <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>1. Local software</h2>
                     <p>

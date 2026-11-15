@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 
@@ -5,18 +6,24 @@ import react from '@vitejs/plugin-react'
 // runtime API, service-worker application cache, authentication, or billing layer.
 // GitHub Pages serves the generated dist/ directory; user state remains local.
 // The dev server injects an inline React Refresh preamble, so index.html keeps
-// 'unsafe-inline' for scripts. The production document has no inline scripts,
-// so the build tightens script-src to same-origin files only.
+// 'unsafe-inline' for scripts. The production document allows only same-origin
+// files plus the exact inline scripts it contains, by SHA-256 hash (the tiny
+// theme script that must run before first paint).
 function strictProductionCsp(): Plugin {
   return {
     name: 'broono-strict-production-csp',
     apply: 'build',
-    transformIndexHtml(html) {
-      const tightened = html.replace("script-src 'self' 'unsafe-inline'", "script-src 'self'")
-      if (tightened === html) {
-        throw new Error('Expected a script-src directive to tighten in index.html')
-      }
-      return tightened
+    transformIndexHtml: {
+      order: 'post',
+      handler(html) {
+        const hashes = [...html.matchAll(/<script(?![^>]*\bsrc=)(?![^>]*type="application\/ld\+json")[^>]*>([\s\S]*?)<\/script>/g)]
+          .map(([, body]) => `'sha256-${createHash('sha256').update(body).digest('base64')}'`)
+        const tightened = html.replace("script-src 'self' 'unsafe-inline'", ['script-src', "'self'", ...hashes].join(' '))
+        if (tightened === html) {
+          throw new Error('Expected a script-src directive to tighten in index.html')
+        }
+        return tightened
+      },
     },
   }
 }

@@ -1,22 +1,20 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
-import { getMedicationLevel as getMedicationLevelUtil, getDaysUntilNextDose as getDaysUntilNextDoseUtil } from './utils/medication'
-import type { MedicationName } from './utils/medication'
+import { MEDICATIONS, parseDose, type MedicationName } from './utils/medications'
+import { INJECTION_SITES, type InjectionSite } from './utils/stats'
 import { formatShortDate, toLocalISODate } from './utils/date'
 import { safeLocalStorage } from './utils/storageHealth'
 import { convertWeight, guessWeightUnit, validateWeight, type WeightUnit } from './utils/weight'
 
-export type { MedicationName, WeightUnit }
-export type InjectionSite = 'Left Stomach' | 'Right Stomach' | 'Left Thigh' | 'Right Thigh'
-export type Symptom = 'None' | 'Nausea' | 'Fatigue' | 'Headache' | 'Constipation'
+export type { MedicationName, WeightUnit, InjectionSite }
+export { MEDICATIONS, INJECTION_SITES }
+export const SYMPTOMS = [
+  'None', 'Nausea', 'Vomiting', 'Diarrhoea', 'Constipation', 'Heartburn', 'Fatigue', 'Headache', 'Site reaction',
+] as const
+export type Symptom = typeof SYMPTOMS[number]
 
-export const MEDICATIONS: MedicationName[] = ['Zepbound', 'Mounjaro', 'Wegovy', 'Ozempic']
-export const INJECTION_SITES: InjectionSite[] = ['Left Stomach', 'Right Stomach', 'Left Thigh', 'Right Thigh']
-export const SYMPTOMS: Symptom[] = ['None', 'Nausea', 'Fatigue', 'Headache', 'Constipation']
-
-export const STORE_VERSION = 5
+export const STORE_VERSION = 6
 export const LIMITS = {
-  dose: 40,
   notes: 2000,
   journalEntry: 5000,
   proteinGoal: { min: 30, max: 300 },
@@ -28,7 +26,10 @@ export interface WeeklyLog {
   date: string
   displayDate: string
   weight: number
+  /** '' when no injection was recorded with this log. */
   site: InjectionSite | ''
+  /** Dose injected in mg; 0 when no injection or not recorded. */
+  doseMg: number
   symptoms: Symptom[]
   notes: string
 }
@@ -42,9 +43,18 @@ export interface JournalEntry {
 
 export interface UserProfile {
   medicationName: MedicationName
-  dose: string
+  /** Current dose in mg; 0 when not set. */
+  doseMg: number
   injectionDayOfWeek: number
   startWeight: number
+  /** Goal weight in the same unit as `startWeight`; 0 when not set. */
+  goalWeight: number
+  /** Height in centimetres, used only for BMI; 0 when not set. */
+  heightCm: number
+  /** `YYYY-MM-DD` the user started treatment, or ''. */
+  treatmentStartDate: string
+  /** `HH:MM` used for calendar reminders. */
+  reminderTime: string
   weightUnit: WeightUnit
   proteinGoalG: number
   waterGoalGlasses: number
@@ -104,9 +114,13 @@ function uid(): string {
 
 const createDefaultProfile = (): UserProfile => ({
   medicationName: 'Zepbound',
-  dose: '',
+  doseMg: 0,
   injectionDayOfWeek: 1,
   startWeight: 0,
+  goalWeight: 0,
+  heightCm: 0,
+  treatmentStartDate: '',
+  reminderTime: '09:00',
   weightUnit: guessWeightUnit(globalThis.navigator?.language),
   proteinGoalG: 100,
   waterGoalGlasses: 8,
@@ -152,9 +166,14 @@ function sanitizeProfile(raw: unknown, sourceVersion: number): UserProfile {
     medicationName: MEDICATIONS.includes(raw.medicationName as MedicationName)
       ? raw.medicationName as MedicationName
       : base.medicationName,
-    dose: asText(raw.dose, LIMITS.dose),
+    // Versions before 6 stored the dose as free text ("5mg").
+    doseMg: parseDose(raw.doseMg ?? raw.dose),
     injectionDayOfWeek: clampInt(raw.injectionDayOfWeek, 0, 6, base.injectionDayOfWeek),
     startWeight: validateWeight(Number(raw.startWeight), weightUnit) ?? 0,
+    goalWeight: validateWeight(Number(raw.goalWeight), weightUnit) ?? 0,
+    heightCm: clampInt(raw.heightCm, 0, 250, 0) >= 100 ? clampInt(raw.heightCm, 0, 250, 0) : 0,
+    treatmentStartDate: asDate(raw.treatmentStartDate) ?? '',
+    reminderTime: typeof raw.reminderTime === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(raw.reminderTime) ? raw.reminderTime : base.reminderTime,
     weightUnit,
     proteinGoalG: clampInt(raw.proteinGoalG, LIMITS.proteinGoal.min, LIMITS.proteinGoal.max, base.proteinGoalG),
     waterGoalGlasses: clampInt(raw.waterGoalGlasses, LIMITS.waterGoal.min, LIMITS.waterGoal.max, base.waterGoalGlasses),
@@ -171,7 +190,7 @@ function sanitizeLogs(raw: unknown, unit: WeightUnit): WeeklyLog[] {
     if (!date || weight === null) return []
 
     const symptoms = Array.isArray(entry.symptoms)
-      ? SYMPTOMS.filter((symptom) => (entry.symptoms as unknown[]).includes(symptom))
+      ? SYMPTOMS.filter((symptom) => (entry.symptoms as unknown[]).includes(symptom)) as Symptom[]
       : []
 
     return [{
@@ -179,8 +198,9 @@ function sanitizeLogs(raw: unknown, unit: WeightUnit): WeeklyLog[] {
       date,
       displayDate: formatShortDate(date),
       weight,
-      site: INJECTION_SITES.includes(entry.site as InjectionSite) ? entry.site as InjectionSite : '',
-      symptoms: symptoms.length > 0 ? symptoms : ['None'],
+      site: (INJECTION_SITES as readonly string[]).includes(entry.site as string) ? entry.site as InjectionSite : '',
+      doseMg: parseDose(entry.doseMg),
+      symptoms: symptoms.length > 0 ? symptoms : ['None'] as Symptom[],
       notes: asText(entry.notes, LIMITS.notes),
     }]
   }).sort((a, b) => b.date.localeCompare(a.date))
@@ -342,6 +362,3 @@ export const useStore = create<AppState>()(
     },
   ),
 )
-
-export const getMedicationLevel = getMedicationLevelUtil
-export const getDaysUntilNextDose = getDaysUntilNextDoseUtil

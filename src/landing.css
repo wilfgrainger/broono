@@ -1,5 +1,7 @@
 /* Mobile-first landing and sign-in experience */
 .landing-page {
+  /* The marketing page is designed in light colours only. */
+  color-scheme: light;
   --landing-ink: #0f172a;
   --landing-muted: #5f6f85;
   --landing-line: rgba(148, 163, 184, 0.24);

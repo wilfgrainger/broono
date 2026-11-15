@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { BookOpen, Home, Newspaper, Plus, TrendingDown, User } from 'lucide-react'
+import { BookOpen, Compass, Home, Plus, TrendingDown, User } from 'lucide-react'
+import { flushSync } from 'react-dom'
 import { useStore } from './store'
 import Dashboard from './pages/Dashboard'
 import CheckIn from './pages/CheckIn'
 import Progress from './pages/Progress'
-import NewsPage from './pages/News'
+import GuidePage from './pages/Guide'
 import Journal from './pages/Journal'
 import ProfilePage from './pages/Profile'
 import Onboarding from './pages/Onboarding'
@@ -13,33 +14,7 @@ import PrivacyPolicy from './pages/PrivacyPolicy'
 import Terms from './pages/Terms'
 import { useToday } from './utils/useToday'
 import { useStorageSaveFailed } from './utils/storageHealth'
-
-type Tab = 'dashboard' | 'checkin' | 'progress' | 'news' | 'journal' | 'profile'
-
-const TAB_TITLES: Record<Tab, string> = {
-  dashboard: 'Home',
-  checkin: 'Weekly log',
-  progress: 'Progress',
-  news: 'Updates',
-  journal: 'Journal',
-  profile: 'Settings',
-}
-
-// Each tab has a URL hash so the browser and Android back button move between
-// tabs, and a reload keeps the user where they were. Home has no hash.
-const TAB_HASHES: Record<Tab, string> = {
-  dashboard: '',
-  checkin: '#log',
-  progress: '#progress',
-  news: '#updates',
-  journal: '#journal',
-  profile: '#settings',
-}
-
-function tabFromHash(hash: string): Tab {
-  const match = (Object.keys(TAB_HASHES) as Tab[]).find((tab) => TAB_HASHES[tab] === hash && hash !== '')
-  return match ?? 'dashboard'
-}
+import { TAB_HASHES, TAB_TITLES, tabFromHash, type Tab } from './tabs'
 
 function useDocumentTitle(title: string) {
   useEffect(() => {
@@ -102,21 +77,35 @@ function AppShell() {
   useEffect(() => {
     activeTabRef.current = activeTab
   }, [activeTab])
+  // Cross-fades between tabs where the View Transitions API exists; elsewhere
+  // the tab simply changes. flushSync makes React update the DOM inside the
+  // transition callback so the browser captures the new state.
+  const showTab = useCallback((tab: Tab) => {
+    const update = () => {
+      activeTabRef.current = tab
+      setActiveTab(tab)
+    }
+    if (typeof document.startViewTransition !== 'function') {
+      update()
+      return
+    }
+    document.startViewTransition(() => flushSync(update))
+  }, [])
+
   const navigate = useCallback((tab: Tab, options: { replace?: boolean } = {}) => {
     if (activeTabRef.current === tab) return
     const url = `${window.location.pathname}${window.location.search}${TAB_HASHES[tab]}`
     if (options.replace) window.history.replaceState(null, '', url)
     else window.history.pushState(null, '', url)
-    activeTabRef.current = tab
-    setActiveTab(tab)
-  }, [])
+    showTab(tab)
+  }, [showTab])
 
   // Back and forward buttons (including Android's) change the hash.
   useEffect(() => {
-    const onPopState = () => setActiveTab(tabFromHash(window.location.hash))
+    const onPopState = () => showTab(tabFromHash(window.location.hash))
     window.addEventListener('popstate', onPopState)
     return () => window.removeEventListener('popstate', onPopState)
-  }, [])
+  }, [showTab])
 
   // After saving a log, Back should not reopen the finished form.
   const goHome = useCallback(() => navigate('dashboard', { replace: true }), [navigate])
@@ -126,7 +115,7 @@ function AppShell() {
       case 'dashboard': return <Dashboard key={today} onNavigate={navigate} />
       case 'checkin': return <CheckIn onDone={goHome} />
       case 'progress': return <Progress />
-      case 'news': return <NewsPage />
+      case 'guide': return <GuidePage />
       case 'journal': return <Journal />
       case 'profile': return <ProfilePage />
     }
@@ -150,7 +139,7 @@ function AppShell() {
           aria-label="Open settings"
           aria-current={activeTab === 'profile' ? 'page' : undefined}
         >
-          <User size={19} color="#64748b" strokeWidth={1.5} aria-hidden="true" />
+          <User size={19} color="currentColor" strokeWidth={1.5} aria-hidden="true" />
         </button>
       </header>
 
@@ -168,7 +157,7 @@ function AppShell() {
         <NavBtn icon={Home} label="Home" tab="dashboard" active={activeTab} onNav={navigate} />
         <NavBtn icon={Plus} label="Log" tab="checkin" active={activeTab} onNav={navigate} />
         <NavBtn icon={TrendingDown} label="Progress" tab="progress" active={activeTab} onNav={navigate} />
-        <NavBtn icon={Newspaper} label="Updates" tab="news" active={activeTab} onNav={navigate} />
+        <NavBtn icon={Compass} label="Guide" tab="guide" active={activeTab} onNav={navigate} />
         <NavBtn icon={BookOpen} label="Journal" tab="journal" active={activeTab} onNav={navigate} />
       </nav>
     </div>
@@ -197,7 +186,7 @@ function NavBtn({ icon: Icon, label, tab, active, onNav }: NavBtnProps) {
         <Icon
           size={22}
           strokeWidth={isActive ? 2 : 1.5}
-          color={isActive ? '#0f172a' : '#64748b'}
+          color={isActive ? 'var(--text-primary)' : 'var(--text-muted)'}
           aria-hidden="true"
         />
       </span>

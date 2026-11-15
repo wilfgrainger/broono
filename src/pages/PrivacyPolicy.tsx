@@ -9,10 +9,10 @@ export default function PrivacyPolicy() {
         <main className="page-enter" style={{ padding: 24, width: '100%', height: '100%', overflowY: 'auto' }}>
             <div style={{ maxWidth: 680, margin: '0 auto' }}>
             <a href="/" className="legal-back-link">← Back to Broono</a>
-            <h1 style={{ fontSize: 28, fontWeight: 900, color: '#0f172a', marginBottom: 8 }}>Privacy Policy</h1>
-            <p style={{ fontSize: 13, color: '#64748b', marginBottom: 24 }}>Last updated: November 2026</p>
+            <h1 style={{ fontSize: 28, fontWeight: 900, color: 'var(--text-primary)', marginBottom: 8 }}>Privacy Policy</h1>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 24 }}>Last updated: November 2026</p>
 
-            <div style={{ fontSize: 14, color: '#334155', lineHeight: 1.8, display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div style={{ fontSize: 14, color: 'var(--text-body)', lineHeight: 1.8, display: 'flex', flexDirection: 'column', gap: 20 }}>
                 <section>
                     <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>1. Local-only design</h2>
                     <p>
@@ -25,12 +25,12 @@ export default function PrivacyPolicy() {
                     <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>2. Information stored on your device</h2>
                     <p>Depending on the features you use, local data may include:</p>
                     <ul style={{ paddingLeft: 20, margin: '8px 0' }}>
-                        <li>Medication name, dose and injection schedule</li>
-                        <li>Weight entries and progress</li>
-                        <li>Symptoms, injection site and check-in notes</li>
+                        <li>Medication name, dose, injection schedule, reminder time and treatment start date</li>
+                        <li>Weight entries, goal weight, height (if you add it) and progress</li>
+                        <li>Injections (site and dose), side effects and log notes</li>
                         <li>Journal entries</li>
                         <li>Water and protein intake and personal goals</li>
-                        <li>A local flag recording that setup is complete</li>
+                        <li>A local flag recording that setup is complete, and your light or dark theme choice</li>
                     </ul>
                 </section>
 

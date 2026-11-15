@@ -2,6 +2,19 @@
 
 Broono is a mobile-first, local-only GLP-1 tracking companion for weight progress, dose timing, hydration, goals, symptoms and private notes.
 
+## Features
+
+- **Injections**: log site and dose (standard pen strengths as quick picks, any dose typed), with the least-recently-used of six sites suggested for rotation.
+- **Next dose and estimated level**: the next scheduled dose, and an estimated relative medication level built from logged injections (one-compartment model using label half-life and time to peak), with the coming week projected.
+- **Weight**: kilograms, pounds, or stones and pounds; trend chart with start and goal lines, % lost, weekly rate, BMI, and 5–25% milestones.
+- **Dose history**: titration steps from logged injections.
+- **Side effects**: multi-select per log, with frequency over recent logs.
+- **Daily targets**: protein and water counters that reset at local midnight.
+- **Guide**: missed-dose window for the chosen medicine and self-care notes from the patient leaflets, with when to seek urgent help.
+- **Reminders**: a weekly `.ics` calendar event, so the user's calendar does the reminding without any server or notification permission.
+- **Data**: JSON backup and validated restore, CSV export for spreadsheets, printable clinician summary, local erase.
+- **Platform**: light and dark themes (system or pinned), installable web app, browser and Android back navigation between tabs.
+
 There is no Broono account, authentication service, application API, remote database, analytics tracker or paid feature gate. The web and Android editions run from the same React codebase and store user-entered data on the device.
 
 > Broono is a personal tracking companion, not a medical device and not a substitute for professional medical advice.
@@ -49,8 +62,9 @@ The end-to-end tests exercise local onboarding, unrestricted Progress and Journa
 The following information is kept in local browser or app storage:
 
 - setup status and tracker preferences;
-- medication name, dose and injection day;
-- weight, symptom and injection-site check-ins;
+- medication name, dose, injection day, reminder time and treatment start date;
+- goal weight and optional height (for BMI);
+- logs: weight, injection site and dose, side effects and notes;
 - journal entries;
 - hydration and protein totals for the day, and personal goals.
 

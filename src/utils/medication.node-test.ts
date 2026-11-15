@@ -1,4 +1,4 @@
-import { getDaysUntilNextDose, getMedicationLevel } from './medication.ts';
+import { getDaysUntilNextDose } from './medication.ts';
 import { test } from 'node:test';
 import assert from 'node:assert';
 
@@ -23,16 +23,4 @@ test('getDaysUntilNextDose', async (t) => {
       assert.strictEqual(result, scenario.expected, `Failed ${scenario.desc}: expected ${scenario.expected}, got ${result}`);
     });
   }
-});
-
-test('getMedicationLevel stays within 0-100 and decays by half-life', (t) => {
-  t.mock.timers.enable({ apis: ['Date'] });
-  t.mock.timers.setTime(new Date(2025, 2, 10, 12).getTime());
-
-  assert.strictEqual(getMedicationLevel(undefined, 'Wegovy'), 0);
-  assert.strictEqual(getMedicationLevel('2025-03-10', 'Wegovy'), 95);
-  assert.strictEqual(getMedicationLevel('2025-03-03', 'Wegovy'), 48);
-  assert.strictEqual(getMedicationLevel('2025-03-05', 'Mounjaro'), 47);
-  // A log dated in the future (clock change, imported data) must not exceed 100%.
-  assert.strictEqual(getMedicationLevel('2025-03-12', 'Mounjaro'), 100);
 });

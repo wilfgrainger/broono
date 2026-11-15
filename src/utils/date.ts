@@ -27,3 +27,21 @@ export function formatShortDate(isoDate: string): string {
 export function formatDayOfMonth(isoDate: string): string {
   return `${parseLocalISODate(isoDate).getDate()}`
 }
+
+/** Whole calendar days from `from` to `to` (negative when `to` is earlier). DST-safe. */
+export function daysBetween(to: string, from: string): number {
+  const [ty, tm, td] = to.split('-').map(Number)
+  const [fy, fm, fd] = from.split('-').map(Number)
+  return Math.round((Date.UTC(ty, tm - 1, td) - Date.UTC(fy, fm - 1, fd)) / 86_400_000)
+}
+
+/** Adds whole calendar days to a `YYYY-MM-DD` date. */
+export function addDays(isoDate: string, days: number): string {
+  const date = parseLocalISODate(isoDate)
+  return toLocalISODate(new Date(date.getFullYear(), date.getMonth(), date.getDate() + days))
+}
+
+/** e.g. "Wed 19 Nov" in the user's locale. */
+export function formatWeekdayDate(isoDate: string): string {
+  return parseLocalISODate(isoDate).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })
+}

@@ -3,12 +3,12 @@ import { Capacitor } from '@capacitor/core'
 export type SaveResult = 'downloaded' | 'shared' | 'cancelled'
 
 /**
- * Saves a backup file. Browsers get an ordinary download. The Android app has
+ * Saves a file the user asked for. Browsers get an ordinary download. The Android app has
  * no download manager in its WebView, so it writes the file to the app's cache
  * and opens the system share sheet (Drive, Files, email, ...). Nothing is sent
  * anywhere unless the user picks a destination.
  */
-export async function saveBackupFile(contents: string, fileName: string): Promise<SaveResult> {
+export async function saveFile(contents: string, fileName: string, mimeType = 'application/json', title = 'Broono backup'): Promise<SaveResult> {
   if (Capacitor.isNativePlatform()) {
     const [{ Filesystem, Directory, Encoding }, { Share }] = await Promise.all([
       import('@capacitor/filesystem'),
@@ -22,7 +22,7 @@ export async function saveBackupFile(contents: string, fileName: string): Promis
     })
 
     try {
-      await Share.share({ title: 'Broono backup', files: [uri] })
+      await Share.share({ title, files: [uri] })
       return 'shared'
     } catch (error) {
       // Closing the share sheet without choosing a destination is not a failure.
@@ -31,7 +31,7 @@ export async function saveBackupFile(contents: string, fileName: string): Promis
     }
   }
 
-  const url = URL.createObjectURL(new Blob([contents], { type: 'application/json' }))
+  const url = URL.createObjectURL(new Blob([contents], { type: mimeType }))
   const anchor = document.createElement('a')
   anchor.href = url
   anchor.download = fileName

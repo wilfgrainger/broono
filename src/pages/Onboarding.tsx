@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../store'
-import { LIMITS, MEDICATIONS } from '../store'
+import { MEDICATIONS } from '../store'
+import ChoiceGroup from '../components/ChoiceGroup'
+import DoseInput from '../components/DoseInput'
+import { formatDose } from '../utils/medications'
 import type { WeightUnit, UserProfile } from '../store'
 import { ArrowRight, ArrowLeft, Check, Syringe, Target, CalendarDays, Activity, Lock } from 'lucide-react'
 import ReviewRow from '../components/ReviewRow'
@@ -60,7 +63,12 @@ export default function Onboarding() {
 
         const { weightUnit, ...rest } = localProfile
         setWeightUnit(weightUnit)
-        updateProfile({ ...rest, startWeight: validWeight ?? 0, dose: rest.dose.trim() })
+        updateProfile({
+            ...rest,
+            startWeight: validWeight ?? 0,
+            goalWeight: validateWeight(rest.goalWeight, weightUnit) ?? 0,
+            treatmentStartDate: rest.treatmentStartDate || new Date().toLocaleDateString('en-CA'),
+        })
         completeOnboarding()
     }
 
@@ -74,6 +82,7 @@ export default function Onboarding() {
             ...prev,
             weightUnit: unit,
             startWeight: convertWeight(prev.startWeight, prev.weightUnit, unit),
+            goalWeight: convertWeight(prev.goalWeight, prev.weightUnit, unit),
         }))
         setWeightError('')
     }
@@ -184,33 +193,25 @@ export default function Onboarding() {
                         <h1 tabIndex={-1} style={{ fontSize: '1.5rem', marginBottom: '8px' }}>Medication Details</h1>
                         <p id="onboarding-medication-label" style={{ color: 'var(--text-light)', marginBottom: '24px' }}>What medication are you taking?</p>
 
-                        <div role="group" aria-labelledby="onboarding-medication-label" style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '32px' }}>
-                            {MEDICATIONS.map(med => (
-                                <PillSelect
-                                    key={med}
-                                    active={localProfile.medicationName === med}
-                                    onClick={() => updateLocal({ medicationName: med })}
-                                >
-                                    {med}
-                                </PillSelect>
-                            ))}
-                        </div>
-
-                        <label htmlFor="dose-input" style={{ display: 'block', fontSize: '1.1rem', marginBottom: '12px', fontWeight: 'bold' }}>Current Dose</label>
-                        <input
-                            id="dose-input"
-                            name="dose"
-                            type="text"
-                            autoComplete="off"
-                            autoCapitalize="none"
-                            spellCheck={false}
-                            enterKeyHint="next"
-                            className="form-input"
-                            maxLength={LIMITS.dose}
-                            value={localProfile.dose}
-                            onChange={(e) => updateLocal({ dose: e.target.value })}
-                            placeholder="e.g. 2.5mg, 5mg"
+                        <ChoiceGroup
+                            legend="Medication"
+                            hideLegend
+                            name="onboarding-medication"
+                            layout="stack"
+                            options={MEDICATIONS.map((value) => ({ value, label: value }))}
+                            value={localProfile.medicationName}
+                            onChange={(medicationName) => updateLocal({ medicationName })}
                         />
+                        <div style={{ marginTop: 24 }}>
+                            <DoseInput
+                                key={localProfile.medicationName}
+                                id="dose-input"
+                                label="Current dose (optional)"
+                                medication={localProfile.medicationName}
+                                value={localProfile.doseMg}
+                                onChange={(doseMg) => updateLocal({ doseMg })}
+                            />
+                        </div>
                     </Slide>
                 )}
 
@@ -219,17 +220,15 @@ export default function Onboarding() {
                         <h1 tabIndex={-1} style={{ fontSize: '1.5rem', marginBottom: '8px' }}>Starting Vitals</h1>
                         <p style={{ color: 'var(--text-light)', marginBottom: '24px' }}>Let's set your baseline. You can change the unit later in Settings.</p>
 
-                        <h2 id="onboarding-unit-label" style={{ fontSize: '1.1rem', marginBottom: '12px' }}>Unit</h2>
-                        <div role="group" aria-labelledby="onboarding-unit-label" style={{ display: 'grid', gap: '10px', marginBottom: '24px' }}>
-                            {WEIGHT_UNIT_OPTIONS.map(({ unit, label }) => (
-                                <PillSelect
-                                    key={unit}
-                                    active={localProfile.weightUnit === unit}
-                                    onClick={() => changeUnit(unit)}
-                                >
-                                    {label}
-                                </PillSelect>
-                            ))}
+                        <div style={{ marginBottom: 24 }}>
+                            <ChoiceGroup
+                                legend="Unit"
+                                name="onboarding-unit"
+                                layout="stack"
+                                options={WEIGHT_UNIT_OPTIONS.map(({ unit, label }) => ({ value: unit, label }))}
+                                value={localProfile.weightUnit}
+                                onChange={changeUnit}
+                            />
                         </div>
 
                         <WeightField
@@ -245,6 +244,16 @@ export default function Onboarding() {
                             inputRef={weightInputRef}
                             enterKeyHint="next"
                         />
+                        <div style={{ marginTop: 24 }}>
+                            <WeightField
+                                key={`goal-${localProfile.weightUnit}`}
+                                label="Goal weight (optional)"
+                                unit={localProfile.weightUnit}
+                                value={localProfile.goalWeight > 0 ? localProfile.goalWeight : null}
+                                onChange={(next) => updateLocal({ goalWeight: next ?? 0 })}
+                                enterKeyHint="next"
+                            />
+                        </div>
                     </Slide>
                 )}
 
@@ -315,17 +324,15 @@ export default function Onboarding() {
                         </div>
                         <p id="onboarding-day-label" style={{ color: 'var(--text-light)', marginBottom: '24px' }}>When do you take your dose?</p>
 
-                        <div role="group" aria-labelledby="onboarding-day-label" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            {DAY_NAMES.map((day, idx) => (
-                                <PillSelect
-                                    key={day}
-                                    active={localProfile.injectionDayOfWeek === idx}
-                                    onClick={() => updateLocal({ injectionDayOfWeek: idx })}
-                                >
-                                    {day}
-                                </PillSelect>
-                            ))}
-                        </div>
+                        <ChoiceGroup
+                            legend="Injection day"
+                            hideLegend
+                            name="onboarding-day"
+                            layout="stack"
+                            options={DAY_NAMES.map((day, index) => ({ value: `${index}`, label: day }))}
+                            value={`${localProfile.injectionDayOfWeek}`}
+                            onChange={(value) => updateLocal({ injectionDayOfWeek: Number(value) })}
+                        />
                     </Slide>
                 )}
 
@@ -335,8 +342,8 @@ export default function Onboarding() {
                         <p style={{ color: 'var(--text-light)', marginBottom: '32px' }}>Review your details below.</p>
 
                         <div style={{
-                            background: '#f0fdf4',
-                            border: '1px solid #bbf7d0',
+                            background: 'var(--success-soft)',
+                            border: '1px solid var(--success-border)',
                             borderRadius: '12px',
                             padding: '12px 16px',
                             marginBottom: '24px',
@@ -344,15 +351,16 @@ export default function Onboarding() {
                             alignItems: 'flex-start',
                             gap: '12px'
                         }}>
-                            <Lock size={18} color="#16a34a" style={{ marginTop: '2px', flexShrink: 0 }} aria-hidden="true" />
-                            <p style={{ fontSize: 13, color: '#166534', lineHeight: 1.5, margin: 0 }}>
+                            <Lock size={18} color="var(--success)" style={{ marginTop: '2px', flexShrink: 0 }} aria-hidden="true" />
+                            <p style={{ fontSize: 13, color: 'var(--text-body)', lineHeight: 1.5, margin: 0 }}>
                                 <strong>Your data is private.</strong> All health information entered here and in the app is saved <em>locally on your device</em>. Broono has no server to send it to.
                             </p>
                         </div>
 
                         <dl style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                            <ReviewRow label="Medication" value={localProfile.dose.trim() ? `${localProfile.medicationName} (${localProfile.dose.trim()})` : localProfile.medicationName} />
+                            <ReviewRow label="Medication" value={localProfile.doseMg > 0 ? `${localProfile.medicationName} (${formatDose(localProfile.doseMg)})` : localProfile.medicationName} />
                             <ReviewRow label="Start Weight" value={formatWeight(localProfile.startWeight, localProfile.weightUnit)} />
+                            {localProfile.goalWeight > 0 ? <ReviewRow label="Goal Weight" value={formatWeight(localProfile.goalWeight, localProfile.weightUnit)} /> : null}
                             <ReviewRow label="Injection Day" value={DAY_NAMES[localProfile.injectionDayOfWeek]} />
                             <ReviewRow label="Water Goal" value={`${localProfile.waterGoalGlasses} glasses`} />
                             <ReviewRow label="Protein Goal" value={`${localProfile.proteinGoalG}g`} />
@@ -393,32 +401,3 @@ function Slide({ children, transitionKey }: { children: React.ReactNode, transit
         </div>
     )
 }
-
-function PillSelect({ active, onClick, children, style = {} }: { active: boolean, onClick: () => void, children: React.ReactNode, style?: React.CSSProperties }) {
-    return (
-        <button
-            type="button"
-            aria-pressed={active}
-            onClick={onClick}
-            style={{
-                minHeight: 48,
-                padding: '16px 20px',
-                borderRadius: '12px',
-                border: `2px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
-                background: active ? 'var(--primary-light)' : 'var(--card-bg)',
-                color: active ? 'var(--brand-dark)' : 'var(--text-primary)',
-                fontWeight: active ? 600 : 500,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'flex-start',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                fontSize: '1rem',
-                ...style
-            }}
-        >
-            {children}
-        </button>
-    )
-}
-

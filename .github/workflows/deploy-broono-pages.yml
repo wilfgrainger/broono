@@ -72,7 +72,8 @@ jobs:
         run: |
           grep -q 'broono-local-only-2026-08-02-v1' dist/index.html
           grep -q "connect-src 'none'" dist/index.html
-          grep -q "script-src 'self';" dist/index.html
+          grep -q "script-src 'self' 'sha256-" dist/index.html
+          ! grep -q "script-src 'self' 'unsafe-inline'" dist/index.html
           test "$(cat dist/CNAME)" = "broono.app"
           grep -q 'One-release service-worker kill switch' dist/sw.js
           test -f dist/manifest.webmanifest && test -f dist/icons/icon-512.png

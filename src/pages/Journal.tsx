@@ -49,7 +49,7 @@ export default function Journal() {
           placeholder="Noticed your clothes fitting looser? Less food noise today? Energy levels improving?"
         />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, borderTop: '1px solid #e2e8f0', paddingTop: 10 }}>
-          <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>
             {newEntry.length > 0 ? `${newEntry.length} / ${LIMITS.journalEntry}` : 'Your private space'}
           </span>
           <button
@@ -58,8 +58,8 @@ export default function Journal() {
             disabled={!canSave}
             aria-label="Save journal entry"
             style={{
-              background: canSave ? '#0f172a' : '#e2e8f0',
-              color: canSave ? 'white' : '#64748b',
+              background: canSave ? 'var(--inverse-bg)' : 'var(--surface-muted)',
+              color: canSave ? 'var(--inverse-fg)' : 'var(--text-muted)',
               border: 'none',
               borderRadius: 12,
               minWidth: 76,
@@ -78,7 +78,7 @@ export default function Journal() {
 
       <div>
         {journalEntries.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>
+          <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
             <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>No entries yet</h2>
             <p style={{ fontWeight: 600 }}>Your first reflection is waiting.</p>
           </div>
@@ -86,10 +86,10 @@ export default function Journal() {
         <ul className="space-y-4" style={{ listStyle: 'none' }} aria-label="Journal entries">
           {journalEntries.map((entry) => (
             <li key={entry.id} className="card" style={{ position: 'relative' }}>
-              <p style={{ fontSize: 11, fontWeight: 800, color: '#64748b', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: 10 }}>
+              <p style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: 10 }}>
                 <time dateTime={entry.date}>{formatShortDate(entry.date)}</time>
               </p>
-              <p style={{ fontSize: 15, color: '#334155', lineHeight: 1.65, fontWeight: 500, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', paddingRight: 28 }}>
+              <p style={{ fontSize: 15, color: 'var(--text-body)', lineHeight: 1.65, fontWeight: 500, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', paddingRight: 28 }}>
                 {entry.text}
               </p>
               <button
@@ -102,7 +102,7 @@ export default function Journal() {
                 aria-label={`Delete entry from ${formatShortDate(entry.date)}`}
                 style={{ position: 'absolute', top: 4, right: 4 }}
               >
-                <Trash2 size={16} color="#be123c" strokeWidth={2} aria-hidden="true" />
+                <Trash2 size={16} color="var(--danger)" strokeWidth={2} aria-hidden="true" />
               </button>
             </li>
           ))}
