@@ -8,7 +8,7 @@ export default function Terms() {
     return (
         <main className="page-enter" style={{ padding: 24, width: '100%', height: '100%', overflowY: 'auto' }}>
             <div style={{ maxWidth: 680, margin: '0 auto' }}>
-            <a href="/" style={{ display: 'inline-block', marginBottom: 20, color: '#4f46e5', fontWeight: 700 }}>← Back to Broono</a>
+            <a href="/" className="legal-back-link">← Back to Broono</a>
             <h1 style={{ fontSize: 28, fontWeight: 900, color: '#0f172a', marginBottom: 8 }}>Terms of Use</h1>
             <p style={{ fontSize: 13, color: '#64748b', marginBottom: 24 }}>Last updated: August 2026</p>
 

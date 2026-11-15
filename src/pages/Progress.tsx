@@ -1,4 +1,6 @@
-import { useMemo } from 'react'
+import { useMemo, useRef, useState } from 'react'
+import { Trash2 } from 'lucide-react'
+import ConfirmDialog, { type ConfirmDialogHandle } from '../components/ConfirmDialog'
 import { useStore } from '../store'
 import { formatDayOfMonth, formatShortDate } from '../utils/date'
 import { formatWeight } from '../utils/weight'
@@ -10,6 +12,9 @@ export default function Progress() {
   const logs = useStore((s) => s.logs)
   const weightUnit = useStore((s) => s.profile.weightUnit)
   const profileStartWeight = useStore((s) => s.profile.startWeight)
+  const removeLog = useStore((s) => s.removeLog)
+  const deleteDialogRef = useRef<ConfirmDialogHandle>(null)
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; label: string } | null>(null)
 
   const stats = useMemo(() => {
     if (logs.length === 0) return null
@@ -53,14 +58,18 @@ export default function Progress() {
       <div>
         <h1 className="page-title">Progress</h1>
         <p className="page-subtitle">
-          {totalLost > 0 ? `You're down ${formatWeight(totalLost, weightUnit)} total.` : 'Tracking your journey.'}
+          {totalLost > 0
+            ? `You're down ${formatWeight(totalLost, weightUnit)} total.`
+            : totalLost < 0
+              ? `You're up ${formatWeight(Math.abs(totalLost), weightUnit)} since you started.`
+              : 'Tracking your journey.'}
         </p>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
         {[
           { label: 'Start', value: formatWeight(startWeight, weightUnit), unit: '' },
-          { label: 'Lost', value: formatWeight(Math.max(totalLost, 0), weightUnit), unit: '' },
+          { label: totalLost < 0 ? 'Gained' : 'Lost', value: formatWeight(Math.abs(totalLost), weightUnit), unit: '' },
           { label: 'Logs', value: `${weeksCount}`, unit: 'saved' },
         ].map((stat) => (
           <div key={stat.label} className="card" style={{ padding: '16px 14px', textAlign: 'center' }}>
@@ -99,7 +108,7 @@ export default function Progress() {
                 title={`${formatShortDate(log.date)}: ${formatWeight(log.weight, weightUnit)}`}
               >
                 <div
-                  className="chart-bar"
+                  className={log.id === chartLogs[chartLogs.length - 1].id ? 'chart-bar latest' : 'chart-bar'}
                   style={{ flexBasis: `${Math.max(pct, 8)}%`, flexShrink: 1, minHeight: 0, width: '100%' }}
                 />
                 <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600, whiteSpace: 'nowrap' }}>
@@ -109,6 +118,11 @@ export default function Progress() {
             )
           })}
         </div>
+        <p aria-hidden="true" style={{ fontSize: 12, color: '#64748b', fontWeight: 600, marginTop: 14, textAlign: 'center' }}>
+          {chartLogs.length > 1
+            ? `${formatShortDate(chartLogs[0].date)} to ${formatShortDate(chartLogs[chartLogs.length - 1].date)}. Latest log highlighted.`
+            : 'Your trend appears after a second log.'}
+        </p>
       </figure>
 
       <div>
@@ -125,7 +139,7 @@ export default function Progress() {
 
             return (
               <li key={log.id} className="card" style={{ padding: '20px 22px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: 6 }}>
                     <span style={{ fontSize: 24, fontWeight: 900, letterSpacing: '-0.5px' }}>
                       {formatWeight(log.weight, weightUnit)}
@@ -143,8 +157,21 @@ export default function Progress() {
                       </span>
                     ) : null}
                   </div>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', letterSpacing: '1px', textTransform: 'uppercase' }}>
-                    <time dateTime={log.date}>{formatShortDate(log.date)}</time>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 2, marginRight: -12, flexShrink: 0 }}>
+                    <time dateTime={log.date} style={{ fontSize: 11, fontWeight: 700, color: '#64748b', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                      {formatShortDate(log.date)}
+                    </time>
+                    <button
+                      type="button"
+                      className="icon-btn"
+                      aria-label={`Delete log from ${formatShortDate(log.date)}`}
+                      onClick={() => {
+                        setPendingDelete({ id: log.id, label: `${formatShortDate(log.date)}, ${formatWeight(log.weight, weightUnit)}` })
+                        deleteDialogRef.current?.open()
+                      }}
+                    >
+                      <Trash2 size={16} color="#be123c" strokeWidth={2} aria-hidden="true" />
+                    </button>
                   </span>
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -164,18 +191,27 @@ export default function Progress() {
                         fontSize: 11,
                       }}
                     >
-                      {symptom}
+                      {symptom === 'None' ? 'No side effects' : symptom}
                     </span>
                   ))}
                 </div>
                 {log.notes ? (
-                  <p style={{ fontSize: 13, color: '#64748b', marginTop: 10, lineHeight: 1.5 }}>{log.notes}</p>
+                  <p style={{ fontSize: 13, color: '#475569', marginTop: 10, lineHeight: 1.5, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{log.notes}</p>
                 ) : null}
               </li>
             )
           })}
         </ul>
       </div>
+
+      <ConfirmDialog
+        ref={deleteDialogRef}
+        title="Delete this log?"
+        description={pendingDelete ? `${pendingDelete.label}. This cannot be undone.` : ''}
+        confirmLabel="Delete log"
+        cancelLabel="Keep it"
+        onConfirm={() => { if (pendingDelete) removeLog(pendingDelete.id) }}
+      />
     </div>
   )
 }

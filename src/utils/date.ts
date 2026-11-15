@@ -16,7 +16,12 @@ export function parseLocalISODate(isoDate: string): Date {
 }
 
 export function formatShortDate(isoDate: string): string {
-  return parseLocalISODate(isoDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  const date = parseLocalISODate(isoDate)
+  // Entries from another year would otherwise be ambiguous.
+  const sameYear = date.getFullYear() === new Date().getFullYear()
+  return date.toLocaleDateString(undefined, sameYear
+    ? { month: 'short', day: 'numeric' }
+    : { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 export function formatDayOfMonth(isoDate: string): string {

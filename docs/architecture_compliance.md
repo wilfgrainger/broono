@@ -25,7 +25,7 @@ The persisted state may contain:
 - starting weight and weight unit;
 - check-in dates, weight, symptoms, injection site and notes;
 - journal entries;
-- hydration state and goals.
+- hydration and protein totals for the day, and goals.
 
 The state must not contain access tokens, email addresses, subscription status, purchase tokens or remote identifiers.
 

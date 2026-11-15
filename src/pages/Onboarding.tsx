@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../store'
-import type { MedicationName, WeightUnit, UserProfile } from '../store'
+import { LIMITS, MEDICATIONS } from '../store'
+import type { WeightUnit, UserProfile } from '../store'
 import { ArrowRight, ArrowLeft, Check, Syringe, Target, CalendarDays, Activity, Lock } from 'lucide-react'
 import ReviewRow from '../components/ReviewRow'
-import { formatWeight, getWeightInputUnitLabel, getWeightUnitLabel } from '../utils/weight'
+import WeightField from '../components/WeightField'
+import { WEIGHT_UNIT_OPTIONS, convertWeight, formatWeight, getWeightUnitName, validateWeight } from '../utils/weight'
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 const LAST_STEP = 5
@@ -13,6 +15,7 @@ const STEP_TITLES = ['Welcome', 'Medication details', 'Starting vitals', 'Daily 
 export default function Onboarding() {
     const completeOnboarding = useStore((s) => s.completeOnboarding)
     const updateProfile = useStore((s) => s.updateProfile)
+    const setWeightUnit = useStore((s) => s.setWeightUnit)
     const initialProfile = useStore((s) => s.profile)
 
     const [step, setStep] = useState(0)
@@ -21,7 +24,7 @@ export default function Onboarding() {
     const [weightError, setWeightError] = useState('')
     const contentRef = useRef<HTMLDivElement>(null)
     const weightInputRef = useRef<HTMLInputElement>(null)
-    const isFirstRender = useRef(true)
+    const previousStep = useRef(step)
 
     useEffect(() => {
         document.title = `${STEP_TITLES[step]} (step ${step + 1} of ${LAST_STEP + 1}) | Broono`
@@ -29,10 +32,8 @@ export default function Onboarding() {
 
     // Each step replaces the content, so move focus to the new step's heading.
     useEffect(() => {
-        if (isFirstRender.current) {
-            isFirstRender.current = false
-            return
-        }
+        if (previousStep.current === step) return
+        previousStep.current = step
         contentRef.current?.querySelector<HTMLElement>('h1, h2')?.focus()
     }, [step])
 
@@ -42,8 +43,12 @@ export default function Onboarding() {
     const handleSubmit = (event: React.FormEvent) => {
         event.preventDefault()
 
-        if (step === WEIGHT_STEP && !(localProfile.startWeight > 0)) {
-            setWeightError(`Enter your starting weight in ${getWeightInputUnitLabel(localProfile.weightUnit)} to continue.`)
+        const validWeight = validateWeight(localProfile.startWeight, localProfile.weightUnit)
+        if (step >= WEIGHT_STEP && validWeight === null) {
+            setStep(WEIGHT_STEP)
+            setWeightError(localProfile.startWeight > 0
+                ? 'That weight does not look right. Check the number and the unit.'
+                : `Enter your starting weight in ${getWeightUnitName(localProfile.weightUnit).toLowerCase()} to continue.`)
             weightInputRef.current?.focus()
             return
         }
@@ -53,12 +58,24 @@ export default function Onboarding() {
             return
         }
 
-        updateProfile({ ...localProfile, dose: localProfile.dose.trim() })
+        const { weightUnit, ...rest } = localProfile
+        setWeightUnit(weightUnit)
+        updateProfile({ ...rest, startWeight: validWeight ?? 0, dose: rest.dose.trim() })
         completeOnboarding()
     }
 
     const updateLocal = (updates: Partial<UserProfile>) => {
         setLocalProfile((prev) => ({ ...prev, ...updates }))
+    }
+
+    // Keep an already-entered weight meaningful when the unit changes.
+    const changeUnit = (unit: WeightUnit) => {
+        setLocalProfile((prev) => ({
+            ...prev,
+            weightUnit: unit,
+            startWeight: convertWeight(prev.startWeight, prev.weightUnit, unit),
+        }))
+        setWeightError('')
     }
 
     return (
@@ -168,7 +185,7 @@ export default function Onboarding() {
                         <p id="onboarding-medication-label" style={{ color: 'var(--text-light)', marginBottom: '24px' }}>What medication are you taking?</p>
 
                         <div role="group" aria-labelledby="onboarding-medication-label" style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '32px' }}>
-                            {(['Zepbound', 'Mounjaro', 'Wegovy', 'Ozempic'] as MedicationName[]).map(med => (
+                            {MEDICATIONS.map(med => (
                                 <PillSelect
                                     key={med}
                                     active={localProfile.medicationName === med}
@@ -189,6 +206,7 @@ export default function Onboarding() {
                             spellCheck={false}
                             enterKeyHint="next"
                             className="form-input"
+                            maxLength={LIMITS.dose}
                             value={localProfile.dose}
                             onChange={(e) => updateLocal({ dose: e.target.value })}
                             placeholder="e.g. 2.5mg, 5mg"
@@ -199,60 +217,34 @@ export default function Onboarding() {
                 {step === 2 && (
                     <Slide transitionKey="2">
                         <h1 tabIndex={-1} style={{ fontSize: '1.5rem', marginBottom: '8px' }}>Starting Vitals</h1>
-                        <p style={{ color: 'var(--text-light)', marginBottom: '24px' }}>Let's set your baseline.</p>
+                        <p style={{ color: 'var(--text-light)', marginBottom: '24px' }}>Let's set your baseline. You can change the unit later in Settings.</p>
 
                         <h2 id="onboarding-unit-label" style={{ fontSize: '1.1rem', marginBottom: '12px' }}>Unit</h2>
-                        <div role="group" aria-labelledby="onboarding-unit-label" style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
-                            {(['lbs', 'kg'] as WeightUnit[]).map(u => (
+                        <div role="group" aria-labelledby="onboarding-unit-label" style={{ display: 'grid', gap: '10px', marginBottom: '24px' }}>
+                            {WEIGHT_UNIT_OPTIONS.map(({ unit, label }) => (
                                 <PillSelect
-                                    key={u}
-                                    active={localProfile.weightUnit === u}
-                                    onClick={() => updateLocal({ weightUnit: u })}
-                                    style={{ flex: 1, textAlign: 'center', justifyContent: 'center' }}
+                                    key={unit}
+                                    active={localProfile.weightUnit === unit}
+                                    onClick={() => changeUnit(unit)}
                                 >
-                                    {getWeightUnitLabel(u)}
+                                    {label}
                                 </PillSelect>
                             ))}
                         </div>
 
-                        <label htmlFor="start-weight-input" style={{ display: 'block', fontSize: '1.1rem', marginBottom: '12px', fontWeight: 'bold' }}>Starting Weight</label>
-                        <div style={{ position: 'relative' }}>
-                            <input
-                                ref={weightInputRef}
-                                id="start-weight-input"
-                                name="startWeight"
-                                type="number"
-                                inputMode="decimal"
-                                enterKeyHint="next"
-                                required
-                                min="1"
-                                step="0.1"
-                                className="form-input"
-                                style={{ paddingRight: '56px' }}
-                                value={localProfile.startWeight || ''}
-                                onChange={(e) => {
-                                    updateLocal({ startWeight: parseFloat(e.target.value) || 0 })
-                                    if (weightError) setWeightError('')
-                                }}
-                                placeholder="0.0"
-                                aria-invalid={weightError ? true : undefined}
-                                aria-describedby={weightError ? 'start-weight-error start-weight-hint' : 'start-weight-hint'}
-                            />
-                            <span style={{
-                                position: 'absolute',
-                                right: '16px',
-                                top: '50%',
-                                transform: 'translateY(-50%)',
-                                color: 'var(--text-light)',
-                                fontWeight: 600
-                            }}>{getWeightInputUnitLabel(localProfile.weightUnit)}</span>
-                        </div>
-                        {weightError ? <p id="start-weight-error" role="alert" className="field-error">{weightError}</p> : null}
-                        <p id="start-weight-hint" style={{ marginTop: 8, fontSize: '0.85rem', color: 'var(--text-light)' }}>
-                            {localProfile.weightUnit === 'lbs'
-                                ? 'Enter your total weight in pounds. Broono shows it back in stones and pounds.'
-                                : 'Enter your weight in kilograms.'}
-                        </p>
+                        <WeightField
+                            key={localProfile.weightUnit}
+                            label="Starting Weight"
+                            unit={localProfile.weightUnit}
+                            value={localProfile.startWeight > 0 ? localProfile.startWeight : null}
+                            onChange={(next) => {
+                                updateLocal({ startWeight: next ?? 0 })
+                                if (weightError) setWeightError('')
+                            }}
+                            error={weightError}
+                            inputRef={weightInputRef}
+                            enterKeyHint="next"
+                        />
                     </Slide>
                 )}
 

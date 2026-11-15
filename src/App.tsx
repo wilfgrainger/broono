@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { BookOpen, Home, Newspaper, Plus, TrendingDown, User } from 'lucide-react'
 import { useStore } from './store'
 import Dashboard from './pages/Dashboard'
@@ -11,6 +11,7 @@ import Onboarding from './pages/Onboarding'
 import Login from './pages/Login'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import Terms from './pages/Terms'
+import { useToday } from './utils/useToday'
 
 type Tab = 'dashboard' | 'checkin' | 'progress' | 'news' | 'journal' | 'profile'
 
@@ -32,7 +33,8 @@ function useDocumentTitle(title: string) {
 export default function App() {
   const hasStarted = useStore((state) => state.hasStarted)
   const hasCompletedOnboarding = useStore((state) => state.hasCompletedOnboarding)
-  const { pathname } = window.location
+  // GitHub Pages serves /privacy/index.html as /privacy/, so ignore a trailing slash.
+  const pathname = window.location.pathname.replace(/\/+$/, '') || '/'
 
   if (pathname === '/privacy') return <PrivacyPolicy />
   if (pathname === '/terms') return <Terms />
@@ -48,37 +50,40 @@ function AppShell() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard')
   const resetDailyTotalsIfNewDay = useStore((state) => state.resetDailyTotalsIfNewDay)
   const mainRef = useRef<HTMLElement>(null)
-  const isFirstRender = useRef(true)
+  const previousTab = useRef<Tab>(activeTab)
+  const today = useToday()
 
   useDocumentTitle(TAB_TITLES[activeTab])
 
-  // Daily totals roll over when the app is opened or brought back to the foreground.
+  // Daily totals roll over at local midnight and when the app is reopened.
   useEffect(() => {
     resetDailyTotalsIfNewDay()
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') resetDailyTotalsIfNewDay()
-    }
-    document.addEventListener('visibilitychange', onVisible)
-    return () => document.removeEventListener('visibilitychange', onVisible)
-  }, [resetDailyTotalsIfNewDay])
+  }, [today, resetDailyTotalsIfNewDay])
 
   // A tab change is a page change: start at the top and move focus to the new
-  // content so keyboard and screen reader users are not left on the nav bar.
+  // page heading so screen reader users hear where they are. Comparing with the
+  // previous tab (rather than a first-render flag) keeps the initial load, and
+  // StrictMode's repeated effects, from stealing focus.
   useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false
-      return
-    }
+    if (previousTab.current === activeTab) return
+    previousTab.current = activeTab
+
     const main = mainRef.current
     if (!main) return
     main.scrollTop = 0
-    main.focus({ preventScroll: true })
+    const heading = main.querySelector<HTMLElement>('h1')
+    if (heading) {
+      heading.tabIndex = -1
+      heading.focus({ preventScroll: true })
+    }
   }, [activeTab])
+
+  const goHome = useCallback(() => setActiveTab('dashboard'), [])
 
   const renderPage = () => {
     switch (activeTab) {
-      case 'dashboard': return <Dashboard onNavigate={setActiveTab} />
-      case 'checkin': return <CheckIn onDone={() => setActiveTab('dashboard')} />
+      case 'dashboard': return <Dashboard key={today} onNavigate={setActiveTab} />
+      case 'checkin': return <CheckIn onDone={goHome} />
       case 'progress': return <Progress />
       case 'news': return <NewsPage />
       case 'journal': return <Journal />
@@ -108,7 +113,7 @@ function AppShell() {
         </button>
       </header>
 
-      <main ref={mainRef} tabIndex={-1} className="app-main hide-scroll">
+      <main ref={mainRef} className="app-main hide-scroll">
         {renderPage()}
       </main>
 
@@ -139,18 +144,17 @@ function NavBtn({ icon: Icon, label, tab, active, onNav }: NavBtnProps) {
       type="button"
       className={`nav-btn ${isActive ? 'active' : ''}`}
       onClick={() => onNav(tab)}
-      aria-label={label}
       aria-current={isActive ? 'page' : undefined}
     >
-      <div className="nav-icon-wrap">
+      <span className="nav-icon-wrap">
         <Icon
           size={22}
-          strokeWidth={1.5}
+          strokeWidth={isActive ? 2 : 1.5}
           color={isActive ? '#0f172a' : '#64748b'}
           aria-hidden="true"
         />
-      </div>
-      <span className="nav-label" aria-hidden="true">{label}</span>
+      </span>
+      <span className="nav-label">{label}</span>
     </button>
   )
 }

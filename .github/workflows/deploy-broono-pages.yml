@@ -53,12 +53,19 @@ jobs:
         run: pnpm run build
 
       - name: Add SPA fallback
-        run: cp dist/index.html dist/404.html
+        # /privacy and /terms get real files so they return HTTP 200 rather than
+        # the 404 fallback; everything else falls back to the app shell.
+        run: |
+          cp dist/index.html dist/404.html
+          mkdir -p dist/privacy dist/terms
+          cp dist/index.html dist/privacy/index.html
+          cp dist/index.html dist/terms/index.html
 
       - name: Verify local-only artifact
         run: |
           grep -q 'broono-local-only-2026-08-02-v1' dist/index.html
           grep -q "connect-src 'none'" dist/index.html
+          grep -q "script-src 'self';" dist/index.html
           test "$(cat dist/CNAME)" = "broono.app"
           grep -q 'One-release service-worker kill switch' dist/sw.js
           test ! -d backend

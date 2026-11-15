@@ -20,15 +20,19 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const greeting = today.getHours() < 12 ? 'Good morning.' : today.getHours() < 18 ? 'Good afternoon.' : 'Good evening.'
   const todayDate = today.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
 
-  const hasStartWeight = profile.startWeight > 0
   const hasLogs = logs.length > 0
-  const currentWeight = logs[0]?.weight ?? (hasStartWeight ? profile.startWeight : null)
-  const totalLost = hasLogs && hasStartWeight && currentWeight !== null ? profile.startWeight - currentWeight : null
+  // Measure from the onboarding weight, or from the oldest log when there is none
+  // (profiles created before a starting weight was required). Progress does the same.
+  const baseline = profile.startWeight > 0 ? profile.startWeight : logs[logs.length - 1]?.weight ?? null
+  const currentWeight = logs[0]?.weight ?? baseline
+  const totalLost = hasLogs && baseline !== null && currentWeight !== null ? baseline - currentWeight : null
   const currentWeightStr = currentWeight !== null ? formatWeight(currentWeight, profile.weightUnit) : '--'
 
   const medLevel = getMedicationLevel(logs[0]?.date, profile.medicationName)
   const daysUntilDose = getDaysUntilNextDose(profile.injectionDayOfWeek)
-  const doseLabel = daysUntilDose === 1 ? '1 day' : `${daysUntilDose} days`
+  // `getDaysUntilNextDose` reports a full week on the injection day itself.
+  const doseLabel = daysUntilDose === 7 ? 'Today' : daysUntilDose === 1 ? 'Tomorrow' : `${daysUntilDose} days`
+  const medicationLabel = [profile.medicationName, profile.dose.trim()].filter(Boolean).join(' · ')
   const todayISO = toLocalISODate(today)
   const waterGlasses = dailyWater.date === todayISO ? dailyWater.glasses : 0
   const proteinGrams = dailyProtein.date === todayISO ? dailyProtein.grams : 0
@@ -59,7 +63,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         <div>
           <span className="weight-display">{currentWeightStr}</span>
         </div>
-        <div className="badge-teal">
+        <div className={hasLost ? 'badge-teal' : 'badge-teal badge-neutral'}>
           {hasGained
             ? <TrendingUp size={13} strokeWidth={3} aria-hidden="true" />
             : <TrendingDown size={13} strokeWidth={3} aria-hidden="true" />}
@@ -74,6 +78,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               <p id="med-level-label" style={{ fontSize: 12, fontWeight: 600, color: 'rgba(224,242,254,0.95)', marginBottom: 4, letterSpacing: '.5px' }}>
                 Estimated Medication Level
               </p>
+              <p style={{ fontSize: 12, fontWeight: 600, color: 'rgba(224,242,254,0.95)', marginBottom: 6 }}>{medicationLabel}</p>
               <p style={{ fontSize: 52, fontWeight: 900, letterSpacing: '-2px', lineHeight: 1 }}>
                 {medLevel}%
               </p>
@@ -85,7 +90,9 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           </div>
           <progress className="progress-bar on-gradient" max={100} value={medLevel} aria-labelledby="med-level-label" />
           <p style={{ fontSize: 11, color: 'rgba(224,242,254,0.9)', marginTop: 14, letterSpacing: '.3px', fontWeight: 500 }}>
-            This is a simple estimate for personal tracking, not a clinical measurement or dosing recommendation.
+            {hasLogs
+              ? 'A simple estimate counted from your last weekly log. Not a clinical measurement or dosing recommendation.'
+              : 'Save a weekly log on the day you inject to start this estimate. Not a clinical measurement or dosing recommendation.'}
           </p>
         </div>
       </div>

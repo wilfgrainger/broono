@@ -8,12 +8,15 @@ export default defineConfig({
   use: {
     baseURL: 'http://127.0.0.1:4173',
     headless: true,
+    // The default weight unit follows the device language; en-GB gives stones and pounds.
+    locale: 'en-GB',
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
     video: 'retain-on-failure',
   },
   webServer: {
-    command: 'pnpm dev --host 127.0.0.1 --port 4173 --strictPort',
+    // Test the production build so the strict Content-Security-Policy is exercised too.
+    command: 'pnpm run build && pnpm exec vite preview --host 127.0.0.1 --port 4173 --strictPort',
     url: 'http://127.0.0.1:4173',
     reuseExistingServer: true,
     timeout: 120_000,

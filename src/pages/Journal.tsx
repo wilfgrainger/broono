@@ -1,6 +1,7 @@
-import { useState } from 'react'
-import { ChevronRight, Trash2 } from 'lucide-react'
-import { useStore } from '../store'
+import { useRef, useState } from 'react'
+import { Trash2 } from 'lucide-react'
+import ConfirmDialog, { type ConfirmDialogHandle } from '../components/ConfirmDialog'
+import { LIMITS, useStore } from '../store'
 import { formatShortDate } from '../utils/date'
 
 export default function Journal() {
@@ -8,6 +9,9 @@ export default function Journal() {
   const addJournalEntry = useStore((state) => state.addJournalEntry)
   const removeJournalEntry = useStore((state) => state.removeJournalEntry)
   const [newEntry, setNewEntry] = useState('')
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
+  const deleteDialogRef = useRef<ConfirmDialogHandle>(null)
+  const canSave = newEntry.trim().length > 0
 
   const handleAdd = (event?: React.FormEvent) => {
     event?.preventDefault()
@@ -29,44 +33,45 @@ export default function Journal() {
     <div className="page-enter space-y-6" style={{ paddingTop: 8 }}>
       <div>
         <h1 className="page-title">Journal</h1>
-        <p className="page-subtitle">Unlimited private notes stored only on this device.</p>
+        <p className="page-subtitle">Private notes stored only on this device.</p>
       </div>
 
-      <form className="card" style={{ padding: '8px 8px 8px 20px' }} onSubmit={handleAdd}>
+      <form className="card" style={{ padding: '12px 12px 12px 20px' }} onSubmit={handleAdd}>
         <label htmlFor="journal-textarea" className="visually-hidden">New journal entry</label>
         <textarea
           id="journal-textarea"
           name="entry"
           className="journal-textarea"
           value={newEntry}
+          maxLength={LIMITS.journalEntry}
           onChange={(event) => setNewEntry(event.target.value)}
           onKeyDown={handleKey}
           placeholder="Noticed your clothes fitting looser? Less food noise today? Energy levels improving?"
         />
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: 10, paddingRight: 4 }}>
-          <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>
-            {newEntry.length > 0 ? `${newEntry.length} characters | Ctrl/Cmd + Enter to save` : 'Your private space'}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, borderTop: '1px solid #e2e8f0', paddingTop: 10 }}>
+          <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>
+            {newEntry.length > 0 ? `${newEntry.length} / ${LIMITS.journalEntry}` : 'Your private space'}
           </span>
           <button
             type="submit"
             id="save-journal-btn"
-            disabled={!newEntry.trim()}
+            disabled={!canSave}
             aria-label="Save journal entry"
             style={{
-              background: newEntry.trim() ? '#0f172a' : '#e2e8f0',
-              color: 'white',
+              background: canSave ? '#0f172a' : '#e2e8f0',
+              color: canSave ? 'white' : '#64748b',
               border: 'none',
               borderRadius: 12,
-              width: 44,
-              height: 44,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: newEntry.trim() ? 'pointer' : 'default',
-              boxShadow: newEntry.trim() ? '0 4px 12px rgba(15,23,42,0.2)' : 'none',
+              minWidth: 76,
+              minHeight: 44,
+              padding: '0 18px',
+              fontFamily: 'inherit',
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: canSave ? 'pointer' : 'default',
             }}
           >
-            <ChevronRight size={18} color={newEntry.trim() ? 'white' : '#64748b'} strokeWidth={2.5} aria-hidden="true" />
+            Save
           </button>
         </div>
       </form>
@@ -74,7 +79,7 @@ export default function Journal() {
       <div>
         {journalEntries.length === 0 && (
           <div style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>
-            <p style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>No entries yet</p>
+            <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>No entries yet</h2>
             <p style={{ fontWeight: 600 }}>Your first reflection is waiting.</p>
           </div>
         )}
@@ -90,7 +95,10 @@ export default function Journal() {
               <button
                 type="button"
                 className="icon-btn"
-                onClick={() => removeJournalEntry(entry.id)}
+                onClick={() => {
+                  setPendingDeleteId(entry.id)
+                  deleteDialogRef.current?.open()
+                }}
                 aria-label={`Delete entry from ${formatShortDate(entry.date)}`}
                 style={{ position: 'absolute', top: 4, right: 4 }}
               >
@@ -100,6 +108,15 @@ export default function Journal() {
           ))}
         </ul>
       </div>
+
+      <ConfirmDialog
+        ref={deleteDialogRef}
+        title="Delete this entry?"
+        description="This journal entry will be removed from this device. This cannot be undone."
+        confirmLabel="Delete entry"
+        cancelLabel="Keep it"
+        onConfirm={() => { if (pendingDeleteId) removeJournalEntry(pendingDeleteId) }}
+      />
     </div>
   )
 }

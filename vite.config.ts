@@ -21,8 +21,20 @@ function strictProductionCsp(): Plugin {
   }
 }
 
+// connect-src 'none' also blocks Vite's hot-reload WebSocket, so the dev server
+// (only) allows same-origin connections. index.html itself stays at 'none'.
+function devServerCsp(): Plugin {
+  return {
+    name: 'broono-dev-server-csp',
+    apply: 'serve',
+    transformIndexHtml(html, ctx) {
+      return ctx.server ? html.replace("connect-src 'none'", "connect-src 'self' ws: wss:") : html
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [react(), strictProductionCsp()],
+  plugins: [react(), strictProductionCsp(), devServerCsp()],
   build: {
     outDir: 'dist',
     emptyOutDir: true,

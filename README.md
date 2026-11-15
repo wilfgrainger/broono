@@ -52,9 +52,9 @@ The following information is kept in local browser or app storage:
 - medication name, dose and injection day;
 - weight, symptom and injection-site check-ins;
 - journal entries;
-- hydration state and personal goals.
+- hydration and protein totals for the day, and personal goals.
 
-Settings provides a JSON export and a control to erase all Broono data from the current device. There is no automatic cloud backup or cross-device sync.
+Settings provides a JSON export, an import that restores a previous export after validating it, and a control to erase all Broono data from the current device. There is no automatic cloud backup or cross-device sync.
 
 ## Deployment
 

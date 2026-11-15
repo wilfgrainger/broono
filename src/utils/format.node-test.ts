@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { parseLocalISODate, toLocalISODate } from './date.ts'
-import { formatWeight, formatWeightValue } from './weight.ts'
+import { convertWeight, formatWeight, guessWeightUnit, splitStones, validateWeight } from './weight.ts'
 
 test('toLocalISODate uses the local calendar day, not the UTC day', () => {
   // Late evening and just after midnight local time are the cases where
@@ -21,15 +21,37 @@ test('parseLocalISODate round-trips through toLocalISODate', () => {
 
 test('formatWeight always includes a unit', () => {
   assert.equal(formatWeight(82.34, 'kg'), '82.3 kg')
-  assert.equal(formatWeight(195, 'lbs'), '13 st 13 lbs')
-  assert.equal(formatWeight(196, 'lbs'), '14 st')
-  // Below one stone the value used to render as a bare number ("5").
-  assert.equal(formatWeight(5, 'lbs'), '5 lbs')
-  assert.equal(formatWeight(0.5, 'lbs'), '0.5 lbs')
-  assert.equal(formatWeight(-5, 'lbs'), '-5 lbs')
+  assert.equal(formatWeight(195, 'lbs'), '195 lbs')
+  assert.equal(formatWeight(195, 'st'), '13 st 13 lbs')
+  assert.equal(formatWeight(196, 'st'), '14 st')
+  // Below one stone there is no stones part, but the unit must still show.
+  assert.equal(formatWeight(5, 'st'), '5 lbs')
+  assert.equal(formatWeight(-5, 'st'), '-5 lbs')
+  // 27.96 lbs rounds to 28.0, which must roll over to 2 st rather than "1 st 14 lbs".
+  assert.equal(formatWeight(27.96, 'st'), '2 st')
 })
 
-test('formatWeightValue rolls rounded pounds over into stones', () => {
-  assert.equal(formatWeightValue(27.96, 'lbs'), '2 st')
-  assert.equal(formatWeightValue(70, 'kg'), '70')
+test('convertWeight only converts between kilograms and pound-based units', () => {
+  assert.equal(convertWeight(200, 'lbs', 'st'), 200)
+  assert.equal(convertWeight(200, 'st', 'kg'), 90.7)
+  assert.equal(convertWeight(90.7, 'kg', 'lbs'), 200)
+  assert.equal(convertWeight(0, 'kg', 'lbs'), 0)
+})
+
+test('validateWeight rejects missing and implausible values', () => {
+  assert.equal(validateWeight(82.34, 'kg'), 82.3)
+  for (const bad of [0, -5, Number.NaN, Number.POSITIVE_INFINITY, 501]) {
+    assert.equal(validateWeight(bad, 'kg'), null)
+  }
+  assert.equal(validateWeight(1100, 'lbs'), 1100)
+  assert.equal(validateWeight(1101, 'st'), null)
+})
+
+test('splitStones and guessWeightUnit', () => {
+  assert.deepEqual(splitStones(200), { stones: 14, pounds: 4 })
+  assert.deepEqual(splitStones(13.96), { stones: 1, pounds: 0 })
+  assert.equal(guessWeightUnit('en-GB'), 'st')
+  assert.equal(guessWeightUnit('en-US'), 'lbs')
+  assert.equal(guessWeightUnit('de-DE'), 'kg')
+  assert.equal(guessWeightUnit(undefined), 'kg')
 })

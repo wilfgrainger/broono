@@ -8,9 +8,9 @@ export default function PrivacyPolicy() {
     return (
         <main className="page-enter" style={{ padding: 24, width: '100%', height: '100%', overflowY: 'auto' }}>
             <div style={{ maxWidth: 680, margin: '0 auto' }}>
-            <a href="/" style={{ display: 'inline-block', marginBottom: 20, color: '#4f46e5', fontWeight: 700 }}>← Back to Broono</a>
+            <a href="/" className="legal-back-link">← Back to Broono</a>
             <h1 style={{ fontSize: 28, fontWeight: 900, color: '#0f172a', marginBottom: 8 }}>Privacy Policy</h1>
-            <p style={{ fontSize: 13, color: '#64748b', marginBottom: 24 }}>Last updated: August 2026</p>
+            <p style={{ fontSize: 13, color: '#64748b', marginBottom: 24 }}>Last updated: November 2026</p>
 
             <div style={{ fontSize: 14, color: '#334155', lineHeight: 1.8, display: 'flex', flexDirection: 'column', gap: 20 }}>
                 <section>
@@ -29,7 +29,7 @@ export default function PrivacyPolicy() {
                         <li>Weight entries and progress</li>
                         <li>Symptoms, injection site and check-in notes</li>
                         <li>Journal entries</li>
-                        <li>Water intake and personal goals</li>
+                        <li>Water and protein intake and personal goals</li>
                         <li>A local flag recording that setup is complete</li>
                     </ul>
                 </section>
@@ -54,7 +54,7 @@ export default function PrivacyPolicy() {
                 <section>
                     <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>5. Exporting and deleting your data</h2>
                     <p>
-                        You can export a JSON copy from Settings. You can erase Broono data using “Erase data from this device”, by clearing the site&apos;s
+                        You can export a JSON copy from Settings and import it again on the same or another device. You can erase Broono data using “Erase data from this device”, by clearing the site&apos;s
                         storage in your browser, or by clearing/uninstalling the app. Local data is not automatically recoverable after deletion.
                     </p>
                 </section>
