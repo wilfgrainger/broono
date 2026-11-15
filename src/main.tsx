@@ -1,7 +1,9 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom'
 import App from './App.tsx'
+import '@fontsource-variable/inter/wght.css'
+import '@fontsource/dm-serif-display/400.css'
+import '@fontsource/dm-serif-display/400-italic.css'
 import './index.css'
 import './polish.css'
 
@@ -30,14 +32,19 @@ async function removeLegacyGameRuntime(): Promise<boolean> {
 function renderApplication() {
   ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
+      <App />
     </React.StrictMode>,
   )
 }
 
 async function bootstrap() {
+  // Canonical host redirect. Lives here rather than inline in index.html so the
+  // production Content-Security-Policy can forbid inline scripts.
+  if (window.location.hostname === 'www.broono.app') {
+    window.location.replace(`https://broono.app${window.location.pathname}${window.location.search}`)
+    return
+  }
+
   const wasControlled = await removeLegacyGameRuntime()
 
   // Reload once after retiring an obsolete root service worker so the local

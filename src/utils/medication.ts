@@ -1,3 +1,5 @@
+import { parseLocalISODate } from './date.ts'
+
 export type MedicationName = 'Zepbound' | 'Mounjaro' | 'Wegovy' | 'Ozempic'
 
 export function getMedicationLevel(
@@ -7,9 +9,10 @@ export function getMedicationLevel(
   if (!lastLogDate) return 0
   const halfLifeDays = medicationName === 'Ozempic' || medicationName === 'Wegovy' ? 7 : 5
   const daysSince =
-    (Date.now() - new Date(lastLogDate + 'T00:00:00').getTime()) /
+    (Date.now() - parseLocalISODate(lastLogDate).getTime()) /
     (1000 * 60 * 60 * 24)
-  return Math.max(Math.round(Math.pow(0.5, daysSince / halfLifeDays) * 100), 0)
+  const level = Math.round(Math.pow(0.5, Math.max(daysSince, 0) / halfLifeDays) * 100)
+  return Math.min(Math.max(level, 0), 100)
 }
 
 export function getDaysUntilNextDose(injectionDayOfWeek: number): number {

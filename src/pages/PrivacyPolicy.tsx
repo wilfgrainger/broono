@@ -1,9 +1,16 @@
+import { useEffect } from 'react'
+
 export default function PrivacyPolicy() {
+    useEffect(() => {
+        document.title = 'Privacy Policy | Broono'
+    }, [])
+
     return (
-        <div className="page-enter" style={{ padding: 24, maxWidth: 680, margin: '0 auto', overflowY: 'auto' }}>
+        <main className="page-enter" style={{ padding: 24, width: '100%', height: '100%', overflowY: 'auto' }}>
+            <div style={{ maxWidth: 680, margin: '0 auto' }}>
             <a href="/" style={{ display: 'inline-block', marginBottom: 20, color: '#4f46e5', fontWeight: 700 }}>← Back to Broono</a>
             <h1 style={{ fontSize: 28, fontWeight: 900, color: '#0f172a', marginBottom: 8 }}>Privacy Policy</h1>
-            <p style={{ fontSize: 13, color: '#94a3b8', marginBottom: 24 }}>Last updated: August 2026</p>
+            <p style={{ fontSize: 13, color: '#64748b', marginBottom: 24 }}>Last updated: August 2026</p>
 
             <div style={{ fontSize: 14, color: '#334155', lineHeight: 1.8, display: 'flex', flexDirection: 'column', gap: 20 }}>
                 <section>
@@ -75,6 +82,7 @@ export default function PrivacyPolicy() {
                     </p>
                 </section>
             </div>
-        </div>
+            </div>
+        </main>
     )
 }

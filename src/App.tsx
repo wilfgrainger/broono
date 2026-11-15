@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { BookOpen, Home, Newspaper, Plus, TrendingDown, User } from 'lucide-react'
 import { useStore } from './store'
 import Dashboard from './pages/Dashboard'
@@ -14,15 +14,66 @@ import Terms from './pages/Terms'
 
 type Tab = 'dashboard' | 'checkin' | 'progress' | 'news' | 'journal' | 'profile'
 
+const TAB_TITLES: Record<Tab, string> = {
+  dashboard: 'Home',
+  checkin: 'Weekly log',
+  progress: 'Progress',
+  news: 'Updates',
+  journal: 'Journal',
+  profile: 'Settings',
+}
+
+function useDocumentTitle(title: string) {
+  useEffect(() => {
+    document.title = `${title} | Broono`
+  }, [title])
+}
+
 export default function App() {
-  const [activeTab, setActiveTab] = useState<Tab>('dashboard')
-  const resetWaterIfNewDay = useStore((state) => state.resetWaterIfNewDay)
   const hasStarted = useStore((state) => state.hasStarted)
   const hasCompletedOnboarding = useStore((state) => state.hasCompletedOnboarding)
+  const { pathname } = window.location
 
+  if (pathname === '/privacy') return <PrivacyPolicy />
+  if (pathname === '/terms') return <Terms />
+
+  // Old waitlist links now resolve to the local-first product landing page.
+  if (!hasStarted || pathname === '/waitlist') return <Login />
+  if (!hasCompletedOnboarding) return <Onboarding />
+
+  return <AppShell />
+}
+
+function AppShell() {
+  const [activeTab, setActiveTab] = useState<Tab>('dashboard')
+  const resetDailyTotalsIfNewDay = useStore((state) => state.resetDailyTotalsIfNewDay)
+  const mainRef = useRef<HTMLElement>(null)
+  const isFirstRender = useRef(true)
+
+  useDocumentTitle(TAB_TITLES[activeTab])
+
+  // Daily totals roll over when the app is opened or brought back to the foreground.
   useEffect(() => {
-    resetWaterIfNewDay()
-  }, [resetWaterIfNewDay])
+    resetDailyTotalsIfNewDay()
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') resetDailyTotalsIfNewDay()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [resetDailyTotalsIfNewDay])
+
+  // A tab change is a page change: start at the top and move focus to the new
+  // content so keyboard and screen reader users are not left on the nav bar.
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false
+      return
+    }
+    const main = mainRef.current
+    if (!main) return
+    main.scrollTop = 0
+    main.focus({ preventScroll: true })
+  }, [activeTab])
 
   const renderPage = () => {
     switch (activeTab) {
@@ -35,44 +86,29 @@ export default function App() {
     }
   }
 
-  if (window.location.pathname === '/privacy') {
-    return <PrivacyPolicy />
-  }
-
-  if (window.location.pathname === '/terms') {
-    return <Terms />
-  }
-
-  // Old waitlist links now resolve to the local-first product landing page.
-  if (!hasStarted || window.location.pathname === '/waitlist') {
-    return <Login />
-  }
-
-  if (!hasCompletedOnboarding) {
-    return <Onboarding />
-  }
-
   return (
     <div className="app-shell">
       <header className="app-header">
         <div className="logo-wrap">
-          <div className="logo-icon">
+          <div className="logo-icon" aria-hidden="true">
             <span className="logo-b">b</span>
           </div>
           <span className="logo-text">
-            broono<span className="logo-dot">.</span>
+            broono<span className="logo-dot" aria-hidden="true">.</span>
           </span>
         </div>
         <button
+          type="button"
           className="header-profile-btn"
           onClick={() => setActiveTab('profile')}
           aria-label="Open settings"
+          aria-current={activeTab === 'profile' ? 'page' : undefined}
         >
-          <User size={19} color="#64748b" strokeWidth={1.5} />
+          <User size={19} color="#64748b" strokeWidth={1.5} aria-hidden="true" />
         </button>
       </header>
 
-      <main className="app-main hide-scroll">
+      <main ref={mainRef} tabIndex={-1} className="app-main hide-scroll">
         {renderPage()}
       </main>
 
@@ -80,7 +116,7 @@ export default function App() {
         <NavBtn icon={Home} label="Home" tab="dashboard" active={activeTab} onNav={setActiveTab} />
         <NavBtn icon={Plus} label="Log" tab="checkin" active={activeTab} onNav={setActiveTab} />
         <NavBtn icon={TrendingDown} label="Progress" tab="progress" active={activeTab} onNav={setActiveTab} />
-        <NavBtn icon={Newspaper} label="News" tab="news" active={activeTab} onNav={setActiveTab} />
+        <NavBtn icon={Newspaper} label="Updates" tab="news" active={activeTab} onNav={setActiveTab} />
         <NavBtn icon={BookOpen} label="Journal" tab="journal" active={activeTab} onNav={setActiveTab} />
       </nav>
     </div>
@@ -100,6 +136,7 @@ function NavBtn({ icon: Icon, label, tab, active, onNav }: NavBtnProps) {
 
   return (
     <button
+      type="button"
       className={`nav-btn ${isActive ? 'active' : ''}`}
       onClick={() => onNav(tab)}
       aria-label={label}
@@ -109,10 +146,11 @@ function NavBtn({ icon: Icon, label, tab, active, onNav }: NavBtnProps) {
         <Icon
           size={22}
           strokeWidth={1.5}
-          color={isActive ? '#0f172a' : '#94a3b8'}
+          color={isActive ? '#0f172a' : '#64748b'}
+          aria-hidden="true"
         />
       </div>
-      <span className="nav-label">{label}</span>
+      <span className="nav-label" aria-hidden="true">{label}</span>
     </button>
   )
 }

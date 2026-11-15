@@ -1,4 +1,4 @@
-import type { WeightUnit } from '../store'
+import type { WeightUnit } from '../store.ts'
 
 const POUNDS_PER_STONE = 14
 
@@ -12,6 +12,11 @@ function formatDecimal(value: number): string {
 
 export function getWeightUnitLabel(unit: WeightUnit): string {
   return unit === 'lbs' ? 'st/lbs' : 'kg'
+}
+
+/** Weights are entered and stored as a single number: kilograms or total pounds. */
+export function getWeightInputUnitLabel(unit: WeightUnit): string {
+  return unit === 'lbs' ? 'lbs' : 'kg'
 }
 
 export function formatWeightValue(value: number, unit: WeightUnit): string {
@@ -45,7 +50,9 @@ export function formatWeight(value: number, unit: WeightUnit): string {
   }
 
   const sign = value < 0 ? '-' : ''
-  const absoluteValue = Math.abs(value)
+  const absoluteValue = Math.abs(roundToTenth(value))
+  const formatted = formatWeightValue(absoluteValue, unit)
 
-  return `${sign}${formatWeightValue(absoluteValue, unit)}`
+  // Below one stone `formatWeightValue` returns a bare number, so add the unit.
+  return absoluteValue < POUNDS_PER_STONE ? `${sign}${formatted} lbs` : `${sign}${formatted}`
 }

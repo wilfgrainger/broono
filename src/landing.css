@@ -102,7 +102,7 @@
 
 .landing-brand-name b {
   color: #6366f1;
-  font-family: Inter, sans-serif;
+  font-family: var(--font-sans);
   font-size: 31px;
   font-weight: 800;
 }
@@ -874,7 +874,7 @@
 
 .signin-review-note {
   margin-top: 12px;
-  color: #94a3b8;
+  color: #64748b;
   font-size: 11px;
   text-align: center;
 }

@@ -5,7 +5,7 @@ const UPDATE_ITEMS = [
     id: 'check-ins',
     tag: 'Core Feature',
     tagBg: '#eff6ff',
-    tagColor: '#2563eb',
+    tagColor: '#1d4ed8',
     tagBorder: '#bfdbfe',
     title: 'Weekly check-ins help you track weight, symptoms, and injection site rotation.',
     source: 'Broono',
@@ -14,18 +14,18 @@ const UPDATE_ITEMS = [
     id: 'hydration',
     tag: 'Reminder',
     tagBg: '#f0fdf4',
-    tagColor: '#16a34a',
+    tagColor: '#15803d',
     tagBorder: '#bbf7d0',
-    title: 'Hydration and protein goals stay available on the free plan while premium analytics remain optional.',
+    title: 'Hydration and protein goals reset each day. Tap the dashboard buttons to count glasses and grams as you go.',
     source: 'Broono',
   },
   {
     id: 'privacy',
     tag: 'Privacy',
     tagBg: '#fff7ed',
-    tagColor: '#ea580c',
+    tagColor: '#c2410c',
     tagBorder: '#fed7aa',
-    title: 'Health logs and journal entries stay stored on-device so you control what gets exported.',
+    title: 'Health logs and journal entries stay on this device. Export a backup from Settings before changing phones or clearing data.',
     source: 'Broono',
   },
 ]
@@ -36,8 +36,8 @@ export default function NewsPage() {
   return (
     <div className="page-enter space-y-6" style={{ paddingTop: 8 }}>
       <div>
-        <h2 className="page-title">Updates</h2>
-        <p className="page-subtitle">Product updates and trusted guidance for your {medicationName} routine.</p>
+        <h1 className="page-title">Updates</h1>
+        <p className="page-subtitle">Product notes for your {medicationName} routine.</p>
       </div>
 
       <div
@@ -48,10 +48,10 @@ export default function NewsPage() {
         }}
       >
         <p style={{ fontSize: 12, fontWeight: 800, color: '#1d4ed8', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 8 }}>
-          Launch note
+          Local edition
         </p>
         <p style={{ fontSize: 15, color: '#334155', lineHeight: 1.6 }}>
-          The live news feed is temporarily offline while we move it to first-party infrastructure. For launch, this tab stays focused on product guidance rather than third-party articles.
+          Broono works without an internet connection, an account or a subscription, so this tab carries product notes only. It never loads third-party articles. For medical questions, speak to your prescriber or pharmacist.
         </p>
       </div>
 
@@ -64,19 +64,16 @@ export default function NewsPage() {
             >
               {item.tag}
             </span>
-            <h3 style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.4, marginBottom: 16, color: '#0f172a' }}>
+            <h2 style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.4, marginBottom: 16, color: '#0f172a' }}>
               {item.title}
-            </h3>
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.8px' }}>
+            </h2>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '.8px' }}>
               {item.source}
             </span>
           </div>
         ))}
       </div>
 
-      <p style={{ textAlign: 'center', fontSize: 12, color: '#94a3b8', paddingBottom: 8 }}>
-        Third-party health news will return after we own the feed end to end.
-      </p>
     </div>
   )
 }
