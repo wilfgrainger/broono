@@ -200,7 +200,7 @@ export default function Login() {
                             <button
                                 type="button"
                                 onClick={startLocally}
-                                className="google-signin-btn"
+                                className="start-btn"
                             >
                                 Start using Broono
                                 <ArrowRight size={18} aria-hidden="true" />

@@ -1,11 +1,18 @@
-export default function Terms() {
-    return (
-        <div className="page-enter" style={{ padding: 24, maxWidth: 680, margin: '0 auto', overflowY: 'auto' }}>
-            <a href="/" style={{ display: 'inline-block', marginBottom: 20, color: '#4f46e5', fontWeight: 700 }}>← Back to Broono</a>
-            <h1 style={{ fontSize: 28, fontWeight: 900, color: '#0f172a', marginBottom: 8 }}>Terms of Use</h1>
-            <p style={{ fontSize: 13, color: '#94a3b8', marginBottom: 24 }}>Last updated: August 2026</p>
+import { useEffect } from 'react'
 
-            <div style={{ fontSize: 14, color: '#334155', lineHeight: 1.8, display: 'flex', flexDirection: 'column', gap: 20 }}>
+export default function Terms() {
+    useEffect(() => {
+        document.title = 'Terms of Use | Broono'
+    }, [])
+
+    return (
+        <main className="page-enter" style={{ padding: 24, width: '100%', height: '100%', overflowY: 'auto' }}>
+            <div style={{ maxWidth: 680, margin: '0 auto' }}>
+            <a href="/" className="legal-back-link">← Back to Broono</a>
+            <h1 style={{ fontSize: 28, fontWeight: 900, color: 'var(--text-primary)', marginBottom: 8 }}>Terms of Use</h1>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 24 }}>Last updated: August 2026</p>
+
+            <div style={{ fontSize: 14, color: 'var(--text-body)', lineHeight: 1.8, display: 'flex', flexDirection: 'column', gap: 20 }}>
                 <section>
                     <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>1. Local software</h2>
                     <p>
@@ -67,6 +74,7 @@ export default function Terms() {
                     </p>
                 </section>
             </div>
-        </div>
+            </div>
+        </main>
     )
 }

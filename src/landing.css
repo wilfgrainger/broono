@@ -1,5 +1,7 @@
 /* Mobile-first landing and sign-in experience */
 .landing-page {
+  /* The marketing page is designed in light colours only. */
+  color-scheme: light;
   --landing-ink: #0f172a;
   --landing-muted: #5f6f85;
   --landing-line: rgba(148, 163, 184, 0.24);
@@ -23,7 +25,7 @@
 }
 
 .landing-page :focus-visible {
-  outline: 3px solid rgba(99, 102, 241, 0.38);
+  outline: 3px solid #4f46e5;
   outline-offset: 3px;
 }
 
@@ -102,7 +104,7 @@
 
 .landing-brand-name b {
   color: #6366f1;
-  font-family: Inter, sans-serif;
+  font-family: var(--font-sans);
   font-size: 31px;
   font-weight: 800;
 }
@@ -235,7 +237,7 @@
 
 .landing-action-note {
   margin-top: 13px;
-  color: #7c8ba0;
+  color: #5f6f85;
   font-size: 12px;
   line-height: 1.5;
 }
@@ -744,8 +746,8 @@
 }
 
 .signin-card-kicker {
-  color: #6366f1;
-  font-size: 10px;
+  color: #4f46e5;
+  font-size: 11px;
   font-weight: 850;
   letter-spacing: 0.07em;
   text-transform: uppercase;
@@ -765,47 +767,7 @@
   line-height: 1.6;
 }
 
-.consent-list {
-  display: grid;
-  gap: 12px;
-  margin-top: 20px;
-}
-
-.consent-row {
-  display: grid;
-  grid-template-columns: 20px 1fr;
-  gap: 10px;
-  align-items: start;
-  color: #475569;
-  font-size: 12px;
-  line-height: 1.55;
-  cursor: pointer;
-}
-
-.consent-row input {
-  width: 18px;
-  height: 18px;
-  margin-top: 1px;
-  accent-color: #4f46e5;
-}
-
-.consent-row a {
-  color: #4338ca;
-  font-weight: 750;
-}
-
-.signin-error {
-  margin-top: 14px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  color: #be123c;
-  background: #fff1f2;
-  border: 1px solid #fecdd3;
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-.google-signin-btn {
+.start-btn {
   width: 100%;
   min-height: 52px;
   margin-top: 20px;
@@ -825,56 +787,14 @@
   transition: transform 0.16s, opacity 0.16s, background 0.16s;
 }
 
-.google-signin-btn:disabled {
+.start-btn:disabled {
   opacity: 0.48;
   cursor: not-allowed;
 }
 
-.google-glyph {
-  width: 23px;
-  height: 23px;
-  border-radius: 999px;
-  display: grid;
-  place-items: center;
-  color: #0f172a;
-  background: #fff;
-  font-size: 13px;
-  font-weight: 900;
-}
-
-.web-waitlist-card {
-  margin-top: 19px;
-  padding: 16px;
-  border-radius: 16px;
-  color: #334155;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-}
-
-.web-waitlist-card p {
-  font-size: 13px;
-  line-height: 1.55;
-}
-
-.web-waitlist-card a {
-  width: 100%;
-  min-height: 49px;
-  margin-top: 13px;
-  border-radius: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  text-decoration: none;
-  color: #fff;
-  background: #4f46e5;
-  font-size: 13px;
-  font-weight: 850;
-}
-
 .signin-review-note {
   margin-top: 12px;
-  color: #94a3b8;
+  color: #64748b;
   font-size: 11px;
   text-align: center;
 }
@@ -899,7 +819,11 @@
 }
 
 .landing-footer a {
-  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .landing-mobile-dock {
@@ -938,7 +862,7 @@
 
   .landing-nav-cta:hover,
   .landing-cta:hover,
-  .google-signin-btn:hover:not(:disabled) {
+  .start-btn:hover:not(:disabled) {
     transform: translateY(-1px);
     background: #1e293b;
   }
@@ -946,10 +870,6 @@
   .landing-secondary:hover {
     transform: translateY(-1px);
     background: #fff;
-  }
-
-  .web-waitlist-card a:hover {
-    background: #4338ca;
   }
 
   .landing-footer a:hover {

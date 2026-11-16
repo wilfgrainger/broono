@@ -22,10 +22,10 @@ The persisted state may contain:
 
 - setup status;
 - medication and schedule preferences;
-- starting weight and weight unit;
-- check-in dates, weight, symptoms, injection site and notes;
+- starting weight, goal weight, optional height and weight unit;
+- log dates, weight, injection site and dose, side effects and notes;
 - journal entries;
-- hydration state and goals.
+- hydration and protein totals for the day, and goals.
 
 The state must not contain access tokens, email addresses, subscription status, purchase tokens or remote identifiers.
 
@@ -48,7 +48,7 @@ GitHub Pages delivers public application assets. Hosting and network providers m
 
 ### User export
 
-Export creates a local JSON download. After creation, the user controls where that file is stored or shared. The export must include no hidden account or platform identifiers.
+Export creates a local JSON download in a browser, or, in the Android app, a file in the app's private cache handed to the system share sheet. After creation, the user controls where that file is stored or shared. The export must include no hidden account or platform identifiers.
 
 ## Privacy consequences
 

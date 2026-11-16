@@ -1,19 +1,35 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
-import { getMedicationLevel as getMedicationLevelUtil, getDaysUntilNextDose as getDaysUntilNextDoseUtil } from './utils/medication'
-import type { MedicationName } from './utils/medication'
+import { createJSONStorage, persist } from 'zustand/middleware'
+import { MEDICATIONS, parseDose, type MedicationName } from './utils/medications'
+import { INJECTION_SITES, type InjectionSite } from './utils/stats'
+import { formatShortDate, toLocalISODate } from './utils/date'
+import { safeLocalStorage } from './utils/storageHealth'
+import { convertWeight, guessWeightUnit, validateWeight, type WeightUnit } from './utils/weight'
 
-export type WeightUnit = 'lbs' | 'kg'
-export type { MedicationName }
-export type InjectionSite = 'Left Stomach' | 'Right Stomach' | 'Left Thigh' | 'Right Thigh'
-export type Symptom = 'None' | 'Nausea' | 'Fatigue' | 'Headache' | 'Constipation'
+export type { MedicationName, WeightUnit, InjectionSite }
+export { MEDICATIONS, INJECTION_SITES }
+export const SYMPTOMS = [
+  'None', 'Nausea', 'Vomiting', 'Diarrhoea', 'Constipation', 'Heartburn', 'Fatigue', 'Headache', 'Site reaction',
+] as const
+export type Symptom = typeof SYMPTOMS[number]
+
+export const STORE_VERSION = 6
+export const LIMITS = {
+  notes: 2000,
+  journalEntry: 5000,
+  proteinGoal: { min: 30, max: 300 },
+  waterGoal: { min: 1, max: 20 },
+} as const
 
 export interface WeeklyLog {
   id: string
   date: string
   displayDate: string
   weight: number
+  /** '' when no injection was recorded with this log. */
   site: InjectionSite | ''
+  /** Dose injected in mg; 0 when no injection or not recorded. */
+  doseMg: number
   symptoms: Symptom[]
   notes: string
 }
@@ -27,9 +43,20 @@ export interface JournalEntry {
 
 export interface UserProfile {
   medicationName: MedicationName
-  dose: string
+  /** Current dose in mg; 0 when not set. */
+  doseMg: number
   injectionDayOfWeek: number
   startWeight: number
+  /** Goal weight in the same unit as `startWeight`; 0 when not set. */
+  goalWeight: number
+  /** Height in centimetres, used only for BMI; 0 when not set. */
+  heightCm: number
+  /** `YYYY-MM-DD` the user started treatment, or ''. */
+  treatmentStartDate: string
+  /** `HH:MM` used for calendar and device reminders. */
+  reminderTime: string
+  /** Weekly local notification in the Android app. */
+  deviceReminder: boolean
   weightUnit: WeightUnit
   proteinGoalG: number
   waterGoalGlasses: number
@@ -40,6 +67,11 @@ interface DailyWater {
   glasses: number
 }
 
+interface DailyProtein {
+  date: string
+  grams: number
+}
+
 interface AppState {
   hasStarted: boolean
   hasCompletedOnboarding: boolean
@@ -47,59 +79,181 @@ interface AppState {
   logs: WeeklyLog[]
   journalEntries: JournalEntry[]
   dailyWater: DailyWater
+  dailyProtein: DailyProtein
   startLocally: () => void
-  updateProfile: (updates: Partial<UserProfile>) => void
+  updateProfile: (updates: Partial<Omit<UserProfile, 'weightUnit'>>) => void
+  setWeightUnit: (unit: WeightUnit) => void
   completeOnboarding: () => void
   addLog: (log: Omit<WeeklyLog, 'id'>) => void
+  updateLog: (id: string, changes: Omit<WeeklyLog, 'id'>) => void
   removeLog: (id: string) => void
   addJournalEntry: (text: string) => void
   removeJournalEntry: (id: string) => void
   addWaterGlass: () => void
-  resetWaterIfNewDay: () => void
+  removeWaterGlass: () => void
+  addProtein: (grams: number) => void
+  resetDailyTotalsIfNewDay: () => void
+  importData: (data: PersistedAppState) => void
   resetApp: () => void
 }
 
-type PersistedAppState = Pick<
+export type PersistedAppState = Pick<
   AppState,
   'hasStarted' |
   'hasCompletedOnboarding' |
   'profile' |
   'logs' |
   'journalEntries' |
-  'dailyWater'
+  'dailyWater' |
+  'dailyProtein'
 >
 
-function today(): string {
-  return new Date().toISOString().split('T')[0]
-}
+const today = () => toLocalISODate()
 
 function uid(): string {
-  return Math.random().toString(36).slice(2) + Date.now().toString(36)
+  return globalThis.crypto?.randomUUID?.() ??
+    Math.random().toString(36).slice(2) + Date.now().toString(36)
 }
 
-function formatDisplayDate(isoDate: string): string {
-  const d = new Date(isoDate + 'T00:00:00')
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-}
-
-const defaultProfile: UserProfile = {
+const createDefaultProfile = (): UserProfile => ({
   medicationName: 'Zepbound',
-  dose: '5mg',
+  doseMg: 0,
   injectionDayOfWeek: 1,
   startWeight: 0,
-  weightUnit: 'lbs',
+  goalWeight: 0,
+  heightCm: 0,
+  treatmentStartDate: '',
+  reminderTime: '09:00',
+  deviceReminder: false,
+  weightUnit: guessWeightUnit(globalThis.navigator?.language),
   proteinGoalG: 100,
   waterGoalGlasses: 8,
-}
+})
 
 const createPersistedState = (): PersistedAppState => ({
   hasStarted: false,
   hasCompletedOnboarding: false,
-  profile: { ...defaultProfile },
+  profile: createDefaultProfile(),
   logs: [],
   journalEntries: [],
   dailyWater: { date: today(), glasses: 0 },
+  dailyProtein: { date: today(), grams: 0 },
 })
+
+// ── Validation of stored or imported data ──
+// Anything read back from storage or from a backup file is untrusted: it may be
+// from an older version, hand-edited, or not a Broono file at all.
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+const asText = (value: unknown, maxLength: number) =>
+  typeof value === 'string' ? value.slice(0, maxLength) : ''
+const asDate = (value: unknown) =>
+  typeof value === 'string' && ISO_DATE.test(value) ? value : null
+const clampInt = (value: unknown, min: number, max: number, fallback: number) =>
+  typeof value === 'number' && Number.isFinite(value) ? Math.min(Math.max(Math.round(value), min), max) : fallback
+
+function sanitizeProfile(raw: unknown, sourceVersion: number): UserProfile {
+  const base = createDefaultProfile()
+  if (!isRecord(raw)) return base
+
+  // Before version 5 the `lbs` unit was always displayed as stones and pounds.
+  const rawUnit = raw.weightUnit
+  const weightUnit: WeightUnit = rawUnit === 'kg' || rawUnit === 'st'
+    ? rawUnit
+    : rawUnit === 'lbs'
+      ? (sourceVersion < 5 ? 'st' : 'lbs')
+      : base.weightUnit
+
+  return {
+    medicationName: MEDICATIONS.includes(raw.medicationName as MedicationName)
+      ? raw.medicationName as MedicationName
+      : base.medicationName,
+    // Versions before 6 stored the dose as free text ("5mg").
+    doseMg: parseDose(raw.doseMg ?? raw.dose),
+    injectionDayOfWeek: clampInt(raw.injectionDayOfWeek, 0, 6, base.injectionDayOfWeek),
+    startWeight: validateWeight(Number(raw.startWeight), weightUnit) ?? 0,
+    goalWeight: validateWeight(Number(raw.goalWeight), weightUnit) ?? 0,
+    heightCm: clampInt(raw.heightCm, 0, 250, 0) >= 100 ? clampInt(raw.heightCm, 0, 250, 0) : 0,
+    treatmentStartDate: asDate(raw.treatmentStartDate) ?? '',
+    reminderTime: typeof raw.reminderTime === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(raw.reminderTime) ? raw.reminderTime : base.reminderTime,
+    deviceReminder: raw.deviceReminder === true,
+    weightUnit,
+    proteinGoalG: clampInt(raw.proteinGoalG, LIMITS.proteinGoal.min, LIMITS.proteinGoal.max, base.proteinGoalG),
+    waterGoalGlasses: clampInt(raw.waterGoalGlasses, LIMITS.waterGoal.min, LIMITS.waterGoal.max, base.waterGoalGlasses),
+  }
+}
+
+function sanitizeLogs(raw: unknown, unit: WeightUnit): WeeklyLog[] {
+  if (!Array.isArray(raw)) return []
+
+  return raw.flatMap((entry): WeeklyLog[] => {
+    if (!isRecord(entry)) return []
+    const date = asDate(entry.date)
+    const weight = validateWeight(Number(entry.weight), unit)
+    if (!date || weight === null) return []
+
+    const symptoms = Array.isArray(entry.symptoms)
+      ? SYMPTOMS.filter((symptom) => (entry.symptoms as unknown[]).includes(symptom)) as Symptom[]
+      : []
+
+    return [{
+      id: asText(entry.id, 80) || uid(),
+      date,
+      displayDate: formatShortDate(date),
+      weight,
+      site: (INJECTION_SITES as readonly string[]).includes(entry.site as string) ? entry.site as InjectionSite : '',
+      doseMg: parseDose(entry.doseMg),
+      symptoms: symptoms.length > 0 ? symptoms : ['None'] as Symptom[],
+      notes: asText(entry.notes, LIMITS.notes),
+    }]
+  }).sort((a, b) => b.date.localeCompare(a.date))
+}
+
+function sanitizeJournal(raw: unknown): JournalEntry[] {
+  if (!Array.isArray(raw)) return []
+
+  return raw.flatMap((entry): JournalEntry[] => {
+    if (!isRecord(entry)) return []
+    const date = asDate(entry.date)
+    const text = asText(entry.text, LIMITS.journalEntry).trim()
+    if (!date || !text) return []
+
+    return [{ id: asText(entry.id, 80) || uid(), date, displayDate: formatShortDate(date), text }]
+  })
+}
+
+/**
+ * Builds a valid state from stored or imported data. Returns null when the
+ * input is not recognisable as Broono data at all.
+ */
+export function sanitizePersistedState(raw: unknown, sourceVersion: number): PersistedAppState | null {
+  if (!isRecord(raw)) return null
+  const looksLikeBroono = isRecord(raw.profile) || Array.isArray(raw.logs) || Array.isArray(raw.journalEntries)
+  if (!looksLikeBroono) return null
+
+  const base = createPersistedState()
+  const profile = sanitizeProfile(raw.profile, sourceVersion)
+  const logs = sanitizeLogs(raw.logs, profile.weightUnit)
+  const journalEntries = sanitizeJournal(raw.journalEntries)
+  const hasExistingUse = logs.length > 0 || journalEntries.length > 0 || profile.startWeight > 0
+
+  const water = isRecord(raw.dailyWater) ? raw.dailyWater : {}
+  const protein = isRecord(raw.dailyProtein) ? raw.dailyProtein : {}
+
+  return {
+    hasStarted: typeof raw.hasStarted === 'boolean' ? raw.hasStarted || hasExistingUse : hasExistingUse,
+    hasCompletedOnboarding: typeof raw.hasCompletedOnboarding === 'boolean'
+      ? raw.hasCompletedOnboarding
+      : hasExistingUse,
+    profile,
+    logs,
+    journalEntries,
+    dailyWater: { date: asDate(water.date) ?? base.dailyWater.date, glasses: clampInt(water.glasses, 0, 99, 0) },
+    dailyProtein: { date: asDate(protein.date) ?? base.dailyProtein.date, grams: clampInt(protein.grams, 0, 999, 0) },
+  }
+}
 
 export const useStore = create<AppState>()(
   persist(
@@ -111,13 +265,39 @@ export const useStore = create<AppState>()(
       updateProfile: (updates) =>
         set((state) => ({ profile: { ...state.profile, ...updates } })),
 
+      // Changing unit converts every stored weight so the numbers keep their meaning.
+      setWeightUnit: (unit) =>
+        set((state) => {
+          const from = state.profile.weightUnit
+          if (from === unit) return {}
+
+          return {
+            profile: {
+              ...state.profile,
+              weightUnit: unit,
+              startWeight: convertWeight(state.profile.startWeight, from, unit),
+            },
+            logs: state.logs.map((log) => ({ ...log, weight: convertWeight(log.weight, from, unit) })),
+          }
+        }),
+
       completeOnboarding: () => set({ hasCompletedOnboarding: true }),
 
       resetApp: () => set(createPersistedState()),
 
+      importData: (data) => set({ ...data, hasStarted: true, hasCompletedOnboarding: true }),
+
+      // Logs are kept newest first by date, whatever order they were entered in.
       addLog: (log) =>
         set((state) => ({
-          logs: [{ ...log, id: uid() }, ...state.logs],
+          logs: [{ ...log, id: uid() }, ...state.logs].sort((a, b) => b.date.localeCompare(a.date)),
+        })),
+
+      updateLog: (id, changes) =>
+        set((state) => ({
+          logs: state.logs
+            .map((log) => (log.id === id ? { ...changes, id } : log))
+            .sort((a, b) => b.date.localeCompare(a.date)),
         })),
 
       removeLog: (id) =>
@@ -129,8 +309,9 @@ export const useStore = create<AppState>()(
             {
               id: uid(),
               date: today(),
-              displayDate: formatDisplayDate(today()),
-              text,
+              // Kept so exports keep their shape; the UI formats `date` at render time.
+              displayDate: formatShortDate(today()),
+              text: text.slice(0, LIMITS.journalEntry),
             },
             ...state.journalEntries,
           ],
@@ -146,56 +327,50 @@ export const useStore = create<AppState>()(
           const date = today()
           const current = state.dailyWater.date === date ? state.dailyWater.glasses : 0
 
-          return {
-            dailyWater: {
-              date,
-              glasses: Math.min(current + 1, state.profile.waterGoalGlasses),
-            },
-          }
+          return { dailyWater: { date, glasses: Math.min(current + 1, 99) } }
         }),
 
-      resetWaterIfNewDay: () =>
+      removeWaterGlass: () =>
         set((state) => {
           const date = today()
-          if (state.dailyWater.date !== date) {
-            return { dailyWater: { date, glasses: 0 } }
-          }
+          const current = state.dailyWater.date === date ? state.dailyWater.glasses : 0
 
-          return {}
+          return { dailyWater: { date, glasses: Math.max(current - 1, 0) } }
+        }),
+
+      addProtein: (grams) =>
+        set((state) => {
+          const date = today()
+          const current = state.dailyProtein.date === date ? state.dailyProtein.grams : 0
+
+          return { dailyProtein: { date, grams: Math.min(Math.max(current + grams, 0), 999) } }
+        }),
+
+      resetDailyTotalsIfNewDay: () =>
+        set((state) => {
+          const date = today()
+
+          return {
+            ...(state.dailyWater.date !== date ? { dailyWater: { date, glasses: 0 } } : {}),
+            ...(state.dailyProtein.date !== date ? { dailyProtein: { date, grams: 0 } } : {}),
+          }
         }),
     }),
     {
       name: 'broono-store',
-      version: 3,
-      migrate: (persistedState) => {
-        const baseState = createPersistedState()
-
-        if (!persistedState || typeof persistedState !== 'object') {
-          return baseState
-        }
-
-        const data = persistedState as Partial<PersistedAppState>
-        const hasExistingUse = Boolean(
-          data.hasStarted ||
-          data.hasCompletedOnboarding ||
-          (Array.isArray(data.logs) && data.logs.length > 0) ||
-          (Array.isArray(data.journalEntries) && data.journalEntries.length > 0) ||
-          (data.profile?.startWeight && data.profile.startWeight > 0),
-        )
-
-        return {
-          ...baseState,
-          hasStarted: data.hasStarted ?? hasExistingUse,
-          hasCompletedOnboarding: data.hasCompletedOnboarding ?? false,
-          profile: { ...baseState.profile, ...data.profile },
-          logs: Array.isArray(data.logs) ? data.logs : [],
-          journalEntries: Array.isArray(data.journalEntries) ? data.journalEntries : [],
-          dailyWater: data.dailyWater ?? baseState.dailyWater,
-        }
-      },
+      version: STORE_VERSION,
+      storage: createJSONStorage(() => safeLocalStorage),
+      partialize: (state): PersistedAppState => ({
+        hasStarted: state.hasStarted,
+        hasCompletedOnboarding: state.hasCompletedOnboarding,
+        profile: state.profile,
+        logs: state.logs,
+        journalEntries: state.journalEntries,
+        dailyWater: state.dailyWater,
+        dailyProtein: state.dailyProtein,
+      }),
+      migrate: (persistedState, version) =>
+        sanitizePersistedState(persistedState, version) ?? createPersistedState(),
     },
   ),
 )
-
-export const getMedicationLevel = getMedicationLevelUtil
-export const getDaysUntilNextDose = getDaysUntilNextDoseUtil

@@ -5,9 +5,9 @@ interface ReviewRowProps {
 
 export default function ReviewRow({ label, value }: ReviewRowProps) {
     return (
-        <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '16px', borderBottom: '1px solid var(--border)' }}>
-            <span style={{ color: 'var(--text-light)' }}>{label}</span>
-            <span style={{ fontWeight: 600 }}>{value}</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, paddingBottom: '16px', borderBottom: '1px solid var(--border)' }}>
+            <dt style={{ color: 'var(--text-secondary)', flexShrink: 0 }}>{label}</dt>
+            <dd style={{ fontWeight: 600, textAlign: 'right', minWidth: 0, overflowWrap: 'anywhere' }}>{value}</dd>
         </div>
     )
 }

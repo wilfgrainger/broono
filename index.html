@@ -4,11 +4,18 @@
 <head>
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+  <link rel="manifest" href="/manifest.webmanifest" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#0f172a" />
+  <meta name="color-scheme" content="light dark" />
+  <!-- Applies a saved Light/Dark choice before first paint. Allowed by its hash in the production CSP. -->
+  <script>try{var s=localStorage.getItem("color-scheme");if(s==="light"||s==="dark")document.querySelector('meta[name="color-scheme"]').content=s}catch(e){}</script>
+  <meta name="theme-color" content="#f8fafc" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0b1120" media="(prefers-color-scheme: dark)" />
   <meta name="broono-build" content="broono-local-only-2026-08-02-v1" />
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self'; connect-src 'none'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" />
+    content="default-src 'self'; connect-src 'none'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; form-action 'self'" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="Broono" />
@@ -18,25 +25,22 @@
     content="local GLP-1 tracker, private weight tracker, Mounjaro tracker, Wegovy tracker, Ozempic tracker, dose tracker" />
   <meta name="author" content="Broono" />
   <link rel="canonical" href="https://broono.app" />
-  <script>
-    if (window.location.hostname === 'www.broono.app') {
-      window.location.replace('https://broono.app' + window.location.pathname + window.location.search);
-    }
-  </script>
-
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://broono.app/" />
   <meta property="og:title" content="Broono — Local-only GLP-1 tracking" />
   <meta property="og:description"
     content="Track weight, dose timing, hydration and private notes without an account or health-data server." />
-  <meta property="og:image" content="https://broono.app/favicon.svg" />
+  <meta property="og:image" content="https://broono.app/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Broono: a calmer way to follow your GLP-1 week. Local-only tracking." />
 
-  <meta property="twitter:card" content="summary" />
+  <meta name="twitter:card" content="summary_large_image" />
   <meta property="twitter:url" content="https://broono.app/" />
   <meta property="twitter:title" content="Broono — Local-only GLP-1 tracking" />
   <meta property="twitter:description"
     content="Track weight, dose timing, hydration and private notes without an account or health-data server." />
-  <meta property="twitter:image" content="https://broono.app/favicon.svg" />
+  <meta property="twitter:image" content="https://broono.app/og-image.png" />
 
   <title>Broono — Local-only GLP-1 Progress Tracking</title>
 </head>

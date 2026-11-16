@@ -1,25 +1,74 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../store'
-import type { MedicationName, WeightUnit, UserProfile } from '../store'
+import { MEDICATIONS } from '../store'
+import ChoiceGroup from '../components/ChoiceGroup'
+import DoseInput from '../components/DoseInput'
+import { formatDose } from '../utils/medications'
+import type { WeightUnit, UserProfile } from '../store'
 import { ArrowRight, ArrowLeft, Check, Syringe, Target, CalendarDays, Activity, Lock } from 'lucide-react'
 import ReviewRow from '../components/ReviewRow'
-import { formatWeight, getWeightUnitLabel } from '../utils/weight'
+import WeightField from '../components/WeightField'
+import { WEIGHT_UNIT_OPTIONS, convertWeight, formatWeight, getWeightUnitName, validateWeight } from '../utils/weight'
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+const LAST_STEP = 5
+const WEIGHT_STEP = 2
+const STEP_TITLES = ['Welcome', 'Medication details', 'Starting vitals', 'Daily goals', 'Injection schedule', 'Review']
 
 export default function Onboarding() {
     const completeOnboarding = useStore((s) => s.completeOnboarding)
     const updateProfile = useStore((s) => s.updateProfile)
+    const setWeightUnit = useStore((s) => s.setWeightUnit)
     const initialProfile = useStore((s) => s.profile)
 
     const [step, setStep] = useState(0)
     const [localProfile, setLocalProfile] = useState<UserProfile>(initialProfile)
 
-    const handleNext = () => setStep((s) => Math.min(s + 1, 5))
+    const [weightError, setWeightError] = useState('')
+    const contentRef = useRef<HTMLDivElement>(null)
+    const weightInputRef = useRef<HTMLInputElement>(null)
+    const previousStep = useRef(step)
+
+    useEffect(() => {
+        document.title = `${STEP_TITLES[step]} (step ${step + 1} of ${LAST_STEP + 1}) | Broono`
+    }, [step])
+
+    // Each step replaces the content, so move focus to the new step's heading.
+    useEffect(() => {
+        if (previousStep.current === step) return
+        previousStep.current = step
+        contentRef.current?.querySelector<HTMLElement>('h1, h2')?.focus()
+    }, [step])
+
     const handlePrev = () => setStep((s) => Math.max(s - 1, 0))
 
-    const handleComplete = () => {
-        updateProfile(localProfile)
+    // One submit handler drives every step, so Enter in a field advances too.
+    const handleSubmit = (event: React.FormEvent) => {
+        event.preventDefault()
+
+        const validWeight = validateWeight(localProfile.startWeight, localProfile.weightUnit)
+        if (step >= WEIGHT_STEP && validWeight === null) {
+            setStep(WEIGHT_STEP)
+            setWeightError(localProfile.startWeight > 0
+                ? 'That weight does not look right. Check the number and the unit.'
+                : `Enter your starting weight in ${getWeightUnitName(localProfile.weightUnit).toLowerCase()} to continue.`)
+            weightInputRef.current?.focus()
+            return
+        }
+
+        if (step < LAST_STEP) {
+            setStep((s) => s + 1)
+            return
+        }
+
+        const { weightUnit, ...rest } = localProfile
+        setWeightUnit(weightUnit)
+        updateProfile({
+            ...rest,
+            startWeight: validWeight ?? 0,
+            goalWeight: validateWeight(rest.goalWeight, weightUnit) ?? 0,
+            treatmentStartDate: rest.treatmentStartDate || new Date().toLocaleDateString('en-CA'),
+        })
         completeOnboarding()
     }
 
@@ -27,9 +76,22 @@ export default function Onboarding() {
         setLocalProfile((prev) => ({ ...prev, ...updates }))
     }
 
+    // Keep an already-entered weight meaningful when the unit changes.
+    const changeUnit = (unit: WeightUnit) => {
+        setLocalProfile((prev) => ({
+            ...prev,
+            weightUnit: unit,
+            startWeight: convertWeight(prev.startWeight, prev.weightUnit, unit),
+            goalWeight: convertWeight(prev.goalWeight, prev.weightUnit, unit),
+        }))
+        setWeightError('')
+    }
+
     return (
-        <div className="onboarding-wrapper fade-in" style={{
-            minHeight: '100dvh',
+        <form className="onboarding-wrapper fade-in" onSubmit={handleSubmit} noValidate aria-label="Set up Broono" style={{
+            width: '100%',
+            height: '100%',
+            overflowY: 'auto',
             display: 'flex',
             flexDirection: 'column',
             background: 'var(--bg)',
@@ -39,7 +101,15 @@ export default function Onboarding() {
         }}>
             {/* Header Progress */}
             <div style={{ padding: '24px 20px 12px' }}>
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                <div
+                    role="progressbar"
+                    aria-label="Setup progress"
+                    aria-valuemin={1}
+                    aria-valuemax={LAST_STEP + 1}
+                    aria-valuenow={step + 1}
+                    aria-valuetext={`Step ${step + 1} of ${LAST_STEP + 1}: ${STEP_TITLES[step]}`}
+                    style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}
+                >
                     {[0, 1, 2, 3, 4, 5].map(i => (
                         <div
                             key={i}
@@ -55,8 +125,10 @@ export default function Onboarding() {
                 </div>
                 {step > 0 && (
                     <button
+                        type="button"
                         onClick={handlePrev}
                         style={{
+                            minHeight: 44,
                             background: 'none',
                             border: 'none',
                             color: 'var(--text-light)',
@@ -70,15 +142,15 @@ export default function Onboarding() {
                             fontSize: '0.9rem'
                         }}
                     >
-                        <ArrowLeft size={16} /> Back
+                        <ArrowLeft size={16} aria-hidden="true" /> Back
                     </button>
                 )}
             </div>
 
-            <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px 24px' }}>
+            <div ref={contentRef} style={{ flex: 1, padding: '12px 20px 24px', width: '100%', maxWidth: 520, margin: '0 auto' }}>
                 {step === 0 && (
                     <Slide transitionKey="0">
-                        <h1 style={{ fontSize: '2rem', marginBottom: '16px', letterSpacing: '-0.03em', lineHeight: 1.2 }}>
+                        <h1 tabIndex={-1} style={{ fontSize: '2rem', marginBottom: '16px', letterSpacing: '-0.03em', lineHeight: 1.2 }}>
                             Welcome to<br />
                             <span style={{ fontWeight: 800 }}>broono<span style={{ color: 'var(--primary)' }}>.</span></span>
                         </h1>
@@ -96,19 +168,19 @@ export default function Onboarding() {
                         }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                                 <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <Activity size={20} color="var(--primary)" />
+                                    <Activity size={20} color="var(--primary)" aria-hidden="true" />
                                 </div>
                                 <div style={{ flex: 1 }}>
-                                    <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>Track Progress</h3>
+                                    <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>Track Progress</h2>
                                     <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-light)' }}>Log your weekly weight & symptoms</p>
                                 </div>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                                 <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <Syringe size={20} color="var(--primary)" />
+                                    <Syringe size={20} color="var(--primary)" aria-hidden="true" />
                                 </div>
                                 <div style={{ flex: 1 }}>
-                                    <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>Dose Tracking</h3>
+                                    <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>Dose Tracking</h2>
                                     <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-light)' }}>Stay on top of your injection schedule</p>
                                 </div>
                             </div>
@@ -118,71 +190,69 @@ export default function Onboarding() {
 
                 {step === 1 && (
                     <Slide transitionKey="1">
-                        <h2 style={{ fontSize: '1.5rem', marginBottom: '8px' }}>Medication Details</h2>
-                        <p style={{ color: 'var(--text-light)', marginBottom: '24px' }}>What medication are you taking?</p>
+                        <h1 tabIndex={-1} style={{ fontSize: '1.5rem', marginBottom: '8px' }}>Medication Details</h1>
+                        <p id="onboarding-medication-label" style={{ color: 'var(--text-light)', marginBottom: '24px' }}>What medication are you taking?</p>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '32px' }}>
-                            {(['Zepbound', 'Mounjaro', 'Wegovy', 'Ozempic'] as MedicationName[]).map(med => (
-                                <PillSelect
-                                    key={med}
-                                    active={localProfile.medicationName === med}
-                                    onClick={() => updateLocal({ medicationName: med })}
-                                >
-                                    {med}
-                                </PillSelect>
-                            ))}
-                        </div>
-
-                        <label htmlFor="dose-input" style={{ display: 'block', fontSize: '1.1rem', marginBottom: '12px', fontWeight: 'bold' }}>Current Dose</label>
-                        <input
-                            id="dose-input"
-                            type="text"
-                            className="form-input"
-                            value={localProfile.dose}
-                            onChange={(e) => updateLocal({ dose: e.target.value })}
-                            placeholder="e.g. 2.5mg, 5mg"
+                        <ChoiceGroup
+                            legend="Medication"
+                            hideLegend
+                            name="onboarding-medication"
+                            layout="stack"
+                            options={MEDICATIONS.map((value) => ({ value, label: value }))}
+                            value={localProfile.medicationName}
+                            onChange={(medicationName) => updateLocal({ medicationName })}
                         />
+                        <div style={{ marginTop: 24 }}>
+                            <DoseInput
+                                key={localProfile.medicationName}
+                                id="dose-input"
+                                label="Current dose (optional)"
+                                medication={localProfile.medicationName}
+                                value={localProfile.doseMg}
+                                onChange={(doseMg) => updateLocal({ doseMg })}
+                            />
+                        </div>
                     </Slide>
                 )}
 
                 {step === 2 && (
                     <Slide transitionKey="2">
-                        <h2 style={{ fontSize: '1.5rem', marginBottom: '8px' }}>Starting Vitals</h2>
-                        <p style={{ color: 'var(--text-light)', marginBottom: '24px' }}>Let's set your baseline.</p>
+                        <h1 tabIndex={-1} style={{ fontSize: '1.5rem', marginBottom: '8px' }}>Starting Vitals</h1>
+                        <p style={{ color: 'var(--text-light)', marginBottom: '24px' }}>Let's set your baseline. You can change the unit later in Settings.</p>
 
-                        <h3 style={{ fontSize: '1.1rem', marginBottom: '12px' }}>Unit</h3>
-                        <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
-                            {(['lbs', 'kg'] as WeightUnit[]).map(u => (
-                                <PillSelect
-                                    key={u}
-                                    active={localProfile.weightUnit === u}
-                                    onClick={() => updateLocal({ weightUnit: u })}
-                                    style={{ flex: 1, textAlign: 'center', justifyContent: 'center' }}
-                                >
-                                    {getWeightUnitLabel(u)}
-                                </PillSelect>
-                            ))}
+                        <div style={{ marginBottom: 24 }}>
+                            <ChoiceGroup
+                                legend="Unit"
+                                name="onboarding-unit"
+                                layout="stack"
+                                options={WEIGHT_UNIT_OPTIONS.map(({ unit, label }) => ({ value: unit, label }))}
+                                value={localProfile.weightUnit}
+                                onChange={changeUnit}
+                            />
                         </div>
 
-                        <label htmlFor="start-weight-input" style={{ display: 'block', fontSize: '1.1rem', marginBottom: '12px', fontWeight: 'bold' }}>Starting Weight</label>
-                        <div style={{ position: 'relative' }}>
-                            <input
-                                id="start-weight-input"
-                                type="number"
-                                className="form-input"
-                                style={{ paddingRight: '48px' }}
-                                value={localProfile.startWeight || ''}
-                                onChange={(e) => updateLocal({ startWeight: parseFloat(e.target.value) || 0 })}
-                                placeholder="0.0"
+                        <WeightField
+                            key={localProfile.weightUnit}
+                            label="Starting Weight"
+                            unit={localProfile.weightUnit}
+                            value={localProfile.startWeight > 0 ? localProfile.startWeight : null}
+                            onChange={(next) => {
+                                updateLocal({ startWeight: next ?? 0 })
+                                if (weightError) setWeightError('')
+                            }}
+                            error={weightError}
+                            inputRef={weightInputRef}
+                            enterKeyHint="next"
+                        />
+                        <div style={{ marginTop: 24 }}>
+                            <WeightField
+                                key={`goal-${localProfile.weightUnit}`}
+                                label="Goal weight (optional)"
+                                unit={localProfile.weightUnit}
+                                value={localProfile.goalWeight > 0 ? localProfile.goalWeight : null}
+                                onChange={(next) => updateLocal({ goalWeight: next ?? 0 })}
+                                enterKeyHint="next"
                             />
-                            <span style={{
-                                position: 'absolute',
-                                right: '16px',
-                                top: '50%',
-                                transform: 'translateY(-50%)',
-                                color: 'var(--text-light)',
-                                fontWeight: 600
-                            }}>{getWeightUnitLabel(localProfile.weightUnit)}</span>
                         </div>
                     </Slide>
                 )}
@@ -190,8 +260,8 @@ export default function Onboarding() {
                 {step === 3 && (
                     <Slide transitionKey="3">
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                            <Target size={24} color="var(--primary)" />
-                            <h2 style={{ margin: 0, fontSize: '1.5rem' }}>Daily Goals</h2>
+                            <Target size={24} color="var(--primary)" aria-hidden="true" />
+                            <h1 tabIndex={-1} style={{ margin: 0, fontSize: '1.5rem' }}>Daily Goals</h1>
                         </div>
                         <p style={{ color: 'var(--text-light)', marginBottom: '24px' }}>Set your daily targets to stay on track.</p>
 
@@ -202,12 +272,14 @@ export default function Onboarding() {
                             padding: '20px',
                             marginBottom: '16px'
                         }}>
-                            <h3 style={{ margin: '0 0 12px 0', fontSize: '1rem', display: 'flex', justifyContent: 'space-between' }}>
+                            <p style={{ margin: '0 0 12px 0', fontSize: '1rem', fontWeight: 700, display: 'flex', justifyContent: 'space-between' }}>
                                 <label htmlFor="water-goal-input">Hydration Goal</label>
-                                <span style={{ color: 'var(--primary)' }}>{localProfile.waterGoalGlasses} glasses</span>
-                            </h3>
+                                <span style={{ color: 'var(--brand-mid)' }}>{localProfile.waterGoalGlasses} glasses</span>
+                            </p>
                             <input
                                 id="water-goal-input"
+                                name="waterGoal"
+                                aria-valuetext={`${localProfile.waterGoalGlasses} glasses`}
                                 type="range"
                                 min="1"
                                 max="20"
@@ -215,7 +287,7 @@ export default function Onboarding() {
                                 onChange={(e) => updateLocal({ waterGoalGlasses: parseInt(e.target.value, 10) })}
                                 style={{ width: '100%', accentColor: 'var(--primary)' }}
                             />
-                            <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: 'var(--text-light)' }}>approx {Math.round(localProfile.waterGoalGlasses * 8)} oz</p>
+                            <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: 'var(--text-light)' }}>about {Number((localProfile.waterGoalGlasses * 0.25).toFixed(2))} litres, at 250 ml a glass</p>
                         </div>
 
                         <div style={{
@@ -224,12 +296,14 @@ export default function Onboarding() {
                             borderRadius: '16px',
                             padding: '20px'
                         }}>
-                            <h3 style={{ margin: '0 0 12px 0', fontSize: '1rem', display: 'flex', justifyContent: 'space-between' }}>
+                            <p style={{ margin: '0 0 12px 0', fontSize: '1rem', fontWeight: 700, display: 'flex', justifyContent: 'space-between' }}>
                                 <label htmlFor="protein-goal-input">Protein Goal</label>
-                                <span style={{ color: 'var(--primary)' }}>{localProfile.proteinGoalG}g</span>
-                            </h3>
+                                <span style={{ color: 'var(--brand-mid)' }}>{localProfile.proteinGoalG}g</span>
+                            </p>
                             <input
                                 id="protein-goal-input"
+                                name="proteinGoal"
+                                aria-valuetext={`${localProfile.proteinGoalG} grams`}
                                 type="range"
                                 min="30"
                                 max="250"
@@ -245,33 +319,31 @@ export default function Onboarding() {
                 {step === 4 && (
                     <Slide transitionKey="4">
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                            <CalendarDays size={24} color="var(--primary)" />
-                            <h2 style={{ margin: 0, fontSize: '1.5rem' }}>Injection Schedule</h2>
+                            <CalendarDays size={24} color="var(--primary)" aria-hidden="true" />
+                            <h1 tabIndex={-1} style={{ margin: 0, fontSize: '1.5rem' }}>Injection Schedule</h1>
                         </div>
-                        <p style={{ color: 'var(--text-light)', marginBottom: '24px' }}>When do you take your dose?</p>
+                        <p id="onboarding-day-label" style={{ color: 'var(--text-light)', marginBottom: '24px' }}>When do you take your dose?</p>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            {DAY_NAMES.map((day, idx) => (
-                                <PillSelect
-                                    key={day}
-                                    active={localProfile.injectionDayOfWeek === idx}
-                                    onClick={() => updateLocal({ injectionDayOfWeek: idx })}
-                                >
-                                    {day}
-                                </PillSelect>
-                            ))}
-                        </div>
+                        <ChoiceGroup
+                            legend="Injection day"
+                            hideLegend
+                            name="onboarding-day"
+                            layout="stack"
+                            options={DAY_NAMES.map((day, index) => ({ value: `${index}`, label: day }))}
+                            value={`${localProfile.injectionDayOfWeek}`}
+                            onChange={(value) => updateLocal({ injectionDayOfWeek: Number(value) })}
+                        />
                     </Slide>
                 )}
 
                 {step === 5 && (
                     <Slide transitionKey="5">
-                        <h2 style={{ fontSize: '1.5rem', marginBottom: '8px' }}>You're all set!</h2>
+                        <h1 tabIndex={-1} style={{ fontSize: '1.5rem', marginBottom: '8px' }}>You're all set!</h1>
                         <p style={{ color: 'var(--text-light)', marginBottom: '32px' }}>Review your details below.</p>
 
                         <div style={{
-                            background: '#f0fdf4',
-                            border: '1px solid #bbf7d0',
+                            background: 'var(--success-soft)',
+                            border: '1px solid var(--success-border)',
                             borderRadius: '12px',
                             padding: '12px 16px',
                             marginBottom: '24px',
@@ -279,19 +351,20 @@ export default function Onboarding() {
                             alignItems: 'flex-start',
                             gap: '12px'
                         }}>
-                            <Lock size={18} color="#16a34a" style={{ marginTop: '2px', flexShrink: 0 }} />
-                            <p style={{ fontSize: 13, color: '#166534', lineHeight: 1.5, margin: 0 }}>
-                                <strong>Your data is private.</strong> All health information entered here and in the app is saved <em>locally on your device</em> and is never sent to our servers.
+                            <Lock size={18} color="var(--success)" style={{ marginTop: '2px', flexShrink: 0 }} aria-hidden="true" />
+                            <p style={{ fontSize: 13, color: 'var(--text-body)', lineHeight: 1.5, margin: 0 }}>
+                                <strong>Your data is private.</strong> All health information entered here and in the app is saved <em>locally on your device</em>. Broono has no server to send it to.
                             </p>
                         </div>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                            <ReviewRow label="Medication" value={`${localProfile.medicationName} (${localProfile.dose})`} />
+                        <dl style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            <ReviewRow label="Medication" value={localProfile.doseMg > 0 ? `${localProfile.medicationName} (${formatDose(localProfile.doseMg)})` : localProfile.medicationName} />
                             <ReviewRow label="Start Weight" value={formatWeight(localProfile.startWeight, localProfile.weightUnit)} />
+                            {localProfile.goalWeight > 0 ? <ReviewRow label="Goal Weight" value={formatWeight(localProfile.goalWeight, localProfile.weightUnit)} /> : null}
                             <ReviewRow label="Injection Day" value={DAY_NAMES[localProfile.injectionDayOfWeek]} />
                             <ReviewRow label="Water Goal" value={`${localProfile.waterGoalGlasses} glasses`} />
                             <ReviewRow label="Protein Goal" value={`${localProfile.proteinGoalG}g`} />
-                        </div>
+                        </dl>
                     </Slide>
                 )}
             </div>
@@ -302,30 +375,22 @@ export default function Onboarding() {
                 bottom: 0,
                 left: 0,
                 right: 0,
-                padding: '20px',
+                padding: '20px 20px max(20px, env(safe-area-inset-bottom))',
                 background: 'linear-gradient(to top, var(--bg) 80%, transparent)',
                 display: 'flex',
                 justifyContent: 'center'
             }}>
-                {step < 5 ? (
-                    <button
-                        className="btn-primary"
-                        style={{ width: '100%', maxWidth: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                        onClick={handleNext}
-                    >
-                        Continue <ArrowRight size={18} />
-                    </button>
-                ) : (
-                    <button
-                        className="btn-primary"
-                        style={{ width: '100%', maxWidth: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                        onClick={handleComplete}
-                    >
-                        Get Started <Check size={18} />
-                    </button>
-                )}
+                <button
+                    type="submit"
+                    className="btn-primary"
+                    style={{ width: '100%', maxWidth: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                >
+                    {step < LAST_STEP
+                        ? <>Continue <ArrowRight size={18} aria-hidden="true" /></>
+                        : <>Get Started <Check size={18} aria-hidden="true" /></>}
+                </button>
             </div>
-        </div>
+        </form>
     )
 }
 
@@ -336,30 +401,3 @@ function Slide({ children, transitionKey }: { children: React.ReactNode, transit
         </div>
     )
 }
-
-function PillSelect({ active, onClick, children, style = {} }: { active: boolean, onClick: () => void, children: React.ReactNode, style?: React.CSSProperties }) {
-    return (
-        <button
-            aria-pressed={active}
-            onClick={onClick}
-            style={{
-                padding: '16px 20px',
-                borderRadius: '12px',
-                border: `2px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
-                background: active ? 'var(--primary-light)' : 'var(--card-bg)',
-                color: active ? 'var(--primary)' : 'var(--text)',
-                fontWeight: active ? 600 : 500,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'flex-start',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                fontSize: '1rem',
-                ...style
-            }}
-        >
-            {children}
-        </button>
-    )
-}
-

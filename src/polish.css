@@ -52,12 +52,12 @@
 
 .landing-nav-cta,
 .landing-cta,
-.google-signin-btn,
+.start-btn,
 .landing-mobile-dock a {
   min-height: 48px;
 }
 
-.google-signin-btn {
+.start-btn {
   margin-top: 20px;
 }
 

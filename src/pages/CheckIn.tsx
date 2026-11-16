@@ -1,43 +1,99 @@
-import { useState } from 'react'
-import { ArrowRight, AlertCircle, Check } from 'lucide-react'
-import { useStore, type InjectionSite, type Symptom } from '../store'
-import { getWeightUnitLabel } from '../utils/weight'
-
-const SITES: InjectionSite[] = ['Left Stomach', 'Right Stomach', 'Left Thigh', 'Right Thigh']
-const SYMPTOMS: Symptom[] = ['None', 'Nausea', 'Fatigue', 'Headache', 'Constipation']
+import { useEffect, useRef, useState } from 'react'
+import { ArrowRight, Check } from 'lucide-react'
+import ChoiceGroup from '../components/ChoiceGroup'
+import DoseInput from '../components/DoseInput'
+import WeightField from '../components/WeightField'
+import { INJECTION_SITES, LIMITS, SYMPTOMS, useStore, type InjectionSite, type Symptom, type WeeklyLog } from '../store'
+import { confirmWithHaptics } from '../utils/deviceReminder'
+import { formatShortDate, toLocalISODate } from '../utils/date'
+import { getDoseStatus } from '../utils/medication'
+import { suggestNextSite } from '../utils/stats'
+import { getWeightUnitName, validateWeight } from '../utils/weight'
 
 interface CheckInProps {
     onDone: () => void
+    /** When set, the form edits this log instead of adding a new one. */
+    editLog?: WeeklyLog
 }
 
-export default function CheckIn({ onDone }: CheckInProps) {
+type SiteChoice = InjectionSite | 'none'
+
+export default function CheckIn({ onDone, editLog }: CheckInProps) {
     const logs = useStore((s) => s.logs)
+    const profile = useStore((s) => s.profile)
     const addLog = useStore((s) => s.addLog)
-    const weightUnit = useStore((s) => s.profile.weightUnit)
-    const lastSite = logs[0]?.site
+    const updateLog = useStore((s) => s.updateLog)
+    const updateProfile = useStore((s) => s.updateProfile)
+    const weightUnit = profile.weightUnit
+    const today = toLocalISODate()
+    // The log being edited does not count towards its own site suggestion.
+    const injectionLogs = logs.filter((log) => log.site && log.id !== editLog?.id)
+    const suggestion = suggestNextSite(injectionLogs)
+    const doseDue = getDoseStatus(profile.injectionDayOfWeek, injectionLogs[0]?.date, today).daysUntil === 0
 
-    const [weight, setWeight] = useState('')
-    const [site, setSite] = useState<InjectionSite | ''>('')
-    const [symptom, setSymptom] = useState<Symptom>('None')
-    const [notes, setNotes] = useState('')
+    const [weight, setWeight] = useState<number | null>(editLog && editLog.weight > 0 ? editLog.weight : null)
+    const [date, setDate] = useState(editLog?.date ?? today)
+    // On dose day the injection is the likely reason for logging, so start with the suggested site.
+    const [site, setSite] = useState<SiteChoice | ''>(editLog ? editLog.site || 'none' : doseDue ? suggestion.site : '')
+    const [doseMg, setDoseMg] = useState(editLog?.doseMg || profile.doseMg)
+    const [symptoms, setSymptoms] = useState<Symptom[]>(editLog?.symptoms ?? ['None'])
+    const [notes, setNotes] = useState(editLog?.notes ?? '')
     const [saved, setSaved] = useState(false)
+    const [error, setError] = useState<{ field: 'weight' | 'entry'; message: string } | null>(null)
+    const weightInputRef = useRef<HTMLInputElement>(null)
+    const savedHeadingRef = useRef<HTMLHeadingElement>(null)
+    const injected = site !== '' && site !== 'none'
 
-    const handleSave = () => {
-        if (!weight.trim()) return
-        const today = new Date()
-        addLog({
-            date: today.toISOString().split('T')[0],
-            displayDate: today.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-            weight: parseFloat(weight),
-            site,
-            symptoms: [symptom],
-            notes,
-        })
+    // Return to the dashboard after the confirmation, unless the user has
+    // already navigated elsewhere (the timer is cleared on unmount).
+    useEffect(() => {
+        if (!saved) return
+        // The form, and the focused Save button with it, has just been removed.
+        savedHeadingRef.current?.focus()
+        const timer = window.setTimeout(onDone, 1600)
+        return () => window.clearTimeout(timer)
+    }, [saved, onDone])
+
+    // "None" and real side effects are mutually exclusive; several real ones can be chosen.
+    const changeSymptoms = (next: Symptom[]) => {
+        const addedNone = next.includes('None') && !symptoms.includes('None')
+        if (addedNone) return setSymptoms(['None'])
+        const real = next.filter((symptom) => symptom !== 'None')
+        setSymptoms(real.length > 0 ? real : ['None'])
+    }
+
+    const handleSave = (event: React.FormEvent) => {
+        event.preventDefault()
+        const validWeight = weight === null ? null : validateWeight(weight, weightUnit)
+        if (weight !== null && validWeight === null) {
+            setError({ field: 'weight', message: 'That weight does not look right. Check the number and the unit in Settings.' })
+            weightInputRef.current?.focus()
+            return
+        }
+        if (validWeight === null && !injected) {
+            setError({ field: 'entry', message: `Add your weight in ${getWeightUnitName(weightUnit).toLowerCase()}, an injection, or both.` })
+            weightInputRef.current?.focus()
+            return
+        }
+        // A cleared or future date falls back to today.
+        const logDate = /^\d{4}-\d{2}-\d{2}$/.test(date) && date <= today ? date : today
+        const dose = injected && doseMg > 0 ? doseMg : 0
+        const entry = {
+            date: logDate,
+            displayDate: formatShortDate(logDate),
+            weight: validWeight ?? 0,
+            site: injected ? site : '' as const,
+            doseMg: dose,
+            symptoms,
+            notes: notes.trim(),
+        }
+        if (editLog) updateLog(editLog.id, entry)
+        else addLog(entry)
+        void confirmWithHaptics()
+        // A new dose on the most recent injection is a dose change (titration).
+        const isLatestInjection = !injectionLogs.some((log) => log.date > logDate)
+        if (dose > 0 && isLatestInjection && dose !== profile.doseMg) updateProfile({ doseMg: dose })
         setSaved(true)
-        setTimeout(() => {
-            setSaved(false)
-            onDone()
-        }, 1600)
     }
 
     if (saved) {
@@ -45,142 +101,113 @@ export default function CheckIn({ onDone }: CheckInProps) {
             <div className="page-enter" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '72vh', gap: 20 }}>
                 <div
                     className="scale-in"
-                    style={{ width: 96, height: 96, background: '#f0fdf4', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 32px rgba(20,184,166,0.15)' }}
+                    style={{ width: 96, height: 96, background: 'var(--success-soft)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 >
-                    <Check size={48} color="#14b8a6" strokeWidth={2.5} />
+                    <Check size={48} color="var(--teal)" strokeWidth={2.5} aria-hidden="true" />
                 </div>
-                <h2 className="page-title">Log Saved</h2>
+                <h1 ref={savedHeadingRef} tabIndex={-1} role="status" className="page-title">{editLog ? 'Changes Saved' : 'Log Saved'}</h1>
             </div>
         )
     }
 
+    const siteOptions = [
+        ...INJECTION_SITES.map((value) => ({ value, label: value, hint: value === suggestion.site ? 'Suggested' : undefined })),
+        { value: 'none' as const, label: 'No injection this time' },
+    ]
+
     return (
-        <div className="page-enter space-y-6" style={{ paddingTop: 8 }}>
+        <form className="page-enter space-y-6" style={{ paddingTop: 8 }} onSubmit={handleSave} noValidate aria-labelledby="checkin-title">
             <div>
-                <h2 className="page-title">Weekly Log</h2>
-                <p className="page-subtitle">Update stats and rotate your injection site.</p>
+                <h1 id="checkin-title" className="page-title">{editLog ? 'Edit log' : 'Add a log'}</h1>
+                <p className="page-subtitle">{editLog ? `Change the entry from ${formatShortDate(editLog.date)}.` : 'Record an injection, a weigh-in, or both.'}</p>
             </div>
 
-            {/* Weight input */}
-            <div className="card" style={{ textAlign: 'center', padding: '32px 24px' }}>
-                <label htmlFor="weight-input" style={{ display: 'block', fontSize: 11, fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 16 }}>
-                    Current Weight
-                </label>
-                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'baseline', gap: 8 }}>
-                    <input
-                        id="weight-input"
-                        type="number"
-                        value={weight}
-                        onChange={(e) => setWeight(e.target.value)}
-                        placeholder="0.0"
-                        step="0.1"
-                        style={{
-                            width: 160,
-                            textAlign: 'center',
-                            fontSize: 58,
-                            fontWeight: 900,
-                            letterSpacing: '-2px',
-                            border: 'none',
-                            outline: 'none',
-                            background: 'transparent',
-                            color: weight ? 'var(--text-primary)' : 'var(--border)',
-                            fontFamily: 'Inter, sans-serif',
-                            transition: 'color 0.2s',
-                        }}
+            {error?.field === 'entry' ? <p role="alert" className="field-error" style={{ marginTop: 0 }}>{error.message}</p> : null}
+
+            <div className="card">
+                <label htmlFor="log-date-input" style={{ display: 'block', fontSize: 14, fontWeight: 700, marginBottom: 12 }}>Date</label>
+                <input
+                    id="log-date-input"
+                    name="date"
+                    type="date"
+                    className="form-input"
+                    value={date}
+                    max={today}
+                    onChange={(e) => setDate(e.target.value)}
+                />
+            </div>
+
+            <div className="card space-y-5">
+                <ChoiceGroup
+                    legend="Injection site"
+                    description={suggestion.lastUsed
+                        ? `Rotate sites: ${suggestion.site} was last used ${formatShortDate(suggestion.lastUsed)}, longer ago than any other.`
+                        : `Rotate sites: ${suggestion.site} has not been used yet.`}
+                    name="site"
+                    options={siteOptions}
+                    value={site}
+                    onChange={(value) => {
+                        setSite(value)
+                        if (error?.field === 'entry') setError(null)
+                    }}
+                />
+                {injected ? (
+                    <DoseInput
+                        id="log-dose-input"
+                        label="Dose injected"
+                        medication={profile.medicationName}
+                        value={doseMg}
+                        onChange={setDoseMg}
                     />
-                    <span style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-muted)' }}>{getWeightUnitLabel(weightUnit)}</span>
-                </div>
+                ) : null}
             </div>
 
-            {/* Injection site */}
+            <div className="card" style={{ textAlign: 'center', padding: '28px 20px' }}>
+                <WeightField
+                    key={weightUnit}
+                    label="Weight (optional with an injection)"
+                    unit={weightUnit}
+                    value={weight}
+                    onChange={(next) => {
+                        setWeight(next)
+                        if (error) setError(null)
+                    }}
+                    error={error?.field === 'weight' ? error.message : undefined}
+                    size="display"
+                    inputRef={weightInputRef}
+                />
+            </div>
+
             <div className="card">
-                <div style={{
-                    display: 'flex', alignItems: 'flex-start', gap: 12, background: 'var(--bg)',
-                    borderRadius: 14, padding: 16, marginBottom: 20
-                }}>
-                    <AlertCircle size={18} color="var(--text-secondary)" strokeWidth={2} style={{ flexShrink: 0, marginTop: 2 }} />
-                    <div>
-                        <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Site Rotation</p>
-                        <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4, lineHeight: 1.5 }}>
-                            Last injection: <strong>{lastSite || 'Not recorded'}</strong>. Choose a different area.
-                        </p>
-                    </div>
-                </div>
-                <div className="selector-grid">
-                    {SITES.map((s) => (
-                        <button
-                            key={s}
-                            id={`site-${s.replace(/ /g, '-').toLowerCase()}`}
-                            onClick={() => setSite(s)}
-                            aria-pressed={site === s}
-                            className={`selector-btn ${site === s ? 'selected' : ''}`}
-                        >
-                            {s}
-                        </button>
-                    ))}
-                </div>
+                <ChoiceGroup<Symptom>
+                    multiple
+                    legend="Side effects"
+                    description="Choose all that apply since your last log."
+                    name="symptoms"
+                    layout="wrap"
+                    options={SYMPTOMS.map((value) => ({ value, label: value === 'None' ? 'None' : value }))}
+                    value={symptoms}
+                    onChange={changeSymptoms}
+                />
             </div>
 
-            {/* Side effects */}
-            <div className="card">
-                <p style={{ fontSize: 14, fontWeight: 700, marginBottom: 16 }}>Side Effects?</p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                    {SYMPTOMS.map((sym) => (
-                        <button
-                            key={sym}
-                            id={`symptom-${sym.toLowerCase()}`}
-                            onClick={() => setSymptom(sym)}
-                            aria-pressed={symptom === sym}
-                            className="pill-btn"
-                            style={{
-                                padding: '10px 18px',
-                                fontSize: 13,
-                                background: symptom === sym ? 'var(--primary)' : 'var(--bg)',
-                                color: symptom === sym ? 'white' : 'var(--text-secondary)',
-                                border: symptom === sym ? '1px solid var(--primary)' : '1px solid var(--border)',
-                                boxShadow: symptom === sym ? '0 4px 14px rgba(99, 102, 241, 0.2)' : 'none',
-                            }}
-                        >
-                            {sym}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {/* Notes */}
             <div className="card" style={{ padding: '20px 24px' }}>
                 <label htmlFor="notes-input" style={{ display: 'block', fontSize: 14, fontWeight: 700, marginBottom: 12 }}>Notes (optional)</label>
                 <textarea
                     id="notes-input"
+                    name="notes"
+                    className="form-input"
                     value={notes}
+                    maxLength={LIMITS.notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    placeholder="How are you feeling this week?"
-                    style={{
-                        width: '100%',
-                        minHeight: 80,
-                        border: 'none',
-                        outline: 'none',
-                        background: 'transparent',
-                        fontFamily: 'Inter, sans-serif',
-                        fontSize: 14,
-                        resize: 'none',
-                        color: 'var(--text-primary)',
-                        lineHeight: 1.6,
-                    }}
+                    placeholder="Appetite, food noise, energy, anything worth remembering"
+                    style={{ fontWeight: 500, lineHeight: 1.6 }}
                 />
             </div>
 
-            {/* Save */}
-            <button
-                id="save-log-btn"
-                className="btn-primary"
-                onClick={handleSave}
-                disabled={!weight}
-                title={!weight ? "Enter current weight to save" : undefined}
-                style={{ opacity: weight ? 1 : 0.5 }}
-            >
-                Save Log <ArrowRight size={18} strokeWidth={2.5} />
+            <button type="submit" id="save-log-btn" className="btn-primary">
+                {editLog ? 'Save changes' : 'Save Log'} <ArrowRight size={18} strokeWidth={2.5} aria-hidden="true" />
             </button>
-        </div>
+        </form>
     )
 }
