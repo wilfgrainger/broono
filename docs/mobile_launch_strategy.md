@@ -19,6 +19,7 @@ The Android package must:
 - include no Google Auth or purchase plugin;
 - keep Android backups disabled unless an explicit encrypted-backup design is approved;
 - preserve local export and local erasure (export uses the system share sheet via `@capacitor/filesystem` and `@capacitor/share`, which declare no permissions);
+- keep the weekly reminder local: `@capacitor/local-notifications` may add notification, exact-alarm, boot and wake-lock permissions, never internet;
 - describe medication-level displays as estimates, not clinical measurements.
 
 Run `pnpm android:sync` after any dependency change. Then inspect:

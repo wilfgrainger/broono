@@ -6,6 +6,7 @@ import DoseInput from '../components/DoseInput'
 import WeightField from '../components/WeightField'
 import { LIMITS, MEDICATIONS, STORE_VERSION, sanitizePersistedState, useStore, type PersistedAppState } from '../store'
 import { buildWeeklyReminderIcs } from '../utils/calendar'
+import { canUseDeviceReminders, requestReminderPermission } from '../utils/deviceReminder'
 import { toCsv } from '../utils/csv'
 import { toLocalISODate } from '../utils/date'
 import { formatDose } from '../utils/medications'
@@ -73,6 +74,7 @@ export default function ProfilePage() {
   const [pendingImport, setPendingImport] = useState<PersistedAppState | null>(null)
   const [dataMessage, setDataMessage] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null)
   const [scheme, setScheme] = useState<ColorScheme>(getColorScheme)
+  const [reminderMessage, setReminderMessage] = useState('')
 
   const report = (result: Awaited<ReturnType<typeof saveFile>>, what: string) => {
     if (result === 'cancelled') return setDataMessage(null)
@@ -199,6 +201,31 @@ export default function ProfilePage() {
             onChange={(event) => { if (/^\d{2}:\d{2}$/.test(event.target.value)) updateProfile({ reminderTime: event.target.value }) }}
           />
         </div>
+        {canUseDeviceReminders() ? (
+          <div>
+            <label className="toggle-row">
+              <input
+                type="checkbox"
+                checked={profile.deviceReminder}
+                aria-describedby="device-reminder-status"
+                onChange={async (event) => {
+                  if (!event.target.checked) {
+                    updateProfile({ deviceReminder: false })
+                    setReminderMessage('')
+                    return
+                  }
+                  const granted = await requestReminderPermission().catch(() => false)
+                  updateProfile({ deviceReminder: granted })
+                  setReminderMessage(granted ? '' : 'Notifications are switched off for Broono. Turn them on in Android Settings, then try again.')
+                }}
+              />
+              <span>Remind me on this phone</span>
+            </label>
+            <p id="device-reminder-status" role="status" className="muted-text" style={{ marginTop: 6 }}>
+              {reminderMessage || (profile.deviceReminder ? `A notification every ${DAY_NAMES[profile.injectionDayOfWeek]} at ${profile.reminderTime}.` : '')}
+            </p>
+          </div>
+        ) : null}
         <button type="button" className="btn-secondary" onClick={() => void handleReminder()}>
           <CalendarPlus size={18} aria-hidden="true" style={{ verticalAlign: '-3px', marginRight: 8 }} />
           Add a weekly reminder to my calendar

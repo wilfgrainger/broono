@@ -1193,3 +1193,7 @@ input[type=range]::-moz-range-thumb {
 .guide-list { padding-left: 20px; display: grid; gap: 8px; }
 
 .settings-card .weight-field-label { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; }
+
+/* ── Toggle row (a native checkbox with its label) ── */
+.toggle-row { display: flex; align-items: center; gap: 12px; min-height: 48px; font-size: 14px; font-weight: 700; cursor: pointer; }
+.toggle-row input { inline-size: 22px; block-size: 22px; margin: 0; flex-shrink: 0; }

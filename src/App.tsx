@@ -14,6 +14,7 @@ import PrivacyPolicy from './pages/PrivacyPolicy'
 import Terms from './pages/Terms'
 import { useToday } from './utils/useToday'
 import { useStorageSaveFailed } from './utils/storageHealth'
+import { canUseDeviceReminders, syncDeviceReminder } from './utils/deviceReminder'
 import { TAB_HASHES, TAB_TITLES, tabFromHash, type Tab } from './tabs'
 
 function useDocumentTitle(title: string) {
@@ -41,6 +42,21 @@ export default function App() {
 function AppShell() {
   const [activeTab, setActiveTab] = useState<Tab>(() => tabFromHash(window.location.hash))
   const saveFailed = useStorageSaveFailed()
+  const [editingLogId, setEditingLogId] = useState<string | null>(null)
+  const editLog = useStore((state) => (editingLogId ? state.logs.find((log) => log.id === editingLogId) : undefined))
+  const reminderEnabled = useStore((state) => state.profile.deviceReminder)
+  const reminderDay = useStore((state) => state.profile.injectionDayOfWeek)
+  const reminderTime = useStore((state) => state.profile.reminderTime)
+  const medicationName = useStore((state) => state.profile.medicationName)
+  const doseMg = useStore((state) => state.profile.doseMg)
+
+  // Keep the Android app's weekly notification in step with the settings.
+  useEffect(() => {
+    if (!canUseDeviceReminders()) return
+    syncDeviceReminder({ enabled: reminderEnabled, dayOfWeek: reminderDay, time: reminderTime, medicationName, doseMg }).catch(() => {
+      // Scheduling can fail if notifications are switched off; Settings explains how to turn them on.
+    })
+  }, [reminderEnabled, reminderDay, reminderTime, medicationName, doseMg])
   const resetDailyTotalsIfNewDay = useStore((state) => state.resetDailyTotalsIfNewDay)
   const mainRef = useRef<HTMLElement>(null)
   const previousTab = useRef<Tab>(activeTab)
@@ -102,19 +118,35 @@ function AppShell() {
 
   // Back and forward buttons (including Android's) change the hash.
   useEffect(() => {
-    const onPopState = () => showTab(tabFromHash(window.location.hash))
+    const onPopState = () => {
+      setEditingLogId(null)
+      showTab(tabFromHash(window.location.hash))
+    }
     window.addEventListener('popstate', onPopState)
     return () => window.removeEventListener('popstate', onPopState)
   }, [showTab])
 
   // After saving a log, Back should not reopen the finished form.
   const goHome = useCallback(() => navigate('dashboard', { replace: true }), [navigate])
+  const finishEditing = useCallback(() => {
+    setEditingLogId(null)
+    navigate('progress', { replace: true })
+  }, [navigate])
+  const startEditing = useCallback((id: string) => {
+    setEditingLogId(id)
+    navigate('checkin')
+  }, [navigate])
+  // Choosing a tab yourself always starts a fresh log rather than resuming an edit.
+  const chooseTab = useCallback((tab: Tab) => {
+    setEditingLogId(null)
+    navigate(tab)
+  }, [navigate])
 
   const renderPage = () => {
     switch (activeTab) {
       case 'dashboard': return <Dashboard key={today} onNavigate={navigate} />
-      case 'checkin': return <CheckIn onDone={goHome} />
-      case 'progress': return <Progress />
+      case 'checkin': return <CheckIn key={editLog?.id ?? 'new'} editLog={editLog} onDone={editLog ? finishEditing : goHome} />
+      case 'progress': return <Progress onEdit={startEditing} />
       case 'guide': return <GuidePage />
       case 'journal': return <Journal />
       case 'profile': return <ProfilePage />
@@ -135,7 +167,7 @@ function AppShell() {
         <button
           type="button"
           className="header-profile-btn"
-          onClick={() => navigate('profile')}
+          onClick={() => chooseTab('profile')}
           aria-label="Open settings"
           aria-current={activeTab === 'profile' ? 'page' : undefined}
         >
@@ -154,11 +186,11 @@ function AppShell() {
       </main>
 
       <nav className="bottom-nav" aria-label="Primary navigation">
-        <NavBtn icon={Home} label="Home" tab="dashboard" active={activeTab} onNav={navigate} />
-        <NavBtn icon={Plus} label="Log" tab="checkin" active={activeTab} onNav={navigate} />
-        <NavBtn icon={TrendingDown} label="Progress" tab="progress" active={activeTab} onNav={navigate} />
-        <NavBtn icon={Compass} label="Guide" tab="guide" active={activeTab} onNav={navigate} />
-        <NavBtn icon={BookOpen} label="Journal" tab="journal" active={activeTab} onNav={navigate} />
+        <NavBtn icon={Home} label="Home" tab="dashboard" active={activeTab} onNav={chooseTab} />
+        <NavBtn icon={Plus} label="Log" tab="checkin" active={activeTab} onNav={chooseTab} />
+        <NavBtn icon={TrendingDown} label="Progress" tab="progress" active={activeTab} onNav={chooseTab} />
+        <NavBtn icon={Compass} label="Guide" tab="guide" active={activeTab} onNav={chooseTab} />
+        <NavBtn icon={BookOpen} label="Journal" tab="journal" active={activeTab} onNav={chooseTab} />
       </nav>
     </div>
   )

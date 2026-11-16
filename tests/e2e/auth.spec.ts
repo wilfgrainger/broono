@@ -437,3 +437,35 @@ test('the guide gives the missed-dose window for the chosen medicine', async ({ 
   await expect(page.getByText(/5 days \(120 hours\) or less/)).toBeVisible()
   await expect(page.getByRole('heading', { name: /Get medical help straight away/ })).toBeVisible()
 })
+
+test('a saved log can be edited from Progress', async ({ page }) => {
+  await startLocally(page)
+  await completeOnboarding(page)
+  await saveLog(page, '14', '0')
+
+  await page.getByRole('button', { name: 'Progress', exact: true }).click()
+  await page.getByRole('button', { name: /^Edit log from/ }).click()
+  await expect(page.getByRole('heading', { name: 'Edit log' })).toBeVisible()
+  // The form opens with the saved values.
+  await expect(page.getByRole('spinbutton', { name: 'Stones' })).toHaveValue('14')
+  await expect(page.getByRole('radio', { name: 'No injection this time' })).toBeChecked()
+
+  await page.getByRole('spinbutton', { name: 'Pounds' }).fill('2')
+  await page.getByRole('checkbox', { name: 'Headache' }).check()
+  await page.getByLabel('Notes (optional)').fill('Corrected weight')
+  await page.getByRole('button', { name: /Save changes/ }).click()
+  await expect(page.getByRole('status')).toContainText('Changes Saved')
+
+  // Returns to Progress with the change applied, and no duplicate log.
+  await expect(page.getByRole('heading', { name: 'Progress' })).toBeVisible()
+  await expect(page.locator('.history-item')).toHaveCount(1)
+  await expect(page.getByText('Corrected weight')).toBeVisible()
+  const stored = await readStore(page)
+  expect(stored.state.logs).toHaveLength(1)
+  expect(stored.state.logs[0].weight).toBe(198)
+  expect(stored.state.logs[0].symptoms).toEqual(['Headache'])
+
+  // The device reminder toggle only appears in the Android app.
+  await page.getByRole('button', { name: 'Open settings' }).click()
+  await expect(page.getByText('Remind me on this phone')).toHaveCount(0)
+})

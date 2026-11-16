@@ -3,7 +3,8 @@ import { ArrowRight, Check } from 'lucide-react'
 import ChoiceGroup from '../components/ChoiceGroup'
 import DoseInput from '../components/DoseInput'
 import WeightField from '../components/WeightField'
-import { INJECTION_SITES, LIMITS, SYMPTOMS, useStore, type InjectionSite, type Symptom } from '../store'
+import { INJECTION_SITES, LIMITS, SYMPTOMS, useStore, type InjectionSite, type Symptom, type WeeklyLog } from '../store'
+import { confirmWithHaptics } from '../utils/deviceReminder'
 import { formatShortDate, toLocalISODate } from '../utils/date'
 import { getDoseStatus } from '../utils/medication'
 import { suggestNextSite } from '../utils/stats'
@@ -11,28 +12,32 @@ import { getWeightUnitName, validateWeight } from '../utils/weight'
 
 interface CheckInProps {
     onDone: () => void
+    /** When set, the form edits this log instead of adding a new one. */
+    editLog?: WeeklyLog
 }
 
 type SiteChoice = InjectionSite | 'none'
 
-export default function CheckIn({ onDone }: CheckInProps) {
+export default function CheckIn({ onDone, editLog }: CheckInProps) {
     const logs = useStore((s) => s.logs)
     const profile = useStore((s) => s.profile)
     const addLog = useStore((s) => s.addLog)
+    const updateLog = useStore((s) => s.updateLog)
     const updateProfile = useStore((s) => s.updateProfile)
     const weightUnit = profile.weightUnit
     const today = toLocalISODate()
-    const injectionLogs = logs.filter((log) => log.site)
+    // The log being edited does not count towards its own site suggestion.
+    const injectionLogs = logs.filter((log) => log.site && log.id !== editLog?.id)
     const suggestion = suggestNextSite(injectionLogs)
     const doseDue = getDoseStatus(profile.injectionDayOfWeek, injectionLogs[0]?.date, today).daysUntil === 0
 
-    const [weight, setWeight] = useState<number | null>(null)
-    const [date, setDate] = useState(today)
+    const [weight, setWeight] = useState<number | null>(editLog && editLog.weight > 0 ? editLog.weight : null)
+    const [date, setDate] = useState(editLog?.date ?? today)
     // On dose day the injection is the likely reason for logging, so start with the suggested site.
-    const [site, setSite] = useState<SiteChoice | ''>(doseDue ? suggestion.site : '')
-    const [doseMg, setDoseMg] = useState(profile.doseMg)
-    const [symptoms, setSymptoms] = useState<Symptom[]>(['None'])
-    const [notes, setNotes] = useState('')
+    const [site, setSite] = useState<SiteChoice | ''>(editLog ? editLog.site || 'none' : doseDue ? suggestion.site : '')
+    const [doseMg, setDoseMg] = useState(editLog?.doseMg || profile.doseMg)
+    const [symptoms, setSymptoms] = useState<Symptom[]>(editLog?.symptoms ?? ['None'])
+    const [notes, setNotes] = useState(editLog?.notes ?? '')
     const [saved, setSaved] = useState(false)
     const [error, setError] = useState<{ field: 'weight' | 'entry'; message: string } | null>(null)
     const weightInputRef = useRef<HTMLInputElement>(null)
@@ -73,15 +78,18 @@ export default function CheckIn({ onDone }: CheckInProps) {
         // A cleared or future date falls back to today.
         const logDate = /^\d{4}-\d{2}-\d{2}$/.test(date) && date <= today ? date : today
         const dose = injected && doseMg > 0 ? doseMg : 0
-        addLog({
+        const entry = {
             date: logDate,
             displayDate: formatShortDate(logDate),
             weight: validWeight ?? 0,
-            site: injected ? site : '',
+            site: injected ? site : '' as const,
             doseMg: dose,
             symptoms,
             notes: notes.trim(),
-        })
+        }
+        if (editLog) updateLog(editLog.id, entry)
+        else addLog(entry)
+        void confirmWithHaptics()
         // A new dose on the most recent injection is a dose change (titration).
         const isLatestInjection = !injectionLogs.some((log) => log.date > logDate)
         if (dose > 0 && isLatestInjection && dose !== profile.doseMg) updateProfile({ doseMg: dose })
@@ -97,7 +105,7 @@ export default function CheckIn({ onDone }: CheckInProps) {
                 >
                     <Check size={48} color="var(--teal)" strokeWidth={2.5} aria-hidden="true" />
                 </div>
-                <h1 ref={savedHeadingRef} tabIndex={-1} role="status" className="page-title">Log Saved</h1>
+                <h1 ref={savedHeadingRef} tabIndex={-1} role="status" className="page-title">{editLog ? 'Changes Saved' : 'Log Saved'}</h1>
             </div>
         )
     }
@@ -110,8 +118,8 @@ export default function CheckIn({ onDone }: CheckInProps) {
     return (
         <form className="page-enter space-y-6" style={{ paddingTop: 8 }} onSubmit={handleSave} noValidate aria-labelledby="checkin-title">
             <div>
-                <h1 id="checkin-title" className="page-title">Add a log</h1>
-                <p className="page-subtitle">Record an injection, a weigh-in, or both.</p>
+                <h1 id="checkin-title" className="page-title">{editLog ? 'Edit log' : 'Add a log'}</h1>
+                <p className="page-subtitle">{editLog ? `Change the entry from ${formatShortDate(editLog.date)}.` : 'Record an injection, a weigh-in, or both.'}</p>
             </div>
 
             {error?.field === 'entry' ? <p role="alert" className="field-error" style={{ marginTop: 0 }}>{error.message}</p> : null}
@@ -198,7 +206,7 @@ export default function CheckIn({ onDone }: CheckInProps) {
             </div>
 
             <button type="submit" id="save-log-btn" className="btn-primary">
-                Save Log <ArrowRight size={18} strokeWidth={2.5} aria-hidden="true" />
+                {editLog ? 'Save changes' : 'Save Log'} <ArrowRight size={18} strokeWidth={2.5} aria-hidden="true" />
             </button>
         </form>
     )

@@ -53,8 +53,10 @@ export interface UserProfile {
   heightCm: number
   /** `YYYY-MM-DD` the user started treatment, or ''. */
   treatmentStartDate: string
-  /** `HH:MM` used for calendar reminders. */
+  /** `HH:MM` used for calendar and device reminders. */
   reminderTime: string
+  /** Weekly local notification in the Android app. */
+  deviceReminder: boolean
   weightUnit: WeightUnit
   proteinGoalG: number
   waterGoalGlasses: number
@@ -83,6 +85,7 @@ interface AppState {
   setWeightUnit: (unit: WeightUnit) => void
   completeOnboarding: () => void
   addLog: (log: Omit<WeeklyLog, 'id'>) => void
+  updateLog: (id: string, changes: Omit<WeeklyLog, 'id'>) => void
   removeLog: (id: string) => void
   addJournalEntry: (text: string) => void
   removeJournalEntry: (id: string) => void
@@ -121,6 +124,7 @@ const createDefaultProfile = (): UserProfile => ({
   heightCm: 0,
   treatmentStartDate: '',
   reminderTime: '09:00',
+  deviceReminder: false,
   weightUnit: guessWeightUnit(globalThis.navigator?.language),
   proteinGoalG: 100,
   waterGoalGlasses: 8,
@@ -174,6 +178,7 @@ function sanitizeProfile(raw: unknown, sourceVersion: number): UserProfile {
     heightCm: clampInt(raw.heightCm, 0, 250, 0) >= 100 ? clampInt(raw.heightCm, 0, 250, 0) : 0,
     treatmentStartDate: asDate(raw.treatmentStartDate) ?? '',
     reminderTime: typeof raw.reminderTime === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(raw.reminderTime) ? raw.reminderTime : base.reminderTime,
+    deviceReminder: raw.deviceReminder === true,
     weightUnit,
     proteinGoalG: clampInt(raw.proteinGoalG, LIMITS.proteinGoal.min, LIMITS.proteinGoal.max, base.proteinGoalG),
     waterGoalGlasses: clampInt(raw.waterGoalGlasses, LIMITS.waterGoal.min, LIMITS.waterGoal.max, base.waterGoalGlasses),
@@ -286,6 +291,13 @@ export const useStore = create<AppState>()(
       addLog: (log) =>
         set((state) => ({
           logs: [{ ...log, id: uid() }, ...state.logs].sort((a, b) => b.date.localeCompare(a.date)),
+        })),
+
+      updateLog: (id, changes) =>
+        set((state) => ({
+          logs: state.logs
+            .map((log) => (log.id === id ? { ...changes, id } : log))
+            .sort((a, b) => b.date.localeCompare(a.date)),
         })),
 
       removeLog: (id) =>

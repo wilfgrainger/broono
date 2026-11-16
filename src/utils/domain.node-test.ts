@@ -93,3 +93,9 @@ test('CSV cells are quoted and formula-like text is neutralised', async () => {
   assert.equal(csvCell(-2.5), '-2.5')
   assert.equal(toCsv(['a', 'b'], [[1, 'x']]), 'a,b\r\n1,x\r\n')
 })
+
+test('device reminder schedule uses the plugin weekday numbering', async () => {
+  const { reminderSchedule } = await import('./deviceReminder.ts')
+  assert.deepEqual(reminderSchedule({ dayOfWeek: 0, time: '08:30' }), { on: { weekday: 1, hour: 8, minute: 30 }, allowWhileIdle: true })
+  assert.deepEqual(reminderSchedule({ dayOfWeek: 6, time: '21:05' }).on, { weekday: 7, hour: 21, minute: 5 })
+})

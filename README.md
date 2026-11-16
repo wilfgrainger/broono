@@ -11,7 +11,8 @@ Broono is a mobile-first, local-only GLP-1 tracking companion for weight progres
 - **Side effects**: multi-select per log, with frequency over recent logs.
 - **Daily targets**: protein and water counters that reset at local midnight.
 - **Guide**: missed-dose window for the chosen medicine and self-care notes from the patient leaflets, with when to seek urgent help.
-- **Reminders**: a weekly `.ics` calendar event, so the user's calendar does the reminding without any server or notification permission.
+- **Reminders**: a weekly `.ics` calendar event on any device, and an optional weekly notification in the Android app.
+- **Editing**: any log can be edited or deleted from Progress.
 - **Data**: JSON backup and validated restore, CSV export for spreadsheets, printable clinician summary, local erase.
 - **Platform**: light and dark themes (system or pinned), installable web app, browser and Android back navigation between tabs.
 
@@ -88,6 +89,8 @@ See `docs/PRODUCTION_HOSTING.md` for the exact release and Cloudflare-retirement
 The checked-in Android project does not request `android.permission.INTERNET` or `com.android.vending.BILLING`, and it does not link the former Google Auth or native-purchases modules.
 
 The Android WebView cannot download files, so Export writes the backup to the app's private cache with `@capacitor/filesystem` and opens the system share sheet with `@capacitor/share`. Neither plugin declares a permission, and nothing leaves the device unless the user picks a destination. Import uses the standard file picker.
+
+The optional weekly injection reminder in the Android app uses `@capacitor/local-notifications`, which the operating system schedules on the device. That plugin adds `POST_NOTIFICATIONS` (asked for only when the user turns the reminder on), `SCHEDULE_EXACT_ALARM`, `RECEIVE_BOOT_COMPLETED` (to restore the reminder after a restart) and `WAKE_LOCK`. None of them grants network access. `@capacitor/haptics` gives a light tap when a log is saved.
 
 Run `pnpm android:sync` after dependency or Capacitor configuration changes, then review the generated manifest and Gradle files before committing them.
 

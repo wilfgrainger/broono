@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import { Printer, Trash2 } from 'lucide-react'
+import { Pencil, Printer, Trash2 } from 'lucide-react'
 import { Capacitor } from '@capacitor/core'
 import ConfirmDialog, { type ConfirmDialogHandle } from '../components/ConfirmDialog'
 import WeightChart from '../components/WeightChart'
@@ -29,7 +29,11 @@ function doseSteps(logs: WeeklyLog[], fallbackDose: number) {
   return steps
 }
 
-export default function Progress() {
+interface ProgressProps {
+  onEdit: (logId: string) => void
+}
+
+export default function Progress({ onEdit }: ProgressProps) {
   const logs = useStore((s) => s.logs)
   const profile = useStore((s) => s.profile)
   const removeLog = useStore((s) => s.removeLog)
@@ -212,6 +216,14 @@ export default function Progress() {
                     <time dateTime={log.date} style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '1px', textTransform: 'uppercase' }}>
                       {formatShortDate(log.date)}
                     </time>
+                    <button
+                      type="button"
+                      className="icon-btn"
+                      aria-label={`Edit log from ${formatShortDate(log.date)}`}
+                      onClick={() => onEdit(log.id)}
+                    >
+                      <Pencil size={16} strokeWidth={2} aria-hidden="true" />
+                    </button>
                     <button
                       type="button"
                       className="icon-btn"
