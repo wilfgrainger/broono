@@ -3,6 +3,7 @@ import { Trash2 } from 'lucide-react'
 import ConfirmDialog, { type ConfirmDialogHandle } from '../components/ConfirmDialog'
 import { LIMITS, useStore } from '../store'
 import { formatShortDate } from '../utils/date'
+import { showToast } from '../utils/toast'
 
 export default function Journal() {
   const journalEntries = useStore((state) => state.journalEntries)
@@ -115,7 +116,11 @@ export default function Journal() {
         description="This journal entry will be removed from this device. This cannot be undone."
         confirmLabel="Delete entry"
         cancelLabel="Keep it"
-        onConfirm={() => { if (pendingDeleteId) removeJournalEntry(pendingDeleteId) }}
+        onConfirm={() => {
+          if (!pendingDeleteId) return
+          removeJournalEntry(pendingDeleteId)
+          showToast('Entry deleted')
+        }}
       />
     </div>
   )

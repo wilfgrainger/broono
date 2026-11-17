@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
-import { ArrowRight, Check } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { Check } from 'lucide-react'
 import ChoiceGroup from '../components/ChoiceGroup'
 import DoseInput from '../components/DoseInput'
 import WeightField from '../components/WeightField'
 import { INJECTION_SITES, LIMITS, SYMPTOMS, useStore, type InjectionSite, type Symptom, type WeeklyLog } from '../store'
 import { confirmWithHaptics } from '../utils/deviceReminder'
+import { showToast } from '../utils/toast'
 import { formatShortDate, toLocalISODate } from '../utils/date'
 import { getDoseStatus } from '../utils/medication'
 import { suggestNextSite } from '../utils/stats'
@@ -38,21 +39,10 @@ export default function CheckIn({ onDone, editLog }: CheckInProps) {
     const [doseMg, setDoseMg] = useState(editLog?.doseMg || profile.doseMg)
     const [symptoms, setSymptoms] = useState<Symptom[]>(editLog?.symptoms ?? ['None'])
     const [notes, setNotes] = useState(editLog?.notes ?? '')
-    const [saved, setSaved] = useState(false)
     const [error, setError] = useState<{ field: 'weight' | 'entry'; message: string } | null>(null)
     const weightInputRef = useRef<HTMLInputElement>(null)
-    const savedHeadingRef = useRef<HTMLHeadingElement>(null)
     const injected = site !== '' && site !== 'none'
 
-    // Return to the dashboard after the confirmation, unless the user has
-    // already navigated elsewhere (the timer is cleared on unmount).
-    useEffect(() => {
-        if (!saved) return
-        // The form, and the focused Save button with it, has just been removed.
-        savedHeadingRef.current?.focus()
-        const timer = window.setTimeout(onDone, 1600)
-        return () => window.clearTimeout(timer)
-    }, [saved, onDone])
 
     // "None" and real side effects are mutually exclusive; several real ones can be chosen.
     const changeSymptoms = (next: Symptom[]) => {
@@ -93,21 +83,9 @@ export default function CheckIn({ onDone, editLog }: CheckInProps) {
         // A new dose on the most recent injection is a dose change (titration).
         const isLatestInjection = !injectionLogs.some((log) => log.date > logDate)
         if (dose > 0 && isLatestInjection && dose !== profile.doseMg) updateProfile({ doseMg: dose })
-        setSaved(true)
-    }
-
-    if (saved) {
-        return (
-            <div className="page-enter" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '72vh', gap: 20 }}>
-                <div
-                    className="scale-in"
-                    style={{ width: 96, height: 96, background: 'var(--success-soft)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                >
-                    <Check size={48} color="var(--teal)" strokeWidth={2.5} aria-hidden="true" />
-                </div>
-                <h1 ref={savedHeadingRef} tabIndex={-1} role="status" className="page-title">{editLog ? 'Changes Saved' : 'Log Saved'}</h1>
-            </div>
-        )
+        // A quick confirmation on the next screen, rather than a blocking success page.
+        showToast(editLog ? 'Changes saved' : 'Log saved')
+        onDone()
     }
 
     const siteOptions = [
@@ -124,18 +102,6 @@ export default function CheckIn({ onDone, editLog }: CheckInProps) {
 
             {error?.field === 'entry' ? <p role="alert" className="field-error" style={{ marginTop: 0 }}>{error.message}</p> : null}
 
-            <div className="card">
-                <label htmlFor="log-date-input" style={{ display: 'block', fontSize: 14, fontWeight: 700, marginBottom: 12 }}>Date</label>
-                <input
-                    id="log-date-input"
-                    name="date"
-                    type="date"
-                    className="form-input"
-                    value={date}
-                    max={today}
-                    onChange={(e) => setDate(e.target.value)}
-                />
-            </div>
 
             <div className="card space-y-5">
                 <ChoiceGroup
@@ -205,9 +171,24 @@ export default function CheckIn({ onDone, editLog }: CheckInProps) {
                 />
             </div>
 
-            <button type="submit" id="save-log-btn" className="btn-primary">
-                {editLog ? 'Save changes' : 'Save Log'} <ArrowRight size={18} strokeWidth={2.5} aria-hidden="true" />
-            </button>
+            <div className="card settings-row-inline" style={{ display: 'grid', gap: 12, alignItems: 'center' }}>
+                <label htmlFor="log-date-input" style={{ fontSize: 14, fontWeight: 700 }}>Date</label>
+                <input
+                    id="log-date-input"
+                    name="date"
+                    type="date"
+                    className="form-input" style={{ width: 'auto', paddingBlock: 10 }}
+                    value={date}
+                    max={today}
+                    onChange={(e) => setDate(e.target.value)}
+                />
+            </div>
+
+            <div className="form-actions">
+                <button type="submit" id="save-log-btn" className="btn-primary">
+                    <Check size={18} strokeWidth={2.5} aria-hidden="true" /> {editLog ? 'Save changes' : 'Save Log'}
+                </button>
+            </div>
         </form>
     )
 }

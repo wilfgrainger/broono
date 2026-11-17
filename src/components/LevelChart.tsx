@@ -13,6 +13,8 @@ interface LevelChartProps {
   nextDose?: Injection | null
   pastDays?: number
   futureDays?: number
+  /** Show the explanatory caption under the chart (Dashboard puts it in a popover instead). */
+  showCaption?: boolean
 }
 
 const WIDTH = 320
@@ -20,7 +22,7 @@ const HEIGHT = 120
 const PAD = { top: 10, right: 6, bottom: 22, left: 6 }
 
 /** Estimated medication level for recent weeks, with the next week projected. */
-export default function LevelChart({ injections, ingredient, today, referenceDoseMg, nextDose, pastDays = 28, futureDays = 7 }: LevelChartProps) {
+export default function LevelChart({ injections, ingredient, today, referenceDoseMg, nextDose, pastDays = 28, futureDays = 7, showCaption = true }: LevelChartProps) {
   const points = useMemo(() => estimateLevels(
     nextDose ? [...injections, nextDose] : injections,
     ingredient,
@@ -55,16 +57,17 @@ export default function LevelChart({ injections, ingredient, today, referenceDos
         <path className="level-line projected" d={path(future)} />
         <line className="chart-today" x1={x(0)} x2={x(0)} y1={PAD.top - 4} y2={baseline} />
         {injectionDays.map((injection) => (
-          <circle key={injection.date} className="level-dose" cx={x(injection.day)} cy={baseline} r={3} />
+          <line key={injection.date} className="chart-dot level-dose" x1={x(injection.day)} x2={x(injection.day)} y1={baseline} y2={baseline} />
         ))}
-        <circle className="level-now" cx={x(0)} cy={y(now.level)} r={4} />
+        <line className="chart-dot level-now-ring" x1={x(0)} x2={x(0)} y1={y(now.level)} y2={y(now.level)} />
+        <line className="chart-dot level-now" x1={x(0)} x2={x(0)} y1={y(now.level)} y2={y(now.level)} />
       </svg>
       <div className="chart-axis" aria-hidden="true">
         <span>{formatShortDate(addDays(today, -pastDays))}</span>
         <span>Today</span>
         <span>{formatShortDate(addDays(today, futureDays))}</span>
       </div>
-      <figcaption className="chart-caption">
+      <figcaption className={showCaption ? 'chart-caption' : 'visually-hidden'}>
         Solid line: estimate from your logged injections (dots). Dashed: the coming week{nextDose ? ', including your next scheduled dose' : ''}. 100% is the usual peak after several weeks on your current dose.
       </figcaption>
       <DataTable

@@ -46,7 +46,7 @@ async function saveLog(page: Page, stones: string, pounds: string) {
   await page.getByRole('spinbutton', { name: 'Stones' }).fill(stones)
   await page.getByRole('spinbutton', { name: 'Pounds' }).fill(pounds)
   await page.getByRole('button', { name: /Save Log/ }).click()
-  await expect(page.getByRole('status')).toContainText('Log Saved')
+  await expect(page.locator('.toast')).toContainText('Log saved')
   await expect(page.getByText('Current Weight')).toBeVisible()
 }
 
@@ -193,7 +193,7 @@ test('weekly log validates, saves and feeds the dashboard and progress', async (
   await page.getByRole('checkbox', { name: 'Fatigue' }).check()
   await expect(page.getByRole('checkbox', { name: 'None' })).not.toBeChecked()
   await page.getByRole('button', { name: /Save Log/ }).click()
-  await expect(page.getByRole('status')).toContainText('Log Saved')
+  await expect(page.locator('.toast')).toContainText('Log saved')
 
   // Returns to the dashboard with the new weight and the amount lost, unit included.
   await expect(page.getByText('13 st 13 lbs')).toBeVisible()
@@ -319,7 +319,7 @@ test('tabs are in browser history, so Back returns to the previous tab', async (
   await page.getByRole('button', { name: 'Home', exact: true }).click()
   await saveLog(page, '14', '0')
   await page.goBack()
-  await expect(page.getByRole('heading', { name: 'Weekly Log' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Add a log' })).toHaveCount(0)
 })
 
 test('a failed save to device storage is reported instead of ignored', async ({ page }) => {
@@ -362,7 +362,7 @@ test('logging injections builds the level estimate, rotates sites and tracks the
   await page.getByRole('button', { name: '2.5 milligrams', exact: true }).click()
   // An injection can be logged without a weigh-in.
   await page.getByRole('button', { name: /Save Log/ }).click()
-  await expect(page.getByRole('status')).toContainText('Log Saved')
+  await expect(page.locator('.toast')).toContainText('Log saved')
 
   await expect(page.getByText('Est. level')).toBeVisible()
   await expect(page.getByRole('img', { name: /Estimated level over the last 4 weeks/ })).toBeVisible()
@@ -432,7 +432,7 @@ test('the guide gives the missed-dose window for the chosen medicine', async ({ 
   await expect(page.getByText(/4 days \(96 hours\) or less/)).toBeVisible()
 
   await page.getByRole('button', { name: 'Open settings' }).click()
-  await page.getByRole('radio', { name: 'Wegovy' }).check()
+  await page.getByLabel('Medication').selectOption('Wegovy')
   await page.getByRole('button', { name: 'Guide', exact: true }).click()
   await expect(page.getByText(/5 days \(120 hours\) or less/)).toBeVisible()
   await expect(page.getByRole('heading', { name: /Get medical help straight away/ })).toBeVisible()
@@ -454,7 +454,7 @@ test('a saved log can be edited from Progress', async ({ page }) => {
   await page.getByRole('checkbox', { name: 'Headache' }).check()
   await page.getByLabel('Notes (optional)').fill('Corrected weight')
   await page.getByRole('button', { name: /Save changes/ }).click()
-  await expect(page.getByRole('status')).toContainText('Changes Saved')
+  await expect(page.locator('.toast').last()).toContainText('Changes saved')
 
   // Returns to Progress with the change applied, and no duplicate log.
   await expect(page.getByRole('heading', { name: 'Progress' })).toBeVisible()
@@ -468,4 +468,30 @@ test('a saved log can be edited from Progress', async ({ page }) => {
   // The device reminder toggle only appears in the Android app.
   await page.getByRole('button', { name: 'Open settings' }).click()
   await expect(page.getByText('Remind me on this phone')).toHaveCount(0)
+})
+
+test('saving shows a dismissable toast in the notifications region, without blocking', async ({ page }) => {
+  await startLocally(page)
+  await completeOnboarding(page)
+  await saveLog(page, '14', '0')
+
+  const region = page.getByRole('region', { name: 'Notifications' })
+  await expect(region.locator('.toast')).toContainText('Log saved')
+  // Already back on Home: the toast does not hold the user up.
+  await expect(page.getByText('Current weight')).toBeVisible()
+  await region.getByRole('button', { name: 'Dismiss' }).click()
+  await expect(region.locator('.toast')).toHaveCount(0)
+})
+
+test('wide screens get a sidebar instead of a bottom tab bar', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await startLocally(page)
+  await completeOnboarding(page)
+  const nav = page.getByRole('navigation', { name: 'Primary navigation' })
+  const box = (await nav.boundingBox())!
+  expect(box.x).toBe(0)
+  expect(box.height).toBeGreaterThan(500)
+  expect(box.width).toBeLessThan(300)
+  await nav.getByRole('button', { name: 'Progress' }).click()
+  await expect(page.getByRole('heading', { name: 'Progress' })).toBeVisible()
 })

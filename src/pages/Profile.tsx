@@ -15,6 +15,7 @@ import { getColorScheme, setColorScheme, type ColorScheme } from '../utils/theme
 import { WEIGHT_UNIT_OPTIONS, getWeightInputUnitLabel, validateWeight } from '../utils/weight'
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+const SHORT_UNIT_LABELS = { kg: 'kg', lbs: 'lbs', st: 'st & lbs' } as const
 const MAX_IMPORT_BYTES = 5 * 1024 * 1024
 
 interface NumberSettingProps {
@@ -110,7 +111,7 @@ export default function ProfilePage() {
     const unitLabel = getWeightInputUnitLabel(currentProfile.weightUnit)
     const csv = toCsv(
       ['Date', `Weight (${unitLabel})`, 'Injection site', 'Dose (mg)', 'Side effects', 'Notes'],
-      [...logs].reverse().map((log) => [
+      logs.toReversed().map((log) => [
         log.date,
         log.weight > 0 ? log.weight : '',
         log.site,
@@ -155,169 +156,198 @@ export default function ProfilePage() {
     }
   }
 
+  const toggleDeviceReminder = async (checked: boolean) => {
+    if (!checked) {
+      updateProfile({ deviceReminder: false })
+      setReminderMessage('')
+      return
+    }
+    const granted = await requestReminderPermission().catch(() => false)
+    updateProfile({ deviceReminder: granted })
+    setReminderMessage(granted ? '' : 'Notifications are switched off for Broono. Turn them on in Android Settings, then try again.')
+  }
+
   return (
-    <div className="page-enter space-y-6" style={{ paddingTop: 8 }}>
+    <div className="page-enter space-y-6" style={{ paddingTop: 4 }}>
       <div>
         <h1 className="page-title">Settings</h1>
-        <p className="page-subtitle">Changes are saved as you make them.</p>
+        <p className="page-subtitle">Changes save as you make them.</p>
       </div>
 
-      <div className="card space-y-5">
-        <ChoiceGroup
-          legend="Medication"
-          name="medication"
-          layout="stack"
-          options={MEDICATIONS.map((value) => ({ value, label: value }))}
-          value={profile.medicationName}
-          onChange={(medicationName) => updateProfile({ medicationName })}
-        />
-        <DoseInput
-          key={profile.medicationName}
-          id="dose-input"
-          label="Current dose"
-          medication={profile.medicationName}
-          value={profile.doseMg}
-          onChange={(doseMg) => updateProfile({ doseMg })}
-        />
-      </div>
-
-      <div className="card space-y-5">
-        <ChoiceGroup
-          legend="Injection day"
-          name="injection-day"
-          layout="week"
-          options={DAY_NAMES.map((day, index) => ({ value: `${index}`, label: day.slice(0, 2), ariaLabel: day }))}
-          value={`${profile.injectionDayOfWeek}`}
-          onChange={(value) => updateProfile({ injectionDayOfWeek: Number(value) })}
-        />
-        <div>
-          <label htmlFor="reminder-time" style={{ display: 'block', fontSize: 14, fontWeight: 700, marginBottom: 10 }}>Reminder time</label>
-          <input
-            id="reminder-time"
-            name="reminderTime"
-            type="time"
+      <section className="card settings-group" aria-labelledby="treatment-heading">
+        <h2 id="treatment-heading">Treatment</h2>
+        <div className="settings-row">
+          <label htmlFor="medication-select">Medication</label>
+          <select
+            id="medication-select"
+            name="medication"
             className="form-input"
-            value={profile.reminderTime}
-            onChange={(event) => { if (/^\d{2}:\d{2}$/.test(event.target.value)) updateProfile({ reminderTime: event.target.value }) }}
+            value={profile.medicationName}
+            onChange={(event) => updateProfile({ medicationName: event.target.value as typeof profile.medicationName })}
+          >
+            {MEDICATIONS.map((medication) => <option key={medication} value={medication}>{medication}</option>)}
+          </select>
+        </div>
+        <div className="settings-row">
+          <DoseInput
+            key={profile.medicationName}
+            id="dose-input"
+            label="Current dose"
+            medication={profile.medicationName}
+            value={profile.doseMg}
+            onChange={(doseMg) => updateProfile({ doseMg })}
           />
         </div>
-        {canUseDeviceReminders() ? (
-          <div>
-            <label className="toggle-row">
-              <input
-                type="checkbox"
-                checked={profile.deviceReminder}
-                aria-describedby="device-reminder-status"
-                onChange={async (event) => {
-                  if (!event.target.checked) {
-                    updateProfile({ deviceReminder: false })
-                    setReminderMessage('')
-                    return
-                  }
-                  const granted = await requestReminderPermission().catch(() => false)
-                  updateProfile({ deviceReminder: granted })
-                  setReminderMessage(granted ? '' : 'Notifications are switched off for Broono. Turn them on in Android Settings, then try again.')
-                }}
-              />
-              <span>Remind me on this phone</span>
-            </label>
-            <p id="device-reminder-status" role="status" className="muted-text" style={{ marginTop: 6 }}>
-              {reminderMessage || (profile.deviceReminder ? `A notification every ${DAY_NAMES[profile.injectionDayOfWeek]} at ${profile.reminderTime}.` : '')}
-            </p>
-          </div>
-        ) : null}
-        <button type="button" className="btn-secondary" onClick={() => void handleReminder()}>
-          <CalendarPlus size={18} aria-hidden="true" style={{ verticalAlign: '-3px', marginRight: 8 }} />
-          Add a weekly reminder to my calendar
-        </button>
-        <p className="muted-text" style={{ marginTop: 8 }}>
-          Every {DAY_NAMES[profile.injectionDayOfWeek]} at {profile.reminderTime}. Your calendar app does the reminding, so it works even when Broono is closed. Add it again if you change the day.
-        </p>
-        <div>
-          <label htmlFor="treatment-start" style={{ display: 'block', fontSize: 14, fontWeight: 700, marginBottom: 10 }}>Treatment start date</label>
+        <div className="settings-row settings-row-inline">
+          <label htmlFor="treatment-start">Started treatment</label>
           <input
             id="treatment-start"
             name="treatmentStartDate"
             type="date"
             className="form-input"
+            style={{ width: 'auto' }}
             max={toLocalISODate()}
             value={profile.treatmentStartDate}
             onChange={(event) => updateProfile({ treatmentStartDate: /^\d{4}-\d{2}-\d{2}$/.test(event.target.value) ? event.target.value : '' })}
           />
         </div>
-      </div>
+      </section>
 
-      <div className="card space-y-5 settings-card">
-        <h2 className="choice-legend" style={{ marginBottom: 0 }}>Goals and body</h2>
-        <WeightField
-          key={profile.weightUnit}
-          label="Goal weight (optional)"
-          unit={profile.weightUnit}
-          value={profile.goalWeight > 0 ? profile.goalWeight : null}
-          onChange={(value) => updateProfile({ goalWeight: value === null ? 0 : validateWeight(value, profile.weightUnit) ?? 0 })}
-        />
-        <NumberSetting
-          id="height-cm"
-          label="Height in cm (optional, for BMI)"
-          value={profile.heightCm}
-          min={100}
-          max={250}
-          hint="Only used to show your BMI on Progress."
-          onCommit={(heightCm) => updateProfile({ heightCm })}
-        />
-        <NumberSetting
-          id="protein-goal"
-          label="Protein goal (g per day)"
-          value={profile.proteinGoalG}
-          min={LIMITS.proteinGoal.min}
-          max={LIMITS.proteinGoal.max}
-          hint={`Between ${LIMITS.proteinGoal.min} and ${LIMITS.proteinGoal.max}.`}
-          onCommit={(proteinGoalG) => updateProfile({ proteinGoalG })}
-        />
-        <NumberSetting
-          id="water-goal"
-          label="Water goal (glasses per day)"
-          value={profile.waterGoalGlasses}
-          min={LIMITS.waterGoal.min}
-          max={LIMITS.waterGoal.max}
-          hint={`Between ${LIMITS.waterGoal.min} and ${LIMITS.waterGoal.max}.`}
-          onCommit={(waterGoalGlasses) => updateProfile({ waterGoalGlasses })}
-        />
-      </div>
+      <section className="card settings-group" aria-labelledby="schedule-heading">
+        <h2 id="schedule-heading">Schedule and reminders</h2>
+        <div className="settings-row">
+          <ChoiceGroup
+            legend="Injection day"
+            name="injection-day"
+            layout="week"
+            options={DAY_NAMES.map((day, index) => ({ value: `${index}`, label: day.slice(0, 2), ariaLabel: day }))}
+            value={`${profile.injectionDayOfWeek}`}
+            onChange={(value) => updateProfile({ injectionDayOfWeek: Number(value) })}
+          />
+        </div>
+        <div className="settings-row settings-row-inline">
+          <label htmlFor="reminder-time">Reminder time</label>
+          <input
+            id="reminder-time"
+            name="reminderTime"
+            type="time"
+            className="form-input"
+            style={{ width: 'auto' }}
+            value={profile.reminderTime}
+            onChange={(event) => { if (/^\d{2}:\d{2}$/.test(event.target.value)) updateProfile({ reminderTime: event.target.value }) }}
+          />
+        </div>
+        {canUseDeviceReminders() ? (
+          <div className="settings-row">
+            <label className="toggle-row" style={{ minHeight: 0 }}>
+              <input
+                type="checkbox"
+                checked={profile.deviceReminder}
+                aria-describedby="device-reminder-status"
+                onChange={(event) => void toggleDeviceReminder(event.target.checked)}
+              />
+              <span>Remind me on this phone</span>
+            </label>
+            <p id="device-reminder-status" role="status" className="row-hint">
+              {reminderMessage || (profile.deviceReminder ? `A notification every ${DAY_NAMES[profile.injectionDayOfWeek]} at ${profile.reminderTime}.` : '')}
+            </p>
+          </div>
+        ) : null}
+        <div className="settings-row">
+          <button type="button" className="btn-secondary" onClick={() => void handleReminder()}>
+            <CalendarPlus size={18} aria-hidden="true" style={{ verticalAlign: '-3px', marginRight: 8 }} />
+            Add a weekly reminder to my calendar
+          </button>
+          <p className="row-hint">
+            Every {DAY_NAMES[profile.injectionDayOfWeek]} at {profile.reminderTime}. Your calendar app does the reminding, even when Broono is closed. Add it again if you change the day.
+          </p>
+        </div>
+      </section>
 
-      <div className="card space-y-5">
-        <ChoiceGroup
-          legend="Weight unit"
-          description="Your saved weights are converted when you change unit."
-          name="weight-unit"
-          layout="stack"
-          options={WEIGHT_UNIT_OPTIONS.map(({ unit, label }) => ({ value: unit, label }))}
-          value={profile.weightUnit}
-          onChange={setWeightUnit}
-        />
-        <ChoiceGroup
-          legend="Appearance"
-          name="appearance"
-          layout="grid"
-          options={[
-            { value: 'light dark', label: 'System' },
-            { value: 'light', label: 'Light' },
-            { value: 'dark', label: 'Dark' },
-          ]}
-          value={scheme}
-          onChange={(next: ColorScheme) => {
-            setColorScheme(next)
-            setScheme(next)
-          }}
-        />
-      </div>
+      <section className="card settings-group settings-card" aria-labelledby="goals-heading">
+        <h2 id="goals-heading">Goals and body</h2>
+        <div className="settings-row">
+          <WeightField
+            key={profile.weightUnit}
+            label="Goal weight (optional)"
+            unit={profile.weightUnit}
+            value={profile.goalWeight > 0 ? profile.goalWeight : null}
+            onChange={(value) => updateProfile({ goalWeight: value === null ? 0 : validateWeight(value, profile.weightUnit) ?? 0 })}
+          />
+        </div>
+        <div className="settings-row">
+          <NumberSetting
+            id="height-cm"
+            label="Height in cm (optional, for BMI)"
+            value={profile.heightCm}
+            min={100}
+            max={250}
+            hint="Only used to show your BMI on Progress."
+            onCommit={(heightCm) => updateProfile({ heightCm })}
+          />
+        </div>
+        <div className="settings-row">
+          <NumberSetting
+            id="protein-goal"
+            label="Protein goal (g per day)"
+            value={profile.proteinGoalG}
+            min={LIMITS.proteinGoal.min}
+            max={LIMITS.proteinGoal.max}
+            hint={`Between ${LIMITS.proteinGoal.min} and ${LIMITS.proteinGoal.max}.`}
+            onCommit={(proteinGoalG) => updateProfile({ proteinGoalG })}
+          />
+        </div>
+        <div className="settings-row">
+          <NumberSetting
+            id="water-goal"
+            label="Water goal (glasses per day)"
+            value={profile.waterGoalGlasses}
+            min={LIMITS.waterGoal.min}
+            max={LIMITS.waterGoal.max}
+            hint={`Between ${LIMITS.waterGoal.min} and ${LIMITS.waterGoal.max}.`}
+            onCommit={(waterGoalGlasses) => updateProfile({ waterGoalGlasses })}
+          />
+        </div>
+      </section>
 
-      <div className="card" style={{ background: 'var(--surface-sunken)' }}>
-        <h2 style={{ fontSize: 14, fontWeight: 800, marginBottom: 8 }}>Your data</h2>
-        <p className="muted-text" style={{ marginBottom: 16 }}>
-          Broono has no account or cloud database. Your profile, logs and journal stay in this browser or app installation. Export a backup before clearing browser or app data or changing devices, and import it to restore.
-        </p>
-        <div style={{ display: 'grid', gap: 10 }}>
+      <section className="card settings-group" aria-labelledby="display-heading">
+        <h2 id="display-heading">Display</h2>
+        <div className="settings-row">
+          <ChoiceGroup
+            legend="Weight unit"
+            description="Saved weights are converted when you change unit."
+            name="weight-unit"
+            layout="segmented"
+            options={WEIGHT_UNIT_OPTIONS.map(({ unit, label }) => ({ value: unit, label: SHORT_UNIT_LABELS[unit], ariaLabel: label }))}
+            value={profile.weightUnit}
+            onChange={setWeightUnit}
+          />
+        </div>
+        <div className="settings-row">
+          <ChoiceGroup
+            legend="Appearance"
+            name="appearance"
+            layout="segmented"
+            options={[
+              { value: 'light dark', label: 'System' },
+              { value: 'light', label: 'Light' },
+              { value: 'dark', label: 'Dark' },
+            ]}
+            value={scheme}
+            onChange={(next: ColorScheme) => {
+              setColorScheme(next)
+              setScheme(next)
+            }}
+          />
+        </div>
+      </section>
+
+      <section className="card settings-group" aria-labelledby="data-heading">
+        <h2 id="data-heading">Your data</h2>
+        <div className="settings-row">
+          <p className="row-hint" style={{ fontSize: 13, lineHeight: 1.55 }}>
+            Broono has no account or cloud database. Your data stays in this browser or app. Export a backup before clearing browser or app data or changing devices, and import it to restore.
+          </p>
           <button type="button" id="export-btn" onClick={() => void handleExport()} className="btn-primary">
             Export my local data
           </button>
@@ -335,19 +365,20 @@ export default function ProfilePage() {
             onChange={handleImportFile}
             hidden
           />
+          {/* Always mounted so the result of an export or import is announced. */}
+          <p
+            role="status"
+            style={{ fontSize: 13, fontWeight: 600, color: dataMessage?.tone === 'error' ? 'var(--danger)' : 'var(--success)' }}
+          >
+            {dataMessage?.text}
+          </p>
         </div>
-        {/* Always mounted so the result of an export or import is announced. */}
-        <p
-          role="status"
-          style={{ fontSize: 13, fontWeight: 600, marginTop: dataMessage ? 12 : 0, color: dataMessage?.tone === 'error' ? 'var(--danger)' : 'var(--success)' }}
-        >
-          {dataMessage?.text}
-        </p>
-      </div>
-
-      <button type="button" id="delete-account-btn" onClick={() => eraseDialogRef.current?.open()} className="btn-danger">
-        Erase data from this device
-      </button>
+        <div className="settings-row">
+          <button type="button" id="delete-account-btn" onClick={() => eraseDialogRef.current?.open()} className="btn-danger">
+            Erase data from this device
+          </button>
+        </div>
+      </section>
 
       <ConfirmDialog
         ref={eraseDialogRef}
@@ -377,13 +408,13 @@ export default function ProfilePage() {
         }}
       />
 
-      <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-muted)', paddingBottom: 8, marginTop: 16 }}>
-        Broono local edition — no account, sync or remote backup.
-      </p>
-      <div style={{ textAlign: 'center', display: 'flex', gap: 16, justifyContent: 'center', paddingBottom: 24 }}>
-        <a href="/privacy" style={{ fontSize: 13, color: 'var(--text-secondary)', textDecoration: 'underline', padding: '12px 4px' }}>Privacy Policy</a>
-        <a href="/terms" style={{ fontSize: 13, color: 'var(--text-secondary)', textDecoration: 'underline', padding: '12px 4px' }}>Terms of Use</a>
-      </div>
+      <footer style={{ textAlign: 'center', paddingBottom: 16 }}>
+        <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Broono local edition — no account, sync or remote backup.</p>
+        <div style={{ display: 'flex', gap: 16, justifyContent: 'center' }}>
+          <a href="/privacy" style={{ fontSize: 13, color: 'var(--text-secondary)', textDecoration: 'underline', padding: '12px 4px' }}>Privacy Policy</a>
+          <a href="/terms" style={{ fontSize: 13, color: 'var(--text-secondary)', textDecoration: 'underline', padding: '12px 4px' }}>Terms of Use</a>
+        </div>
+      </footer>
     </div>
   )
 }
