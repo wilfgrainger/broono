@@ -4,6 +4,7 @@ import { Capacitor } from '@capacitor/core'
 import ConfirmDialog, { type ConfirmDialogHandle } from '../components/ConfirmDialog'
 import WeightChart from '../components/WeightChart'
 import { useStore, type WeeklyLog } from '../store'
+import { showToast } from '../utils/toast'
 import { daysBetween, formatShortDate, toLocalISODate } from '../utils/date'
 import { formatDose } from '../utils/medications'
 import { MILESTONES, bmi, percentChange, symptomCounts, weeklyRate } from '../utils/stats'
@@ -14,7 +15,7 @@ const RECENT_LOGS = 8
 
 /** Consecutive injections at the same dose, oldest first: the titration history. */
 function doseSteps(logs: WeeklyLog[], fallbackDose: number) {
-  const injections = logs.filter((log) => log.site).slice().reverse()
+  const injections = logs.filter((log) => log.site).toReversed()
   const steps: { doseMg: number; from: string; to: string; count: number }[] = []
   for (const log of injections) {
     const dose = log.doseMg || fallbackDose
@@ -151,7 +152,7 @@ export default function Progress({ onEdit }: ProgressProps) {
         <section className="card" aria-labelledby="doses-title">
           <h2 id="doses-title" className="section-title">Dose History</h2>
           <ol className="space-y-4" style={{ listStyle: 'none' }}>
-            {steps.slice().reverse().map((step, index) => (
+            {steps.toReversed().map((step, index) => (
               <li key={`${step.from}-${index}`} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'baseline' }}>
                 <span style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{formatDose(step.doseMg) || 'Dose not recorded'}</span>
                 <span className="muted-text" style={{ textAlign: 'right' }}>
@@ -262,7 +263,11 @@ export default function Progress({ onEdit }: ProgressProps) {
         description={pendingDelete ? `${pendingDelete.label}. This cannot be undone.` : ''}
         confirmLabel="Delete log"
         cancelLabel="Keep it"
-        onConfirm={() => { if (pendingDelete) removeLog(pendingDelete.id) }}
+        onConfirm={() => {
+          if (!pendingDelete) return
+          removeLog(pendingDelete.id)
+          showToast('Log deleted')
+        }}
       />
     </div>
   )

@@ -12,6 +12,7 @@ import Onboarding from './pages/Onboarding'
 import Login from './pages/Login'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import Terms from './pages/Terms'
+import Toaster from './components/Toaster'
 import { useToday } from './utils/useToday'
 import { useStorageSaveFailed } from './utils/storageHealth'
 import { canUseDeviceReminders, syncDeviceReminder } from './utils/deviceReminder'
@@ -187,11 +188,13 @@ function AppShell() {
 
       <nav className="bottom-nav" aria-label="Primary navigation">
         <NavBtn icon={Home} label="Home" tab="dashboard" active={activeTab} onNav={chooseTab} />
-        <NavBtn icon={Plus} label="Log" tab="checkin" active={activeTab} onNav={chooseTab} />
+        <NavBtn icon={Plus} label="Log" tab="checkin" active={activeTab} onNav={chooseTab} primary />
         <NavBtn icon={TrendingDown} label="Progress" tab="progress" active={activeTab} onNav={chooseTab} />
         <NavBtn icon={Compass} label="Guide" tab="guide" active={activeTab} onNav={chooseTab} />
         <NavBtn icon={BookOpen} label="Journal" tab="journal" active={activeTab} onNav={chooseTab} />
       </nav>
+
+      <Toaster />
     </div>
   )
 }
@@ -202,23 +205,25 @@ interface NavBtnProps {
   tab: Tab
   active: Tab
   onNav: (tab: Tab) => void
+  /** The main action ("Log"), styled to stand out. */
+  primary?: boolean
 }
 
-function NavBtn({ icon: Icon, label, tab, active, onNav }: NavBtnProps) {
+function NavBtn({ icon: Icon, label, tab, active, onNav, primary = false }: NavBtnProps) {
   const isActive = tab === active
 
   return (
     <button
       type="button"
-      className={`nav-btn ${isActive ? 'active' : ''}`}
+      className={['nav-btn', isActive ? 'active' : '', primary ? 'primary' : ''].filter(Boolean).join(' ')}
       onClick={() => onNav(tab)}
       aria-current={isActive ? 'page' : undefined}
     >
       <span className="nav-icon-wrap">
         <Icon
           size={22}
-          strokeWidth={isActive ? 2 : 1.5}
-          color={isActive ? 'var(--text-primary)' : 'var(--text-muted)'}
+          strokeWidth={isActive || primary ? 2.25 : 1.75}
+          color="currentColor"
           aria-hidden="true"
         />
       </span>

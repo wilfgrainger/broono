@@ -38,7 +38,7 @@ export const MILESTONES = [5, 10, 15, 20, 25] as const
  */
 export function weeklyRate(logs: WeightEntry[]): number | null {
   if (logs.length < 2) return null
-  const sorted = [...logs].sort((a, b) => a.date.localeCompare(b.date))
+  const sorted = logs.toSorted((a, b) => a.date.localeCompare(b.date))
   const latest = sorted[sorted.length - 1]
   const windowStart = sorted.find((log) => daysBetween(latest.date, log.date) <= 35) ?? sorted[0]
   const days = daysBetween(latest.date, windowStart.date)

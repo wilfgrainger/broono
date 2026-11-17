@@ -15,7 +15,7 @@ const PAD = { top: 14, right: 10, bottom: 8, left: 10 }
 
 /** Weight over time with the starting weight and the goal as reference lines. */
 export default function WeightChart({ logs, unit, startWeight, goalWeight }: WeightChartProps) {
-  const points = [...logs].sort((a, b) => a.date.localeCompare(b.date))
+  const points = logs.toSorted((a, b) => a.date.localeCompare(b.date))
   if (points.length === 0) return null
 
   const first = points[0].date
@@ -47,7 +47,10 @@ export default function WeightChart({ logs, unit, startWeight, goalWeight }: Wei
           {goalWeight > 0 ? <line className="chart-goal" x1={0} x2={WIDTH} y1={y(goalWeight)} y2={y(goalWeight)} /> : null}
           <path className="weight-line" d={line} />
           {points.map((point, index) => (
-            <circle key={`${point.date}-${index}`} className={index === points.length - 1 ? 'weight-dot latest' : 'weight-dot'} cx={x(point.date)} cy={y(point.weight)} r={index === points.length - 1 ? 4.5 : 3} />
+            <g key={`${point.date}-${index}`} className={index === points.length - 1 ? 'weight-dot latest' : 'weight-dot'}>
+              <line className="chart-dot weight-dot-ring" x1={x(point.date)} x2={x(point.date)} y1={y(point.weight)} y2={y(point.weight)} />
+              <line className="chart-dot weight-dot-fill" x1={x(point.date)} x2={x(point.date)} y1={y(point.weight)} y2={y(point.weight)} />
+            </g>
           ))}
         </svg>
         {/* Labels are HTML rather than SVG text so they are not stretched with the plot. */}
@@ -61,7 +64,7 @@ export default function WeightChart({ logs, unit, startWeight, goalWeight }: Wei
       <DataTable
         caption="Weigh-ins"
         columns={['Date', 'Weight', 'Change']}
-        rows={[...points].reverse().map((point, index, newestFirst) => {
+        rows={points.toReversed().map((point, index, newestFirst) => {
           const previous = newestFirst[index + 1]
           const change = previous ? point.weight - previous.weight : 0
           return [

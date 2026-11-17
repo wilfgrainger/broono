@@ -15,7 +15,7 @@ interface BaseProps<T extends string> {
   description?: ReactNode
   options: Choice<T>[]
   name?: string
-  layout?: 'grid' | 'wrap' | 'stack' | 'week'
+  layout?: 'grid' | 'wrap' | 'stack' | 'week' | 'segmented'
   className?: string
 }
 
